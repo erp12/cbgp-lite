@@ -21,7 +21,7 @@
                   :inputs        ['in1]
                   :ret-type      int?
                   :type-env      (conj lib/environment [:= 'in1 int?])
-                  :alias->symbol lib/alias->symbol}))
+                  :dealiases lib/dealiases}))
 
   code
 
@@ -42,8 +42,8 @@
   ;; Conditional Logic
 
   (def push
-    [[:lit "small"]
-     [:lit "large"]
+    [[:lit "large"]
+     [:lit "small"]
      [:lit 1000]
      [:var 0]
      [:var 'int-lt]
@@ -56,15 +56,15 @@
                   :inputs        ['in1]
                   :ret-type      string?
                   :type-env      (conj lib/environment [:= 'in1 int?])
-                  :alias->symbol lib/alias->symbol}))
+                  :dealiases lib/dealiases}))
 
   code
 
-  (def lt1000
+  (def small-or-large
     (c/synth-fn ['in1] code))
 
   (doseq [i [100 1000 10000]]
-    (println i (lt1000 i)))
+    (println i (small-or-large i)))
 
   `(fn ~(vec ['in1]) ~code)
 
@@ -91,7 +91,7 @@
                   :inputs   ['in1]
                   :ret-type int?
                   :type-env (conj lib/environment [:= 'in1 int?])
-                  :alias->symbol lib/alias->symbol}))
+                  :dealiases lib/dealiases}))
 
   code
 
@@ -127,7 +127,7 @@
                   :inputs   []
                   :ret-type [:vector int?]
                   :type-env lib/environment
-                  :alias->symbol lib/alias->symbol}))
+                  :dealiases lib/dealiases}))
 
   (def inc-all
     (c/synth-fn [] code))

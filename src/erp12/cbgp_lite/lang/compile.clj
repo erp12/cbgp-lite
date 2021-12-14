@@ -257,15 +257,15 @@
 
 (defn push->clj
   "Translates Push code into a Clojure form that returns value of type `ret-type`."
-  [{:keys [push inputs ret-type type-env alias->symbol]
-    :or   {alias->symbol {}}}]
+  [{:keys [push inputs ret-type type-env dealiases]
+    :or   {dealiases {}}}]
   [push inputs ret-type]
   (let [input-vars (vec (map (fn [in] [:var in]) inputs))
         ast (:ast (push->ast {:push       push
                               :bound-vars input-vars
                               :ret-type   ret-type
                               :type-env   type-env}))]
-    (->> ast ast/ast->form (w/postwalk-replace alias->symbol))))
+    (->> ast ast/ast->form (w/postwalk-replace dealiases))))
 
 (defn synth-fn
   "Given a vector of argument symbols and a Clojure form (`body`)
