@@ -4,6 +4,10 @@
             [clojure.core.match :refer [match]]
             [erp12.cbgp-lite.lang.lib :as lib]))
 
+(def environment
+  (mapv (fn [[symb annotation]] [:= symb annotation])
+        lib/library))
+
 
 (deftest box-ast-test
   (is (= {:ast [:lit 1] :type int?}
@@ -56,11 +60,11 @@
               [:var 'in1]
               [:var 'int-add]
               :apply]
-        code (push->clj {:push          push
-                         :inputs        ['in1]
-                         :ret-type      int?
-                         :type-env      (conj lib/environment [:= 'in1 int?])
-                         :alias->symbol lib/alias->symbol})
+        code (push->clj {:push      push
+                         :inputs    ['in1]
+                         :ret-type  int?
+                         :type-env  (conj environment [:= 'in1 int?])
+                         :dealiases lib/dealiases})
         f (synth-fn ['in1] code)]
     (is (= 100 (f 0)))
     (is (= 200 (f 100)))
@@ -77,11 +81,11 @@
               :apply
               [:var 'if]
               :apply]
-        code (push->clj {:push          push
-                         :inputs        ['in1]
-                         :ret-type      int?
-                         :type-env      (conj lib/environment [:= 'in1 int?])
-                         :alias->symbol lib/alias->symbol})
+        code (push->clj {:push      push
+                         :inputs    ['in1]
+                         :ret-type  int?
+                         :type-env  (conj environment [:= 'in1 int?])
+                         :dealiases lib/dealiases})
         f (synth-fn ['in1] code)]
     (is (= "small" (f 100)))
     (is (= "large" (f 1000)))
@@ -100,11 +104,11 @@
                [:var 'int-add]
                :apply]
               :let]
-        code (push->clj {:push          push
-                         :inputs        ['in1]
-                         :ret-type      int?
-                         :type-env      (conj lib/environment [:= 'in1 int?])
-                         :alias->symbol lib/alias->symbol})
+        code (push->clj {:push      push
+                         :inputs    ['in1]
+                         :ret-type  int?
+                         :type-env  (conj environment [:= 'in1 int?])
+                         :dealiases lib/dealiases})
         f (synth-fn ['in1] code)]
     (is (= 0 (f 0)))
     (is (= 2 (f 1)))
@@ -120,10 +124,10 @@
               [:fn int?]
               [:var 'mapv]
               :apply]
-        code (push->clj {:push          push
-                         :inputs        []
-                         :ret-type      [:vector int?]
-                         :type-env      lib/environment
-                         :alias->symbol lib/alias->symbol})
+        code (push->clj {:push      push
+                         :inputs    []
+                         :ret-type  [:vector int?]
+                         :type-env  environment
+                         :dealiases lib/dealiases})
         f (synth-fn [] code)]
     (is (= [2 3 4] (f)))))
