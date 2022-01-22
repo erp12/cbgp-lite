@@ -4,27 +4,26 @@
 
 (deftest random-gene-test
   (let [opts {:gene-distribution {:open-close    0.2
-                                  :input         0.2
+                                  :local         0.2
                                   :var           0.2
                                   :lit           0.2
                                   :lit-generator 0.1
-                                  :abstraction   0.1}
-              :inputs            ['x]
+                                  :apply         0.1}
               :vars              ['+ '- '* '/]
               :lits              [1 2 10]
-              :lit-generators    [rand]
-              :abstract          [:let]}]
+              :lit-generators    [rand]}]
     (testing "Only valid genes are generated"
       (doseq [gene (repeatedly 1000 #(random-gene opts))]
-        (is (or (contains? #{:open :close :let} gene)
+        (is (or (contains? #{:open :close :apply} gene)
                 (and (vector? gene)
                      (contains? #{:lit :var} (first gene))
                      (some? (second gene)))))))
     (testing "Random generation follows the distribution"
-      (is (= (repeat 100 [:var 'x])
+      (is (= (repeat 100 :apply)
              (repeatedly 100 #(random-gene (assoc opts
                                              :gene-distribution
-                                             {:input 1.0
+                                             {:apply 1.0
+                                              :local 0.0
                                               :var   0.0
                                               :lit   0.0}))))))))
 

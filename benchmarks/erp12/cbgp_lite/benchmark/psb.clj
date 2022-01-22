@@ -11,24 +11,23 @@
 ;; Configuration
 
 (def config
-  {:n-train              200
+  {:n-train              100
    :n-test               300
    :population-size      1000
-   ;; 10x generations because down-sampling to 10% of cases per generation.
-   :max-generations      3000
+   :max-generations      300
    :umad-rate            0.1
    :min-genome-size      50
    :max-genome-size      250
    :gene-distribution    {:open-close    0.1
-                          :input         0.15
                           :var           0.2
+                          :local         0.15
                           :lit           0.15
                           :lit-generator 0.1
                           :abstraction   0.15
                           :apply         0.15}
    :penalty              1e5
    :simplification-steps 2000
-   :downsample-rate      0.1})
+   :downsample-rate      1.0})
 
 (defn make-breed
   [opts]
@@ -41,7 +40,24 @@
 
 
 (def problem-info
-  {"compare-string-lengths"
+  {"checksum"
+   {:input->type    {'input1 string?}
+    :return-type    string?
+    :other-types    [int? boolean? char?]
+    :literals       ["Check sum is " \space 64]
+    :lit-generators [(pu/int-generator 128)
+                     #(rand-nth (concat [\newline \tab] (map char (range 32 127))))]
+    :loss-fn        lev/distance}
+
+   "collatz-numbers"
+   {:input->type    {'input1 int?}
+    :return-type    int?
+    :other-types    [int? float? boolean?]
+    :literals       [0 1]
+    :lit-generators [(pu/int-generator 100)]
+    :loss-fn        pu/absolute-distance}
+
+   "compare-string-lengths"
    {:input->type    {'input1 string?
                      'input2 string?
                      'input3 string?}
@@ -56,8 +72,16 @@
     :return-type    int?
     :other-types    [boolean?]
     :literals       [0 1 2]
-    :lit-generators [#(- (rand-int 2001) 1000)]
+    :lit-generators [(pu/int-generator 1000)]
     :loss-fn        pu/absolute-distance}
+
+   "digits"
+   {:input->type    {'input1 int?}
+    :return-type    string?
+    :other-types    [boolean? char?]
+    :literals       [\newline]
+    :lit-generators [(pu/int-generator 10)]
+    :loss-fn        lev/distance}
 
    "double-letters"
    {:input->type    {'input1 string?}
@@ -67,12 +91,44 @@
     :lit-generators []
     :loss-fn        lev/distance}
 
+   "even-squares"
+   {:input->type    {'input1 int?}
+    :return-type    string?
+    :other-types    [int? boolean?]
+    :literals       []
+    :lit-generators []
+    :loss-fn        lev/distance}
+
+   "for-loop-index"
+   {:input->type    {'input1 int?
+                     'input2 int?
+                     'input3 int?}
+    :return-type    string?
+    :other-types    [int? boolean?]
+    :literals       []
+    :lit-generators []
+    :loss-fn        lev/distance}
+
+   "grade"
+   {:input->type    {'input1 int?
+                     'input2 int?
+                     'input3 int?
+                     'input4 int?
+                     'input5 int?}
+    :return-type    string?
+    :other-types    [boolean?]
+    :literals       ["Student has a"
+                     " grade."
+                     "A" "B" "C" "D" "F"]
+    :lit-generators [#(rand-int 101)]
+    :loss-fn        lev/distance}
+
    "last-index-of-zero"
    {:input->type    {'input1 [:vector int?]}
     :return-type    int?
     :other-types    [boolean?]
     :literals       []
-    :lit-generators [#(- (rand-int 101) 50)]
+    :lit-generators [(pu/int-generator 50)]
     :loss-fn        pu/absolute-distance}
 
    "median"
@@ -82,7 +138,7 @@
     :return-type    int?
     :other-types    [boolean?]
     :literals       []
-    :lit-generators [#(- (rand-int 201) 100)]
+    :lit-generators [(pu/int-generator 100)]
     :loss-fn        pu/absolute-distance}
 
    "mirror-image"
@@ -108,9 +164,11 @@
     :return-type    float?
     :other-types    []
     :literals       []
-    :lit-generators [#(- (rand-int 201) 100)
+    :lit-generators [(pu/int-generator 100)
                      #(- (rand 201.0) 100.0)]
     :loss-fn        pu/absolute-distance}
+
+   ; "pig-latin"
 
    "replace-space-with-newline"
    {:input->type    {'input1 string?}
@@ -120,12 +178,14 @@
     :lit-generators [#(rand-nth (concat [\newline \tab] (map char (range 32 127))))]
     :loss-fn        lev/distance}
 
+   ; "scrabble-score"
+
    "small-or-large"
    {:input->type    {'input1 int?}
     :return-type    string?
     :other-types    [boolean?]
     :literals       ["small" "large"]
-    :lit-generators [#(- (rand-int 20001) 10000)]
+    :lit-generators [(pu/int-generator 10000)]
     :loss-fn        lev/distance}
 
    "smallest"
@@ -136,16 +196,22 @@
     :return-type    int?
     :other-types    [boolean?]
     :literals       []
-    :lit-generators [#(- (rand-int 201) 100)]
+    :lit-generators [(pu/int-generator 100)]
     :loss-fn        pu/absolute-distance}
+
+   ; "string-differences"
 
    "string-lengths-backwards"
    {:input->type    {'input1 [:vector string?]}
     :return-type    string?
     :other-types    [string? int? boolean? [:vector string?]]
     :literals       []
-    :lit-generators [#(- (rand-int 201) 100)]
+    :lit-generators [(pu/int-generator 100)]
     :loss-fn        lev/distance}
+
+   ; "sum-of-squares"
+   ; "super-anagrams"
+   ; "syllables"
 
    "vector-average"
    {:input->type    {'input1 [:vector float?]}
@@ -163,6 +229,10 @@
     :literals       []
     :lit-generators []
     :loss-fn        pu/absolute-distance}
+
+   ; "wallis-pi"
+   ; "word-stats"
+   ; "x-word-lines"
 
    })
 
@@ -207,10 +277,9 @@
   (require '[erp12.cbgp-lite.gp.pluhsy :as pl])
   (require '[erp12.cbgp-lite.lang.compile :as c])
 
-
   (try
     (run {:dataset-dir "data/program-synthesis-benchmark-datasets/datasets"
-          :problem     "number-io"})
+          :problem     "mirror-image"})
     (catch Exception e
       (def caught e)))
 
@@ -221,7 +290,7 @@
   (throw (ex-cause caught))
 
   (def genome
-    (:genome (ex-data caught)))
+    (:genome (ex-data (ex-cause caught))))
   genome
 
   (def push
@@ -231,9 +300,9 @@
   (def code
     (c/push->clj {:push      push
                   :inputs    ['input1]
-                  :ret-type  int?
+                  :ret-type  string?
                   :type-env  (->> lib/library
-                                  (merge {'input1 [:vector int?]})
+                                  (merge {'input1 string?})
                                   (mapv (fn [[symb typ]] [:= symb typ])))
                   :dealiases lib/dealiases}))
 

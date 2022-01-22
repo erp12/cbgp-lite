@@ -188,7 +188,7 @@
                              (if is-s-var
                                (pop-ast new-state)
                                (pop-unifiable-ast arg-type new-state))
-                             ;; If arg-type has the type of an unboud s-var, bind the
+                             ;; If arg-type's type is an unbound s-var, bind the
                              ;; s-var to the type of the popped AST.
                              new-bindings (if is-s-var
                                             {(second arg-type) (:type arg)}

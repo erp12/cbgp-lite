@@ -318,8 +318,8 @@
    `append-str          [:=> [:cat string? char?] string?]
    `take-str            [:=> [:cat int? string?] string?]
    `safe-subs           [:=> [:cat string? int? int?] string?]
-   'first-str           (unary-transform string?)
-   'last-str            (unary-transform string?)
+   'first-str           [:=> [:cat string?] char?]
+   'last-str            [:=> [:cat string?] char?]
    `rest-str            (unary-transform string?)
    `butlast-str         (unary-transform string?)
    'nth-str             [:=> [:cat string? int?] char?]

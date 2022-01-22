@@ -3,7 +3,8 @@
             [psb2.core :as psb2]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.gp.pluhsy :as pl]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [clojure.string :as str])
   (:import (java.util.zip GZIPInputStream)))
 
 (defn problem-types
@@ -11,10 +12,9 @@
   (set/union (set (vals input->type)) #{return-type} other-types))
 
 (defn genetic-source
-  [{:keys [input->type literals lit-generators gene-distribution] :as info}]
+  [{:keys [literals lit-generators gene-distribution] :as info}]
   (let [types (problem-types info)
-        opts {:inputs            (keys input->type)
-              :vars              (vec (keys (lib/lib-for-types types)))
+        opts {:vars              (vec (keys (lib/lib-for-types types)))
               :lits              literals
               :lit-generators    lit-generators
               :abstraction       (vec (concat [:let [:fn]]
@@ -29,10 +29,10 @@
 
 (defn reshape-case
   [case]
-  {:inputs (-> case
-               (dissoc :output1)
-               (->> (sort-by first)
-                    (map second)))
+  {:inputs (->> case
+                (filter (fn [[k _]] (str/starts-with? (name k) "input")))
+                (sort-by first)
+                (mapv second))
    :output (:output1 case)})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -74,6 +74,10 @@
 (defn rand-bool
   []
   (> (rand) 0.5))
+
+(defn int-generator
+  [magnitude]
+  #(- (rand-int (inc (* 2 magnitude))) magnitude))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loss Functions

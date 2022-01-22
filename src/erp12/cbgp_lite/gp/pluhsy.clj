@@ -2,16 +2,17 @@
   (:require [erp12.cbgp-lite.utils :as u]))
 
 (defn random-gene
-  [{:keys [gene-distribution inputs vars lits lit-generators abstraction]
+  [{:keys [gene-distribution vars lits lit-generators abstraction]
     :as   opts}]
   (let [kind (u/rand-weighted gene-distribution)
         gene-val (cond
                    (= :apply kind) :apply
                    (= :open-close kind) (rand-nth [:open :close])
-                   (= :input kind) (u/safe-rand-nth inputs)
                    (= :var kind) (u/safe-rand-nth vars)
+                   (= :local kind) (rand-int Integer/MAX_VALUE)
                    (= :lit kind) (u/safe-rand-nth lits)
-                   (= :lit-generator kind) ((u/safe-rand-nth lit-generators))
+                   (= :lit-generator kind) (when-let [gen (u/safe-rand-nth lit-generators)]
+                                             (gen))
                    (= :abstraction kind) (u/safe-rand-nth abstraction)
                    :else (throw (ex-info (str "Unknown kind of gene: " kind)
                                          {:gene-kind         kind
@@ -22,7 +23,7 @@
       (nil? gene-val)
       (recur opts)
 
-      (contains? #{:input :var} kind)
+      (contains? #{:var :local} kind)
       [:var gene-val]
 
       (contains? #{:lit :lit-generator} kind)
