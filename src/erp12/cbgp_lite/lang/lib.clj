@@ -1,7 +1,17 @@
 (ns erp12.cbgp-lite.lang.lib
-  (:require [clojure.string :as str]))
+  (:refer-clojure :exclude [and or])
+  (:require [clojure.core :as core]
+            [clojure.string :as str]
+            [erp12.schema-inference.ast :as ast]
+            [erp12.schema-inference.schema :as sch]))
+
+;; @todo What do do about nil?
+;; first, last, etc. return nil on empty collections.
+;; inc, +, etc. throw on nil.
 
 ;; @todo Vector insert?
+;; @todo chars->string
+;; @todo join (vector -> string)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Custom Functions
@@ -159,6 +169,50 @@
     (let [idx (mod idx (count coll))]
       (nth coll idx))))
 
+(defn safe-div
+  [n d]
+  (if (zero? d) 0 (/ n d)))
+
+(defn safe-mod
+  [n d]
+  (if (zero? d) 0 (mod n d)))
+
+(defn sin
+  [x]
+  (Math/sin x))
+
+(defn cos
+  [x]
+  (Math/cos x))
+
+(defn tan
+  [x]
+  (Math/tan x))
+
+(defn whitespace?
+  [^Character c]
+  (Character/isWhitespace c))
+
+(defn digit?
+  [^Character c]
+  (Character/isDigit c))
+
+(defn letter?
+  [^Character c]
+  (Character/isLetter c))
+
+(defn iff
+  [cond then else]
+  (if cond then else))
+
+(defn and
+  [a b]
+  (core/and a b))
+
+(defn or
+  [a b]
+  (core/or a b))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Ground Schemas
 ;; nil? boolean? int? float? char? string? keyword?
@@ -182,133 +236,138 @@
 (def library
   {;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Conditional Control Flow
-   'if                     {:s-vars ['t] :body [:=> [:cat boolean? [:s-var 't] [:s-var 't]] [:s-var 't]]}
+   `iff                 {:s-vars ['t] :body [:=> [:cat boolean? [:s-var 't] [:s-var 't]] [:s-var 't]]}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Higher Order Functions
-   'mapv                   {:s-vars ['a 'b]
-                            :body   [:=> [:cat [:=> [:cat [:s-var 'a]] [:s-var 'b]]
-                                          [:vector [:s-var 'a]]]
-                                     [:vector [:s-var 'b]]]}
-   'filterv                {:s-vars ['a]
-                            :body   [:=> [:cat [:=> [:cat [:s-var 'a]] boolean?]
-                                          [:vector [:s-var 'a]]]
-                                     [:vector [:s-var 'a]]]}
-   `removev                {:s-vars ['a]
-                            :body   [:=> [:cat [:=> [:cat [:s-var 'a]] boolean?]
-                                          [:vector [:s-var 'a]]]
-                                     [:vector [:s-var 'a]]]}
-   'mapcatv                {:s-vars ['a 'b]
-                            :body   [:=> [:cat [:=> [:cat [:s-var 'a]] [:vector [:s-var 'b]]]
-                                          [:vector [:s-var 'a]]]
-                                     [:vector [:s-var 'b]]]}
-   'reduce                 {:s-vars ['a]
-                            :body   [:=> [:cat [:=> [:cat [:s-var 'a] [:s-var 'a]] [:s-var 'a]]
-                                          [:vector [:s-var 'a]]]
-                                     [:s-var 'a]]}
-   'fold                   {:s-vars ['a 'b]
-                            :body   [:=> [:cat [:=> [:cat [:s-var 'b] [:s-var 'a]] [:s-var 'b]]
-                                          [:s-var 'b]
-                                          [:vector [:s-var 'a]]]
-                                     [:s-var 'b]]}
+   'mapv                {:s-vars ['a 'b]
+                         :body   [:=> [:cat [:=> [:cat [:s-var 'a]] [:s-var 'b]]
+                                       [:vector [:s-var 'a]]]
+                                  [:vector [:s-var 'b]]]}
+   'mapv2               {:s-vars ['a1 'a2 'b]
+                         :body   [:=> [:cat [:=> [:cat [:s-var 'a1] [:s-var 'a2]] [:s-var 'b]]
+                                       [:vector [:s-var 'a1]]
+                                       [:vector [:s-var 'a2]]]
+                                  [:vector [:s-var 'b]]]}
+   'filterv             {:s-vars ['a]
+                         :body   [:=> [:cat [:=> [:cat [:s-var 'a]] boolean?]
+                                       [:vector [:s-var 'a]]]
+                                  [:vector [:s-var 'a]]]}
+   `removev             {:s-vars ['a]
+                         :body   [:=> [:cat [:=> [:cat [:s-var 'a]] boolean?]
+                                       [:vector [:s-var 'a]]]
+                                  [:vector [:s-var 'a]]]}
+   `mapcatv             {:s-vars ['a 'b]
+                         :body   [:=> [:cat [:=> [:cat [:s-var 'a]] [:vector [:s-var 'b]]]
+                                       [:vector [:s-var 'a]]]
+                                  [:vector [:s-var 'b]]]}
+   'reduce              {:s-vars ['a]
+                         :body   [:=> [:cat [:=> [:cat [:s-var 'a] [:s-var 'a]] [:s-var 'a]]
+                                       [:vector [:s-var 'a]]]
+                                  [:s-var 'a]]}
+   'fold                {:s-vars ['a 'b]
+                         :body   [:=> [:cat [:=> [:cat [:s-var 'b] [:s-var 'a]] [:s-var 'b]]
+                                       [:s-var 'b]
+                                       [:vector [:s-var 'a]]]
+                                  [:s-var 'b]]}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Common
-   '=                      {:s-vars ['a] :body [:=> [:cat [:s-var 'a] [:s-var 'a]] boolean?]}
-   'not=                   {:s-vars ['a] :body [:=> [:cat [:s-var 'a] [:s-var 'a]] boolean?]}
+   '=                   {:s-vars ['a] :body [:=> [:cat [:s-var 'a] [:s-var 'a]] boolean?]}
+   'not=                {:s-vars ['a] :body [:=> [:cat [:s-var 'a] [:s-var 'a]] boolean?]}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Numeric
-   'int-add                (binary-transform int?)
-   'int-sub                (binary-transform int?)
-   'int-mult               (binary-transform int?)
-   'int-div                [:=> [:cat int? int?] float?]
-   'int-mod                (binary-transform int?)
-   'int-inc                (unary-transform int?)
-   'int-dec                (unary-transform int?)
-   'int-lt                 (binary-pred int?)
-   'int-gt                 (binary-pred int?)
-   'int-le                 (binary-pred int?)
-   'int-ge                 (binary-pred int?)
-   'float-add              (binary-transform float?)
-   'float-sub              (binary-transform float?)
-   'float-mult             (binary-transform float?)
-   'float-div              (binary-transform float?)
-   'float-mod              (binary-transform float?)
-   'float-inc              (unary-transform float?)
-   'float-dec              (unary-transform float?)
-   'float-lt               (binary-pred float?)
-   'float-gt               (binary-pred float?)
-   'float-le               (binary-pred float?)
-   'float-ge               (binary-pred float?)
-   'int                    [:=> [:cat float?] int?]
-   'float                  [:=> [:cat float?] float?]
-   'char->int              [:=> [:cat char?] int?]
-   'min-int                (binary-transform int?)
-   'min-float              (binary-transform float?)
-   'max-int                (binary-transform int?)
-   'max-float              (binary-transform float?)
-   'Math/sin               (unary-transform float?)
-   'Math/cos               (unary-transform float?)
-   'Math/tan               (unary-transform float?)
+   'int-add             (binary-transform int?)
+   'int-sub             (binary-transform int?)
+   'int-mult            (binary-transform int?)
+   'int-div             [:=> [:cat int? int?] float?]
+   'int-mod             (binary-transform int?)
+   'int-inc             (unary-transform int?)
+   'int-dec             (unary-transform int?)
+   'int-lt              (binary-pred int?)
+   'int-gt              (binary-pred int?)
+   'int-le              (binary-pred int?)
+   'int-ge              (binary-pred int?)
+   'float-add           (binary-transform float?)
+   'float-sub           (binary-transform float?)
+   'float-mult          (binary-transform float?)
+   'float-div           (binary-transform float?)
+   'float-mod           (binary-transform float?)
+   'float-inc           (unary-transform float?)
+   'float-dec           (unary-transform float?)
+   'float-lt            (binary-pred float?)
+   'float-gt            (binary-pred float?)
+   'float-le            (binary-pred float?)
+   'float-ge            (binary-pred float?)
+   'int                 [:=> [:cat float?] int?]
+   'float               [:=> [:cat int?] float?]
+   'char->int           [:=> [:cat char?] int?]
+   'min-int             (binary-transform int?)
+   'min-float           (binary-transform float?)
+   'max-int             (binary-transform int?)
+   'max-float           (binary-transform float?)
+   `sin                 (unary-transform float?)
+   `cos                 (unary-transform float?)
+   `tan                 (unary-transform float?)
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Text
-   'str                    {:s-vars ['t] :body [:=> [:cat [:s-var 't]] string?]}
-   `int->char              [:=> [:cat int?] char?]
-   'Character/isWhitespace (unary-pred char?)
-   'Character/isDigit      (unary-pred char?)
-   'Character/isLetter     (unary-pred char?)
-   `string-concat          [:=> [:cat string? string?] string?]
-   `append-str             [:=> [:cat string? char?] string?]
-   `take-str               [:=> [:cat int? string?] string?]
-   `safe-subs              [:=> [:cat string? int? int?] string?]
-   'first-str              (unary-transform string?)
-   'last-str               (unary-transform string?)
-   `rest-str               (unary-transform string?)
-   `butlast-str            (unary-transform string?)
-   'nth-str                [:=> [:cat string? int?] char?]
-   'length                 [:=> [:cat string?] int?]
-   `str/reverse            (unary-transform string?)
-   'string->chars          [:=> [:cat string?] [:vector char?]]
-   `split-str              [:=> [:cat string? string?] [:vector string?]]
-   `split-str-on-char      [:=> [:cat string? char?] [:vector string?]]
-   `split-str-on-ws        [:=> [:cat string?] [:vector string?]]
-   'empty-str?             (unary-pred string?)
-   `substring?             (binary-pred string?)
-   `contains-char?         [:=> [:cat string? char?] boolean?]
-   `index-of-char          [:=> [:cat string? char?] int?]
-   `occurrences-of-char    [:=> [:cat string? char?] int?]
-   `str/replace            [:=> [:cat string? string? string?] string?]
-   `str/replace-first      [:=> [:cat string? string? string?] string?]
-   `replace-char           [:=> [:cat string? char? char?] string?]
-   `replace-first-char     [:=> [:cat string? char? char?] string?]
-   `remove-char            [:=> [:cat string? char? char?] string?]
-   `set-char               [:=> [:cat string? int? char?] string?]
+   'str                 {:s-vars ['t] :body [:=> [:cat [:s-var 't]] string?]}
+   `int->char           [:=> [:cat int?] char?]
+   `whitespace?         (unary-pred char?)
+   `digit?              (unary-pred char?)
+   `letter?             (unary-pred char?)
+   `string-concat       [:=> [:cat string? string?] string?]
+   `append-str          [:=> [:cat string? char?] string?]
+   `take-str            [:=> [:cat int? string?] string?]
+   `safe-subs           [:=> [:cat string? int? int?] string?]
+   'first-str           (unary-transform string?)
+   'last-str            (unary-transform string?)
+   `rest-str            (unary-transform string?)
+   `butlast-str         (unary-transform string?)
+   'nth-str             [:=> [:cat string? int?] char?]
+   'length              [:=> [:cat string?] int?]
+   `str/reverse         (unary-transform string?)
+   'string->chars       [:=> [:cat string?] [:vector char?]]
+   `split-str           [:=> [:cat string? string?] [:vector string?]]
+   `split-str-on-char   [:=> [:cat string? char?] [:vector string?]]
+   `split-str-on-ws     [:=> [:cat string?] [:vector string?]]
+   'empty-str?          (unary-pred string?)
+   `substring?          (binary-pred string?)
+   `contains-char?      [:=> [:cat string? char?] boolean?]
+   `index-of-char       [:=> [:cat string? char?] int?]
+   `occurrences-of-char [:=> [:cat string? char?] int?]
+   `str/replace         [:=> [:cat string? string? string?] string?]
+   `str/replace-first   [:=> [:cat string? string? string?] string?]
+   `replace-char        [:=> [:cat string? char? char?] string?]
+   `replace-first-char  [:=> [:cat string? char? char?] string?]
+   `remove-char         [:=> [:cat string? char? char?] string?]
+   `set-char            [:=> [:cat string? int? char?] string?]
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Boolean
-   'and                    (binary-transform boolean?)
-   'or                     (binary-transform boolean?)
-   'not                    (unary-transform boolean?)
-   'zero-int?              [:=> [:cat int?] boolean?]
-   'zero-float?            [:=> [:cat float] boolean?]
+   `and                 (binary-transform boolean?)
+   `or                  (binary-transform boolean?)
+   'not                 (unary-transform boolean?)
+   'zero-int?           [:=> [:cat int?] boolean?]
+   'zero-float?         [:=> [:cat float] boolean?]
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Vector
-   `concatv                {:s-vars ['a] :body (binary-transform [:vector [:s-var 'a]])}
-   'conj                   {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] [:vector [:s-var 'a]]]}
-   `takev                  {:s-vars ['a] :body [:=> [:cat int? [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
-   `safe-subvec            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] int? int?] [:vector [:s-var 'a]]]}
-   'first                  {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:s-var 'a]]}
-   'last                   {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:s-var 'a]]}
-   `restv                  {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
-   `butlastv               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
-   `safe-nth               {:s-vars ['a] :body [:=> [:cat int? [:vector [:s-var 'a]]] [:s-var 'a]]}
-   'count                  {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] int?]}
-   `reversev               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
-   'empty?                 {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] boolean?]}
-   `in?                    {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] boolean?]}
-   `index-of               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] int?]}
-   `occurrences-of         {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] int?]}
-   `safe-assoc             {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] int? [:s-var 'a]] [:vector [:s-var 'a]]]}
-   `replacev               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a] [:s-var 'a]] [:vector [:s-var 'a]]]}
-   `replacev-first         {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a] [:s-var 'a]] [:vector [:s-var 'a]]]}
-   `remove-element         {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] [:vector [:s-var 'a]]]}
+   `concatv             {:s-vars ['a] :body (binary-transform [:vector [:s-var 'a]])}
+   'conj                {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] [:vector [:s-var 'a]]]}
+   `takev               {:s-vars ['a] :body [:=> [:cat int? [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
+   `safe-subvec         {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] int? int?] [:vector [:s-var 'a]]]}
+   'first               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:s-var 'a]]}
+   'last                {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:s-var 'a]]}
+   `restv               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
+   `butlastv            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
+   `safe-nth            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] int?] [:s-var 'a]]}
+   'count               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] int?]}
+   `reversev            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
+   'empty?              {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] boolean?]}
+   `in?                 {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] boolean?]}
+   `index-of            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] int?]}
+   `occurrences-of      {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] int?]}
+   `safe-assoc          {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] int? [:s-var 'a]] [:vector [:s-var 'a]]]}
+   `replacev            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a] [:s-var 'a]] [:vector [:s-var 'a]]]}
+   `replacev-first      {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a] [:s-var 'a]] [:vector [:s-var 'a]]]}
+   `remove-element      {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] [:vector [:s-var 'a]]]}
    })
 
 (def dealiases
@@ -317,29 +376,30 @@
     first-str     first
     float-add     +
     float-dec     dec
-    float-div     /
+    float-div     erp12.cbgp-lite.lang.lib/safe-div
     float-ge      >=
     float-gt      >
     float-inc     inc
     float-le      <=
     float-lt      <
-    float-mod     mod
+    float-mod     erp12.cbgp-lite.lang.lib/safe-mod
     float-mult    *
     float-sub     -
     fold          reduce
     int-add       +
     int-dec       dec
-    int-div       div
+    int-div       erp12.cbgp-lite.lang.lib/safe-div
     int-ge        >=
     int-gt        >
     int-inc       inc
     int-le        <=
     int-lt        <
-    int-mod       mod
+    int-mod       erp12.cbgp-lite.lang.lib/safe-mod
     int-mult      *
     int-sub       -
     last-str      last
     length        count
+    mapv2         map
     max-float     max
     max-int       max
     min-float     min
@@ -348,3 +408,11 @@
     string->chars vec
     zero-float?   zero?
     zero-int?     zero?})
+
+(defn lib-for-types
+  [types]
+  (->> library
+       (filter (fn [[_ typ]]
+                 (core/or (sch/scheme? typ)
+                          (some #(ast/occurs? % typ) types))))
+       (into {})))

@@ -73,23 +73,19 @@
 
 (deftest conditional-logic-test
   ;; If input < 1000, return "small" else "large".
-  (let [push [[:lit "large"]
-              [:lit "small"]
-              [:lit 1000]
-              [:var 0]
-              [:var 'int-lt]
-              :apply
-              [:var 'if]
-              :apply]
-        code (push->clj {:push      push
-                         :inputs    ['in1]
-                         :ret-type  int?
-                         :type-env  (conj environment [:= 'in1 int?])
-                         :dealiases lib/dealiases})
-        f (synth-fn ['in1] code)]
-    (is (= "small" (f 100)))
-    (is (= "large" (f 1000)))
-    (is (= "large" (f 10000)))))
+  (is (= '(erp12.cbgp-lite.lang.lib/iff (< in1 1000) "small" "large")
+         (push->clj {:push      [[:lit "large"]
+                                 [:lit "small"]
+                                 [:lit 1000]
+                                 [:var 0]
+                                 [:var 'int-lt]
+                                 :apply
+                                 [:var 'erp12.cbgp-lite.lang.lib/iff]
+                                 :apply]
+                     :inputs    ['in1]
+                     :ret-type  string?
+                     :type-env  (conj environment [:= 'in1 int?])
+                     :dealiases lib/dealiases}))))
 
 (deftest let-binding-test
   ;; Square and then double the input.
@@ -131,3 +127,19 @@
                          :dealiases lib/dealiases})
         f (synth-fn [] code)]
     (is (= [2 3 4] (f)))))
+
+(deftest nullary-fn-test
+  (is (= '(repeatedly 5 (clojure.core/fn [] (rand)))
+         (push->clj {:push      [[:var 'rand]
+                                 :apply
+                                 [:fn]
+                                 [:lit 5]
+                                 [:var 'repeatedly]
+                                 :apply]
+                     :inputs    []
+                     :ret-type  [:vector float?]
+                     :type-env  [[:= 'rand [:=> [:cat] float?]]
+                                 [:= 'repeatedly {:s-vars '[a]
+                                                  :body   [:=> [:cat int? [:=> [:cat] [:s-var 'a]]]
+                                                           [:vector [:s-var 'a]]]}]]
+                     :dealiases {}}))))
