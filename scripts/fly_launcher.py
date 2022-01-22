@@ -53,18 +53,18 @@ import subprocess
 def alf_cmd(opts: argparse.Namespace, run_id: int) -> str:
     log_file = os.path.join(opts.out, f"run{run_id}.txt")
     cmds = [
-        "echo Starting run",
+        "echo \"Starting run\"",
         "export PATH=$PATH:/usr/java/latest/bin",
         f"cd {opts.cbgp}",
         f"mkdir -p {opts.out}",
-        f"/home/erp12/bin/clojure -M:benchmarks -m {opts.ns} {opts.args} | tee {log_file}",
-        "echo Finished Run"
+        f"/home/erp12/bin/clojure/bin/clojure -M:benchmarks -m {opts.ns} {opts.args} | tee {log_file}",
+        "echo \"Finished Run\""
     ]
     return f"""RemoteCmd {{/bin/sh -c {{{"; ".join(cmds)}}}}}"""
 
 
 def alf_task(opts: argparse.Namespace, run_id: int) -> str:
-    title = f"Run {run_id} - {opts.problem} - {opts.id}"
+    title = f"Run {run_id} - {opts.id}"
     return f"""Task -title {{{title}}} -cmds {{
         {alf_cmd(opts, run_id)} -service {{tom}} -tags {{{opts.tag}}}
     }}
