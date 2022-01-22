@@ -127,6 +127,8 @@
 ;  (clojure.pprint/pprint x)
 ;  x)
 
+;; @todo Exclude macros when searching for args with a function type. (Still allow macros to be the function.)
+;; @todo Break this into multiple private functions to make testing easier.
 (defn push->ast
   "Compiles the `push` code into an AST that returns a value of type `ret-type`.
 
@@ -179,12 +181,18 @@
                              ;; If arg-type is a t-var that we have seen before,
                              ;; bind it to the actual same type as before.
                              arg-type (sch/substitute-types bindings arg-type)
+                             is-s-var (sch/s-var? arg-type)
                              ;; If arg-type is still a t-var, pop an ast of any type.
                              ;; Otherwise, pop the AST of the expected type.
-                             {arg :ast state-arg-popped :state new-bindings :bindings, :or {new-bindings {}}}
-                             (if (sch/s-var? arg-type)
+                             {arg :ast state-arg-popped :state new-bindings :bindings}
+                             (if is-s-var
                                (pop-ast new-state)
-                               (pop-unifiable-ast arg-type new-state))]
+                               (pop-unifiable-ast arg-type new-state))
+                             ;; If arg-type has the type of an unboud s-var, bind the
+                             ;; s-var to the type of the popped AST.
+                             new-bindings (if is-s-var
+                                            {(second arg-type) (:type arg)}
+                                            new-bindings)]
                          (if (= :none arg)
                            state
                            (recur (rest remaining-arg-types)
@@ -196,12 +204,12 @@
 
              ;; Nullary function abstraction.
              [:fn]
-             (let [[ast new-state] (pop-ast state)]
+             (let [{ast :ast new-state :state} (pop-ast state)]
                (if (= :none ast)
                  state
-                 (push-ast new-state
-                           {:ast  [:fn [:cat] (:ast ast)]
-                            :type [:=> [:cat] (:type ast)]})))
+                 (push-ast {:ast  [:fn [:cat] (:ast ast)]
+                            :type [:=> [:cat] (:type ast)]}
+                           new-state)))
 
              ;; Function abstraction with at least 1 argument.
              ;; Compiles a chunk into the body of the function where args can be referenced.

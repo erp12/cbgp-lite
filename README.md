@@ -5,9 +5,7 @@ A genetic programming system for synthesizing programs that cover a narrow subse
 ## To-Do
 
 - plushy genomes
-- Implement benchmark problems
 - Compare runtime of single-stack vs multi-stack
-- Generalization testing
 - Genome simplification
 
 ## Running Tests
