@@ -9,10 +9,6 @@
 ;; first, last, etc. return nil on empty collections.
 ;; inc, +, etc. throw on nil.
 
-;; @todo Vector insert?
-;; @todo chars->string
-;; @todo join (vector -> string)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Custom Functions
 
@@ -236,7 +232,8 @@
 (def library
   {;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Conditional Control Flow
-   `iff                 {:s-vars ['t] :body [:=> [:cat boolean? [:s-var 't] [:s-var 't]] [:s-var 't]]}
+   'if                  {:s-vars ['t]
+                         :body [:=> [:cat boolean? [:s-var 't] [:s-var 't]] [:s-var 't]]}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Higher Order Functions
    'mapv                {:s-vars ['a 'b]
@@ -338,8 +335,9 @@
    `str/replace-first   [:=> [:cat string? string? string?] string?]
    `replace-char        [:=> [:cat string? char? char?] string?]
    `replace-first-char  [:=> [:cat string? char? char?] string?]
-   `remove-char         [:=> [:cat string? char? char?] string?]
+   `remove-char         [:=> [:cat string? char?] string?]
    `set-char            [:=> [:cat string? int? char?] string?]
+   `str/join            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] string?]}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Boolean
    `and                 (binary-transform boolean?)
@@ -368,10 +366,22 @@
    `replacev            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a] [:s-var 'a]] [:vector [:s-var 'a]]]}
    `replacev-first      {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a] [:s-var 'a]] [:vector [:s-var 'a]]]}
    `remove-element      {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] [:vector [:s-var 'a]]]}
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   ;; Printing & Side Effects
+   'do2                 {:s-vars ['a]
+                         :body   [:=> [:cat nil? [:s-var 'a]]
+                                  [:s-var 'a]]}
+   'do3                 {:s-vars ['a]
+                         :body   [:=> [:cat nil? nil? [:s-var 'a]]
+                                  [:s-var 'a]]}
+   'print               {:s-vars ['a] :body [:=> [:cat [:s-var 'a]] nil?]}
+   'println             {:s-vars ['a] :body [:=> [:cat [:s-var 'a]] nil?]}
    })
 
 (def dealiases
   '{char->int     int
+    do2           do
+    do3           do
     empty-str?    empty?
     first-str     first
     float-add     +
@@ -408,6 +418,9 @@
     string->chars vec
     zero-float?   zero?
     zero-int?     zero?})
+
+(def macros
+  #{'if 'do2 'do3})
 
 (defn lib-for-types
   [types]

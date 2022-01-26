@@ -28,12 +28,15 @@
     #(pl/random-gene opts)))
 
 (defn reshape-case
-  [case]
-  {:inputs (->> case
-                (filter (fn [[k _]] (str/starts-with? (name k) "input")))
-                (sort-by first)
-                (mapv second))
-   :output (:output1 case)})
+  [case {:keys [out-key stdout-key] :or {out-key :output1}}]
+  (merge
+    {:inputs (->> case
+                  (filter (fn [[k _]] (str/starts-with? (name k) "input")))
+                  (sort-by first)
+                  (mapv second))
+     :output (out-key case)}
+    (when stdout-key
+      {:std-out (stdout-key case)})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; PSB1 Utils
@@ -80,7 +83,13 @@
   #(- (rand-int (inc (* 2 magnitude))) magnitude))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Loss Functions
+;; Loss Function Utils
+
+(defn round
+  "Round a double to the given precision (number of significant digits)"
+  [precision n]
+  (let [factor (Math/pow 10 precision)]
+    (/ (Math/round (* n factor)) factor)))
 
 (defn absolute-distance
   [actual expected]

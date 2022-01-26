@@ -3,7 +3,8 @@
             [clojure.walk :as w]
             [erp12.schema-inference.inference :as inf]
             [erp12.schema-inference.schema :as sch]
-            [erp12.schema-inference.ast :as ast]))
+            [erp12.schema-inference.ast :as ast]
+            [erp12.cbgp-lite.lang.lib :as lib]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State Manipulation
@@ -39,18 +40,33 @@
       nil
       (nth all-vars (mod n (count all-vars))))))
 
+(defn macro?
+  [ast]
+  (and (vector? ast)
+       (= (first ast) :var)
+       (contains? lib/macros (second ast))))
+
 (defn pop-ast
   "Get the top AST from the ast stack of `state`.
 
   Returns a map of 2 elements:
     :ast - The popped AST or `:none` if no AST is found.
     :state - The state without the popped AST. If no AST found, the state is unchanged."
-  [state]
-  (if (empty? (:asts state))
-    {:ast   :none
-     :state state}
-    {:ast   (first (:asts state))
-     :state (update state :asts rest)}))
+  ([state]
+   (pop-ast state {}))
+  ([state {:keys [allow-macros] :or {allow-macros false}}]
+   (cond
+     (empty? (:asts state))
+     {:ast   :none
+      :state state}
+
+     allow-macros
+     {:ast   (first (:asts state))
+      :state (update state :asts rest)}
+
+     :else
+     (pop-ast (assoc state :asts (remove #(macro? (:ast %)) (:asts state)))
+              {:allow-macros true}))))
 
 (defn pop-unifiable-ast
   "Get the first AST (from the top) that is unifiable with the given schema.
@@ -59,21 +75,25 @@
     :ast - The popped AST or `:none` if no AST is found.
     :state - The state without the popped AST. If no AST found, the state is unchanged.
     :bindings - A map of type substitutions used to unify the types."
-  [unify-with state]
-  (loop [remaining (:asts state)
-         acc []]
-    (if (empty? remaining)
-      {:ast   :none
-       :state state
-       :bindings {}}
-      (let [ast (first remaining)
-            subs (sch/safe-mgu unify-with (:type ast))]
-        (if subs
-          {:ast      ast
-           :state    (assoc state :asts (concat acc (rest remaining)))
-           :bindings subs}
-          (recur (rest remaining)
-                 (conj acc ast)))))))
+  ([unify-with state]
+   (pop-unifiable-ast unify-with state {}))
+  ([unify-with state {:keys [allow-macros] :or {allow-macros false}}]
+   (loop [remaining (:asts state)
+          acc []]
+     (if (empty? remaining)
+       {:ast      :none
+        :state    state
+        :bindings {}}
+       (let [ast (first remaining)
+             subs (sch/safe-mgu unify-with (:type ast))]
+         (if (and subs
+                  (or allow-macros
+                      (not (macro? (:ast ast)))))
+           {:ast      ast
+            :state    (assoc state :asts (concat acc (rest remaining)))
+            :bindings subs}
+           (recur (rest remaining)
+                  (conj acc ast))))))))
 
 (defn pop-function-ast
   "Pops the top function AST regardless of argument/return types.
@@ -127,7 +147,6 @@
 ;  (clojure.pprint/pprint x)
 ;  x)
 
-;; @todo Exclude macros when searching for args with a function type. (Still allow macros to be the function.)
 ;; @todo Break this into multiple private functions to make testing easier.
 (defn push->ast
   "Compiles the `push` code into an AST that returns a value of type `ret-type`.

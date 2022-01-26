@@ -19,15 +19,18 @@
                                                           'input2 int?}
                                             :return-type float?
                                             :vars        #{'float 'float-add}
-                                            :loss-fn     #(Math/abs (- %1 %2))
+                                            :loss-fns    [#(Math/abs (- %1 %2))]
                                             :penalty     1000})
-          opts {:simplification-steps 1000
+          opts {:simplification-steps 3
                 :individual-factory   factory}
           cases [{:inputs [1.5 2] :output 3.5}
-                 {:inputs [0.0 0] :output 0.0}]]
-      (is (= {:behavior    '(3.5 0.0)
+                 {:inputs [0.0 0] :output 0.0}
+                 {:inputs [-1.0 1] :output 0.0}]]
+      (is (= {:behavior    '({:output 3.5 :std-out ""}
+                             {:output 0.0 :std-out ""}
+                             {:output 0.0 :std-out ""})
               :code        '(+ (float input2) input1)
-              :errors      [0.0 0.0]
+              :errors      [0.0 0.0 0.0]
               :genome      [[:var 'input1] [:var 'input2] [:var 'float] :apply [:var 'float-add] :apply]
               :push        [[:var 'input1] [:var 'input2] [:var 'float] :apply [:var 'float-add] :apply]
               :total-error 0.0}
@@ -37,7 +40,7 @@
                        :apply
                        [:var 'float-add]
                        :apply]]
-               (-> {:individual (assoc (factory gn cases) :genome gn)
+               (-> {:individual (assoc (factory gn {:cases cases}) :genome gn)
                     :context    {:cases cases}}
                    (merge opts)
                    simplify

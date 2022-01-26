@@ -2,7 +2,9 @@
   (:require [clojure.test :refer :all]
             [erp12.cbgp-lite.lang.compile :refer :all]
             [clojure.core.match :refer [match]]
-            [erp12.cbgp-lite.lang.lib :as lib]))
+            [erp12.cbgp-lite.lang.lib :as lib]
+            [erp12.cbgp-lite.lang.compile :as c]
+            [erp12.cbgp-lite.gp.pluhsy :as pl]))
 
 (def environment
   (mapv (fn [[symb annotation]] [:= symb annotation])
@@ -73,14 +75,14 @@
 
 (deftest conditional-logic-test
   ;; If input < 1000, return "small" else "large".
-  (is (= '(erp12.cbgp-lite.lang.lib/iff (< in1 1000) "small" "large")
+  (is (= '(if(< in1 1000) "small" "large")
          (push->clj {:push      [[:lit "large"]
                                  [:lit "small"]
                                  [:lit 1000]
                                  [:var 0]
                                  [:var 'int-lt]
                                  :apply
-                                 [:var 'erp12.cbgp-lite.lang.lib/iff]
+                                 [:var 'if]
                                  :apply]
                      :inputs    ['in1]
                      :ret-type  string?
@@ -143,3 +145,52 @@
                                                   :body   [:=> [:cat int? [:=> [:cat] [:s-var 'a]]]
                                                            [:vector [:s-var 'a]]]}]]
                      :dealiases {}}))))
+
+
+(deftest side-effects-test
+  (is (= '(do (println "Hello world!") 0)
+         (push->clj {:push      [[:lit 0]
+                                 [:var]
+                                 [:lit "Hello world!"]
+                                 [:var 'println]
+                                 :apply
+                                 [:var 'do2]
+                                 :apply]
+                     :inputs    []
+                     :ret-type  int?
+                     :type-env  (mapv (fn [[symb typ]] [:= symb typ]) lib/library)
+                     :dealiases lib/dealiases}))))
+
+(deftest replace-space-with-newline-test
+  (let [push [[;; Do part 2
+               [:lit \newline]
+               [:var 1]
+               [:var `lib/remove-char]
+               :apply
+               [:var 'length]
+               :apply
+               ;; Do part 1
+               [:var 1]
+               [:var 'println]
+               :apply
+               ;; Do
+               [:var 'do2]
+               :apply]
+              [:lit \newline]
+              [:lit \space]
+              [:var 0]
+              [:var `lib/replace-char]
+              :apply
+              :let]
+        func (c/synth-fn
+               ['input1]
+               (c/push->clj {:push      (pl/plushy->push push)
+                             :inputs    ['input1]
+                             :ret-type  int?
+                             :type-env  (->> lib/library
+                                             (merge {'input1 string?})
+                                             (mapv (fn [[symb typ]] [:= symb typ])))
+                             :dealiases lib/dealiases}))]
+    (is (= "Hello\nworld!\n"
+           (with-out-str
+             (is (= 11 (func "Hello world!"))))))))

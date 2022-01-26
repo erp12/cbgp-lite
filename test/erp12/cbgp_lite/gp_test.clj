@@ -7,9 +7,9 @@
                                                         'input2 int?}
                                           :return-type float?
                                           :vars        #{'+ 'float}
-                                          :loss-fn     #(Math/abs (- %1 %2))
+                                          :loss-fns    [#(Math/abs (- %1 %2))]
                                           :penalty     1000})]
-    (is (= {:behavior    '(nil)
+    (is (= {:behavior    '({:output nil :std-out ""})
             :code        nil
             :errors      [1000]
             :push        []
