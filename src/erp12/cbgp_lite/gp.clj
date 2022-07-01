@@ -1,12 +1,12 @@
 (ns erp12.cbgp-lite.gp
-  (:require [taoensso.timbre :as log]
-            [taoensso.timbre.appenders.core :as log-app]
-            [clj-fuzzy.levenshtein :as lev]
-            [erp12.ga-clj.generational :refer [evolve]]
-            [erp12.cbgp-lite.gp.pluhsy :as pl]
+  (:require [clj-fuzzy.levenshtein :as lev]
             [erp12.cbgp-lite.gp.individual :as indiv]
+            [erp12.cbgp-lite.gp.pluhsy :as pl]
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.lang.lib :as lib])
+            [erp12.cbgp-lite.lang.lib :as lib]
+            [erp12.ga-clj.generational :refer [evolve]]
+            [taoensso.timbre :as log]
+            [taoensso.timbre.appenders.core :as log-app])
   (:import (java.io StringWriter)))
 
 (log/merge-config!
@@ -54,7 +54,7 @@
                                   (when (contains? expected :std-out)
                                     (if (nil? (:std-out actual))
                                       penalty
-                                      (lev/distance (:std-out expected) (:std-out actual))))))
+                                      (lev/distance (:std-out actual) (:std-out expected))))))
                               behavior)
                       ;; When there is no std-out error, filter out the nils.
                       (filter some?)
@@ -81,11 +81,11 @@
                                :ret-type  return-type
                                :type-env  type-environment
                                :dealiases lib/dealiases})]
-        (merge (evaluate-code {:code code
+        (merge (evaluate-code {:code        code
                                :arg-symbols arg-symbols
-                               :cases cases
-                               :loss-fns loss-fns
-                               :penalty penalty})
+                               :cases       cases
+                               :loss-fns    loss-fns
+                               :penalty     penalty})
                {:push push
                 :code code})))))
 

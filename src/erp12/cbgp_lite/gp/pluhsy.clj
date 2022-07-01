@@ -7,12 +7,11 @@
   (let [kind (u/rand-weighted gene-distribution)
         gene-val (cond
                    (= :apply kind) :apply
-                   (= :open-close kind) (rand-nth [:open :close])
+                   (= :close kind) :close
                    (= :var kind) (u/safe-rand-nth vars)
                    (= :local kind) (rand-int Integer/MAX_VALUE)
                    (= :lit kind) (u/safe-rand-nth lits)
-                   (= :lit-generator kind) (when-let [gen (u/safe-rand-nth lit-generators)]
-                                             (gen))
+                   (= :lit-generator kind) (when-let [gen (u/safe-rand-nth lit-generators)] (gen))
                    (= :abstraction kind) (u/safe-rand-nth abstraction)
                    :else (throw (ex-info (str "Unknown kind of gene: " kind)
                                          {:gene-kind         kind
@@ -49,7 +48,8 @@
           (recur '(:close) push)
           ;; Otherwise, return the translated Push code.
           push)
-        (if (= gene :close)
+        (cond
+          (= gene :close)
           (if has-open
             ;; If there is an :open for this :close gene to close, wrap the Push
             ;; code after the :open with in a list.
@@ -65,6 +65,18 @@
             ;; If there are no :open in the Push code, this :close gene is a noop.
             (recur (rest plushy)
                    push))
+
+          ;; If the kind of gene implies the opening of a chunk (only `let` and `fn` genes)
+          ;; prepend an :open to the plushy genome and append the gene to the Push code
+          ;; so that it is followed by nested Push "chunk".
+          (or (= gene :let)
+              (and (vector? gene)
+                   (= (first gene) :fn)
+                   (> (count gene) 1)))
+          (recur (cons :open (rest plushy))
+                 (conj push gene))
+
           ;; Any other gene is added to the end of the Push code.
+          :else
           (recur (rest plushy)
                  (conj push gene)))))))
