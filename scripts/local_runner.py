@@ -1,38 +1,65 @@
 import argparse
 import os
+from datetime import datetime
 from functools import partial
 import subprocess
 from multiprocessing import Pool, cpu_count
 
 
 def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
-    log_file = os.path.join(opts.out, f"run{run_id}.txt")
-    return "; ".join([
-        f"echo \"Starting run {run_id}\"",
-        "export PATH=$PATH:/usr/java/latest/bin",
-        f"cd {opts.cbgp}",
-        f"mkdir -p {opts.out}",
-        f"{opts.clj} -M:benchmarks -m {opts.ns} {opts.args} | tee {log_file}",
-        f"echo \"Finished Run {run_id}\""
-    ])
+    log_dir = os.path.join(opts.out, opts.start_time, opts.problem)
+    log_file = os.path.join(log_dir, f"run{run_id}.txt")
+    return "; ".join(
+        [
+            f'echo "Starting run {run_id}"',
+            "export PATH=$PATH:/usr/java/latest/bin",
+            f"cd {opts.cbgp}",
+            f"mkdir -p {log_dir}",
+            f"{opts.clj} -X:benchmarks {opts.main}/run :suite-ns {opts.suite} :data-dir '\"{opts.data_dir}\"' :problem '\"{opts.problem}\"' 2>&1 | tee {log_file}",
+            f'echo "Finished Run {run_id}"',
+        ]
+    )
 
 
 def start_run(opts: argparse.Namespace, run_id: int):
-    return subprocess.run(
-        f"{run_cmd(opts, run_id)}",
-        shell=True
-    )
+    return subprocess.run(f"{run_cmd(opts, run_id)}", shell=True)
 
 
 def cli_opts() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--num-runs", type=int, help="The number of runs of the problem to start.")
-    parser.add_argument("-o", "--out", help="The path to put the log files of the run captured from stdout.")
-    parser.add_argument("-c", "--clj", help="Path to the clojure CLI binary.")
-    parser.add_argument("-d", "--cbgp", help="The path to cbgp-lite.")
-    parser.add_argument("-m", "--ns", help="The namespaces to use as an entrypoint. Must contain -main.")
-    parser.add_argument("-a", "--args", help="The args to pass through to the main function.")
-    parser.add_argument("-p", "--parallelism", type=int, default=cpu_count(), help="The number of runs that can be running concurrently.")
+    parser.add_argument(
+        "--main",
+        default="erp12.cbgp-lite.benchmark.ga",
+        help="The namespaces to use as an entrypoint. Must contain a `run` function. Default is GA.",
+    )
+    parser.add_argument(
+        "--suite",
+        default="erp12.cbgp-lite.benchmark.suite.psb",
+        help="The namespace of the benchmark problem suite. Default is PSB.",
+    )
+    parser.add_argument("--problem", help="The name of the problem to run.")
+    parser.add_argument(
+        "--data-dir",
+        help="The directory to read (and in some cases, download) problem data files to.",
+    )
+    parser.add_argument(
+        "--num-runs", type=int, help="The number of runs of the problem to start."
+    )
+    parser.add_argument(
+        "--out", help="The path to put the log files of the run captured from stdout."
+    )
+    parser.add_argument(
+        "--clj",
+        help="Path to the clojure CLI binary.",
+        default="/usr/local/bin/clojure",
+    )
+    parser.add_argument("--cbgp", help="The path to cbgp-lite.", default=".")
+    parser.add_argument(
+        "--parallelism",
+        type=int,
+        default=cpu_count(),
+        help="The number of runs that can be running concurrently.",
+    )
     return parser
 
 
@@ -42,6 +69,7 @@ if __name__ == "__main__":
 
     args.out = os.path.abspath(os.path.expanduser(args.out))
     args.cbgp = os.path.abspath(os.path.expanduser(args.cbgp))
+    args.start_time = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     if not os.path.isdir(args.cbgp):
         raise ValueError(f"cbgp-lite not found at {args.cbgp}")
@@ -57,11 +85,10 @@ if __name__ == "__main__":
 Example:
 
 python3 scripts/local_runner.py \
+    --main "erp12.cbgp-lite.benchmark.ga" \
+    --suite "erp12.cbgp-lite.benchmark.suite.psb" \
+    --problem "replace-space-with-newline" \
     --num-runs 3 \
     --out "./data/logs/test/" \
-    --clj "/usr/local/bin/clojure" \
-    --cbgp "." \
-    --ns "erp12.cbgp-lite.benchmark.psb" \
-    --args "data/program-synthesis-benchmark-datasets/datasets replace-space-with-newline" \
     --parallelism 5
 """

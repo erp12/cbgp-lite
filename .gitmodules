@@ -1,3 +1,0 @@
-[submodule "data/program-synthesis-benchmark-datasets"]
-	path = data/program-synthesis-benchmark-datasets
-	url = git@github.com:thelmuth/program-synthesis-benchmark-datasets.git

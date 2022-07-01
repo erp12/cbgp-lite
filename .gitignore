@@ -1,6 +1,5 @@
 errors.log
-data/datasets/
-data/runs/
+data/
 
 # Clojure
 pom.xml

@@ -1,4 +1,4 @@
-"""Launcher for CBGO runs on the Hampshire College Fly cluster.
+"""Launcher for fCBGP runs on the Hampshire College Fly cluster.
 
 Setup
 =====
@@ -19,46 +19,49 @@ feature branch.
 Parameters
 ==========
 
--h,          --help               Show help message and exit
--n NUM_RUNS, --num-runs NUM_RUNS  The number of runs of the problem to start.
--o OUT,      --out OUT            The path to put the log files of the run captured from stdout.
--d CBGP,     --cbgp CBGP          The path to cbgp-lite.
--m NS,       --ns NS              The namespaces to use as an entrypoint. Must contain -main.
--a ARGS,     --args ARGS          The args to pass through to the main function.
--i ID,       --id ID              The identifier for the overall flight of CBGP runs.
--t TAG,      --tag TAG            An optional tag to add to the runs.
+--help               Show help message and exit
+--num-runs NUM_RUNS  The number of runs of the problem to start.
+--out OUT            The path to put the log files of the run captured from stdout.
+--cbgp CBGP          The path to cbgp-lite.
+--ns NS              The namespaces to use as an entrypoint. Must contain -main.
+--args ARGS          The args to pass through to the main function.
+--id ID              The identifier for the overall flight of CBGP runs.
+--tag TAG            An optional tag to add to the runs.
 
 or run `python3 scripts/fly_launcher.py -h` for help.
 
 Example
 =======
 
-python3 fly_launcher.py \
-    --num-runs 10 \
+python3 scripts/fly_launcher.py \
+    --main "erp12.cbgp-lite.benchmark.ga" \
+    --suite "erp12.cbgp-lite.benchmark.suite.psb" \
+    --problem "replace-space-with-newline" \
+    --num-runs 3 \
     --out "~/runs/cbgp/my-experiment/" \
-    --cbgp "~/cbgp-lite" \
-    --ns "erp12.cbgp-lite.benchmark.psb" \
-    --args "~/data/program-synthesis-benchmark-datasets/datasets/ mirror-image"
-    --id my-gp-experiment
+    --id my-gp-experiment \
+    --dry-run
 
 """
-
-# @todo Add support for n runs of a set of problems?
 
 import argparse
 import os
 import subprocess
+from datetime import datetime
+
+CLJ = "/home/erp12/bin/clojure/bin/clojure"
 
 
 def alf_cmd(opts: argparse.Namespace, run_id: int) -> str:
-    log_file = os.path.join(opts.out, f"run{run_id}.txt")
+    log_dir = os.path.join(opts.out, opts.start_time, opts.problem)
+    log_file = os.path.join(log_dir, f"run{run_id}.txt")
     cmds = [
-        "echo \"Starting run\"",
+        'echo "Starting run"',
         "export PATH=$PATH:/usr/java/latest/bin",
         f"cd {opts.cbgp}",
-        f"mkdir -p {opts.out}",
-        f"/home/erp12/bin/clojure/bin/clojure -M:benchmarks -m {opts.ns} {opts.args} | tee {log_file}",
-        "echo \"Finished Run\""
+        f"mkdir -p {log_dir}",
+        f"{CLJ} -X:benchmarks {opts.main}/run :suite-ns {opts.suite} :data-dir '\"{opts.data_dir}\"' :problem '\"{opts.problem}\"' 2>&1 | tee {log_file}",
+        'echo "Finished Run"',
     ]
     return f"""RemoteCmd {{/bin/sh -c {{{"; ".join(cmds)}}}}}"""
 
@@ -82,13 +85,31 @@ Job -title {{{opts.id}}} -subtasks {{
 
 def cli_opts() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--num-runs", type=int, help="The number of runs of the problem to start.")
-    parser.add_argument("-o", "--out", help="The path to put the log files of the run captured from stdout.")
-    parser.add_argument("-d", "--cbgp", help="The path to cbgp-lite.")
-    parser.add_argument("-m", "--ns", help="The namespaces to use as an entrypoint. Must contain -main.")
-    parser.add_argument("-a", "--args", help="The args to pass through to the main function.")
-    parser.add_argument("-i", "--id", help="The identifier for the overall flight of CBGP runs.")
-    parser.add_argument("-t", "--tag", default="", help="An optional tag to add to the runs.")
+    parser.add_argument(
+        "--main", help="The namespaces to use as an entrypoint. Must contain -main."
+    )
+    parser.add_argument("--suite", help="The namespace of the benchmark problem suite.")
+    parser.add_argument("--problem", help="The name of the problem to run.")
+    parser.add_argument(
+        "--data-dir",
+        help="The directory to read (and in some cases, download) problem data files to.",
+    )
+    parser.add_argument(
+        "--num-runs", type=int, help="The number of runs of the problem to start."
+    )
+    parser.add_argument(
+        "--out", help="The path to put the log files of the run captured from stdout."
+    )
+    parser.add_argument("--id", help="The identifier for the overall flight of runs.")
+    parser.add_argument("--cbgp", help="The path to cbgp-lite.", default=".")
+    parser.add_argument(
+        "--tag", default="4pernode", help="An optional tag to add to the runs."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="If set, will write but not submit the ALF file.",
+    )
     return parser
 
 
@@ -102,6 +123,7 @@ if __name__ == "__main__":
 
     args.out = os.path.abspath(os.path.expanduser(args.out))
     args.cbgp = os.path.abspath(os.path.expanduser(args.cbgp))
+    args.start_time = datetime.now().strftime("%Y%m%d-%H%M%S")
 
     if not os.path.isdir(args.cbgp):
         raise ValueError(f"cbgp-lite not found at {args.cbgp}")
@@ -113,7 +135,13 @@ if __name__ == "__main__":
     with open(alf_file, "w") as alf:
         alf.write(alf_job(args))
 
-    ret = subprocess.run(
-        f"{PIXAR_INIT};{PIXAR_CMD} {alf_file}",
-        shell=True
-    )
+    if not args.dry_run:
+        try:
+            subprocess.run(
+                f"{PIXAR_INIT};{PIXAR_CMD} {alf_file}",
+                shell=True,
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as e:
+            print("Encountered error!")
+            print(e.output)
