@@ -3,7 +3,7 @@
             [erp12.cbgp-lite.gp.pluhsy :refer :all]))
 
 (deftest random-gene-test
-  (let [opts {:gene-distribution {:open-close    0.2
+  (let [opts {:gene-distribution {:close         0.2
                                   :local         0.2
                                   :var           0.2
                                   :lit           0.2
@@ -33,4 +33,7 @@
   (is (= '[:a [:b [[[:c]]]]]
          (plushy->push '(:a :open :b :open :open :open :c :close))))
   (is (= '[:a [:b] :c]
-         (plushy->push '(:a :open :b :close :close :close :c :close)))))
+         (plushy->push '(:a :open :b :close :close :close :c :close))))
+  (testing "implicit opens"
+    (is (= [:a :let [:b] :c [:fn :int] []]
+           (plushy->push '(:a :let :b :close :c [:fn :int]))))))

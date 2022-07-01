@@ -1,10 +1,9 @@
 (ns erp12.cbgp-lite.lang.compile-test
   (:require [clojure.test :refer :all]
+            [erp12.cbgp-lite.gp.pluhsy :as pl]
             [erp12.cbgp-lite.lang.compile :refer :all]
-            [clojure.core.match :refer [match]]
-            [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.gp.pluhsy :as pl]))
+            [erp12.cbgp-lite.lang.lib :as lib]))
 
 (def environment
   (mapv (fn [[symb annotation]] [:= symb annotation])
@@ -21,6 +20,10 @@
   (is (= {:ast [:var 'x] :type int?}
          (nth-var 100 {:vars [{:ast [:var 'x] :type int?}]})))
   (is (= nil (nth-var 100 {:vars []}))))
+
+(deftest macro?-test
+  (is (macro? [:var 'if]))
+  (is (not (macro? [:var 'float-add]))))
 
 (deftest pop-ast-test
   (is (= {:ast :none :state empty-state}
@@ -47,14 +50,12 @@
             :bindings {}}
            (pop-unifiable-ast [:=> [:cat int?] string?]
                               {:asts (list {:ast :_ :type boolean?}
-                                           {:ast :_ :type [:=> [:cat int?] string?]})})))))
-
-(deftest compile-chunk-test
-  (is (= {:ast :none :state empty-state}
-         (compile-chunk {:bound-vars []
-                         :ret-type   :any
-                         :state      empty-state
-                         :type-env   []}))))
+                                           {:ast :_ :type [:=> [:cat int?] string?]})}))))
+  (testing "skip macros"
+    (is (= {:ast {:ast [:var '+] :type :_}
+            :state {:asts (list {:ast [:var 'if] :type :_})}}
+           (pop-ast {:asts (list {:ast [:var 'if] :type :_}
+                                 {:ast [:var '+] :type :_})})))))
 
 (deftest simple-math-test
   ;; Add 100 to the input.
@@ -75,7 +76,7 @@
 
 (deftest conditional-logic-test
   ;; If input < 1000, return "small" else "large".
-  (is (= '(if(< in1 1000) "small" "large")
+  (is (= '(if (< in1 1000) "small" "large")
          (push->clj {:push      [[:lit "large"]
                                  [:lit "small"]
                                  [:lit 1000]
@@ -96,12 +97,12 @@
               [:var 0]
               [:var 'int-mult]
               :apply
+              :let
               [;; Binds to local variable
                [:var 1]
                [:var 1]
                [:var 'int-add]
-               :apply]
-              :let]
+               :apply]]
         code (push->clj {:push      push
                          :inputs    ['in1]
                          :ret-type  int?
@@ -115,11 +116,11 @@
 (deftest hof-with-anonymous-fn-test
   ;; Map `inc` over the elements of a vector
   (let [push [[:lit [1 2 3]]
-              [;; Binds to local variable
+              [:fn int?]
+              [;; Binds to local function argument
                [:var 0]
                [:var 'int-inc]
                :apply]
-              [:fn int?]
               [:var 'mapv]
               :apply]
         code (push->clj {:push      push
@@ -150,7 +151,6 @@
 (deftest side-effects-test
   (is (= '(do (println "Hello world!") 0)
          (push->clj {:push      [[:lit 0]
-                                 [:var]
                                  [:lit "Hello world!"]
                                  [:var 'println]
                                  :apply
@@ -162,26 +162,27 @@
                      :dealiases lib/dealiases}))))
 
 (deftest replace-space-with-newline-test
-  (let [push [[;; Do part 2
-               [:lit \newline]
-               [:var 1]
-               [:var `lib/remove-char]
-               :apply
-               [:var 'length]
-               :apply
-               ;; Do part 1
-               [:var 1]
-               [:var 'println]
-               :apply
-               ;; Do
-               [:var 'do2]
-               :apply]
-              [:lit \newline]
+  (let [push [[:lit \newline]
               [:lit \space]
               [:var 0]
               [:var `lib/replace-char]
               :apply
-              :let]
+              :let
+              ;; From here below is the body of the `let`.
+              ;; Do part 2
+              [:lit \newline]
+              [:var 1]
+              [:var `lib/remove-char]
+              :apply
+              [:var 'length]
+              :apply
+              ;; Do part 1
+              [:var 1]
+              [:var 'println]
+              :apply
+              ;; Do
+              [:var 'do2]
+              :apply]
         func (c/synth-fn
                ['input1]
                (c/push->clj {:push      (pl/plushy->push push)
