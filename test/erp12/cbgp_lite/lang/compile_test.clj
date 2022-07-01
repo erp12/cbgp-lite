@@ -52,10 +52,24 @@
                               {:asts (list {:ast :_ :type boolean?}
                                            {:ast :_ :type [:=> [:cat int?] string?]})}))))
   (testing "skip macros"
-    (is (= {:ast {:ast [:var '+] :type :_}
+    (is (= {:ast   {:ast [:var '+] :type :_}
             :state {:asts (list {:ast [:var 'if] :type :_})}}
            (pop-ast {:asts (list {:ast [:var 'if] :type :_}
                                  {:ast [:var '+] :type :_})})))))
+
+(deftest push->ast-test
+  (testing "unpacking nested push"
+    (is (= {:ast  [:apply [:var 'int-add] [:var 'in1] [:lit 100]]
+            :type int?}
+           (push->ast {:push      [[:lit 100]
+                                   [:var 'in1]
+                                   [:var 'int-add]
+                                   [:fn int?]
+                                   [:apply]]
+                       :inputs    ['in1]
+                       :ret-type  int?
+                       :type-env  (conj environment [:= 'in1 int?])
+                       :dealiases lib/dealiases})))))
 
 (deftest simple-math-test
   ;; Add 100 to the input.

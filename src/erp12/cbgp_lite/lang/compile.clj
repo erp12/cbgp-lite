@@ -221,25 +221,21 @@
                   body (push->ast {:push       (first (:push state))
                                    :bound-vars (vec (concat bound-vars arg-var-asts))
                                    :ret-type   [:s-var (sch/gen-s-var)]
-                                   :type-env   fn-body-env})
-                  state-no-body-chunk (update state :push rest)]
+                                   :type-env   fn-body-env})]
               (if (= :none body)
                 ;; @todo Should we leave the chunk on the push stack and unpack it?
-                state-no-body-chunk
+                state
                 (push-ast {:ast  [:fn (vec (cons :cat arg-vars)) (:ast body)]
                            :type [:=> (vec (cons :cat arg-types)) (:type body)]}
-                          state-no-body-chunk)))
+                          (update state :push rest))))
 
             ;; Searches for an AST to define the local variable.
             ;; Compiles a chunk into the body of the let.
             ;; @todo Should there be N local variables?
             (_ :guard #(= :let %))
-            (let [{var-def :ast new-state :state} (pop-ast state)
-                  ;; Still pop the "chunk" that is next on the stack.
-                  ;; @todo Should we leave the chunk on the push stack and unpack it?
-                  noop-state (update state :push rest)]
+            (let [{var-def :ast new-state :state} (pop-ast state)]
               (if (= :none var-def)
-                noop-state
+                state
                 (let [;; Generate a unique symbol for the new variable.
                       local-var-symb (gensym "v-")
                       local-var [:var local-var-symb]
@@ -249,12 +245,16 @@
                                        :ret-type   [:s-var (sch/gen-s-var)]
                                        :type-env   (conj type-env [:= local-var-symb (:type var-def)])})]
                   (if (= :none body)
-                    noop-state
+                    state
                     ;; Compose the new `let` AST from the local variable symbol, def, and body.
                     ;; Push the new AST to the state.
                     (push-ast {:ast  [:let [local-var (:ast var-def)] (:ast body)]
                                :type (:type body)}
-                              (update new-state :push rest))))))))))))
+                              (update new-state :push rest))))))
+
+            ;; Nested push sequences (not consumed by :fn or :let) are unpacked onto the push stack.
+            [& _]
+            (update state :push #(concat push-unit %))))))))
 
 (defn push->clj
   "Translates Push code into a Clojure form that returns value of type `ret-type`."
