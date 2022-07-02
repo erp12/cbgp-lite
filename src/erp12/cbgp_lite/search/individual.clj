@@ -15,7 +15,6 @@
          {:output  result#
           :std-out (str s#)}))))
 
-
 (defn log-program-execution-errors
   "Debug log any errors thrown during program evaluation to help with
   debugging the library of functions and their type annotations."
@@ -45,64 +44,76 @@
 
 (defn evaluate-until-first-failure
   [{:keys [code arg-symbols cases loss-fns]}]
-  (let [;; Create a Clojure function with the compiled code.
-        func (c/synth-fn arg-symbols code)]
-    (loop [cases cases
-           cases-used 0]
-      (if (empty? cases)
-        {:func       func
-         :solution?  true
-         :cases-used cases-used}
-        (let [{:keys [inputs] :as case} (first cases)
-              prog-output (try
-                            (with-out-and-stdout (apply func inputs))
-                            (catch Exception e
-                              {:output e :std-out nil}))
-              _ (log-program-execution-errors (assoc prog-output :code code))
-              errors (compute-errors-on-case {:case        case
-                                              :penalty     1 ;; Any positive number will short-circuit evaluation.
-                                              :loss-fns    loss-fns
-                                              :prog-output prog-output})]
-          (if (some pos? errors)
-            {:func       func
-             :cases-used (inc cases-used)}
-            (recur (rest cases) (inc cases-used))))))))
+  (if (nil? code)
+    {:func       nil
+     :cases-used 0}
+    (let [;; Create a Clojure function with the compiled code.
+          func (c/synth-fn arg-symbols code)]
+      (loop [cases cases
+             cases-used 0]
+        (if (empty? cases)
+          {:func       func
+           :solution?  true
+           :cases-used cases-used}
+          (let [{:keys [inputs] :as case} (first cases)
+                prog-output (try
+                              (with-out-and-stdout (apply func inputs))
+                              (catch Exception e
+                                {:output e :std-out nil}))
+                _ (log-program-execution-errors (assoc prog-output :code code))
+                errors (compute-errors-on-case {:case        case
+                                                :penalty     1 ;; Any positive number will short-circuit evaluation.
+                                                :loss-fns    loss-fns
+                                                :prog-output prog-output})]
+            (if (some pos? errors)
+              {:func       func
+               :cases-used (inc cases-used)}
+              (recur (rest cases) (inc cases-used)))))))))
 
 (defn evaluate-full-behavior
   [{:keys [code arg-symbols cases loss-fns penalty]}]
-  (let [;; Create a Clojure function with the compiled code.
-        func (c/synth-fn arg-symbols code)
-        ;; Call the function on each training case.
-        behavior (->> cases
-                      (map :inputs)
-                      (map #(try
-                              (with-out-and-stdout (apply func %))
-                              (catch Exception e
-                                {:output e :std-out nil}))))
+  (if (nil? code)
+    ;; If the compilation process did not produce any code. Assume all penalties.
+    (let [errors (repeat (* (count cases) (inc (count loss-fns))) penalty)]
+      {:func        nil
+       :behavior    nil
+       ;; Assume penalty errors for all loss functions and std-out for each case.
+       ;; May be too many errors (if no std-out but they are all the same, so that's okay.
+       :errors      errors
+       :total-error (reduce + errors)
+       :cases-used  0})
+    (let [;; Create a Clojure function with the compiled code.
+          func (c/synth-fn arg-symbols code)
+          ;; Call the function on each training case.
+          behavior (->> cases
+                        (map :inputs)
+                        (map #(try
+                                (with-out-and-stdout (apply func %))
+                                (catch Exception e
+                                  {:output e :std-out nil}))))
 
-        ;; Log the first execution error seen.
-        _ (log-program-execution-errors (assoc (first (filter #(instance? Exception (:output %)) behavior))
-                                          :code code))
+          ;; Log the first execution error seen.
+          _ (log-program-execution-errors (assoc (first (filter #(instance? Exception (:output %)) behavior))
+                                            :code code))
 
-        ;; Compute the error on each case.
-        errors (->> cases
-                    (mapcat (fn [b case]
-                              (compute-errors-on-case {:case        case
-                                                       :prog-output b
-                                                       :loss-fns    loss-fns
-                                                       :penalty     penalty}))
-                            behavior)
-                    ;; When there is no std-out error, filter out the nils.
-                    (filter some?)
-                    vec)
-        total-error (apply + errors)]
-    {:func        func
-     :behavior    behavior
-     :errors      errors
-     :total-error total-error
-     :solution?   (zero? total-error)
-     :cases-used  (count cases)}))
-
+          ;; Compute the error on each case.
+          errors (->> cases
+                      (mapcat (fn [b case]
+                                (compute-errors-on-case {:case        case
+                                                         :prog-output b
+                                                         :loss-fns    loss-fns
+                                                         :penalty     penalty}))
+                              behavior)
+                      ;; When there is no std-out error, filter out the nils.
+                      (filter some?)
+                      vec)
+          total-error (apply + errors)]
+      {:func        func
+       :behavior    behavior
+       :errors      errors
+       :total-error total-error
+       :solution?   (zero? total-error)
+       :cases-used  (count cases)})))
 
 (defn make-individual-factory
   [{:keys [evaluate-fn cases] :as opts}]
@@ -122,7 +133,6 @@
                             :cases cases))
              {:push push
               :code code}))))
-
 
 (defn simplify
   [{:keys [individual simplification-steps individual-factory context]}]

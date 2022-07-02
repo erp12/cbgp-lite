@@ -81,13 +81,21 @@
                                                 :evaluate-fn i/evaluate-full-behavior}
                                                (u/enhance :arg-symbols (fn [{:keys [input->type]}] (vec (sort (keys input->type))))
                                                           :type-env task/type-environment)))]
-    (is (= {:behavior    '({:output nil :std-out ""})
-            :code        nil
-            :errors      [1000]
-            :push        []
-            :total-error 1000
+    (is (= {:behavior    '({:output 1.0 :std-out ""})
+            :code        1.0
+            :errors      [2.5]
+            :push        [[:lit 1.0]]
+            :total-error 2.5
             :cases-used  1
             :solution?   false}
+           (dissoc (factory '([:lit 1.0]) {:cases [{:inputs [1.5 2] :output 3.5}]})
+                   :func)))
+    (is (= {:behavior    nil
+            :code        nil
+            :errors      [1000 1000]
+            :push        []
+            :total-error 2000
+            :cases-used  0}
            (dissoc (factory '() {:cases [{:inputs [1.5 2] :output 3.5}]})
                    :func)))))
 
