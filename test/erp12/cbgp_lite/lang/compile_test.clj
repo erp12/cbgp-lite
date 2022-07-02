@@ -1,9 +1,9 @@
 (ns erp12.cbgp-lite.lang.compile-test
   (:require [clojure.test :refer :all]
-            [erp12.cbgp-lite.gp.pluhsy :as pl]
             [erp12.cbgp-lite.lang.compile :refer :all]
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.lang.lib :as lib]))
+            [erp12.cbgp-lite.lang.lib :as lib]
+            [erp12.cbgp-lite.search.pluhsy :as pl]))
 
 (def environment
   (mapv (fn [[symb annotation]] [:= symb annotation])
@@ -52,7 +52,7 @@
                               {:asts (list {:ast :_ :type boolean?}
                                            {:ast :_ :type [:=> [:cat int?] string?]})}))))
   (testing "skip macros"
-    (is (= {:ast {:ast [:var '+] :type :_}
+    (is (= {:ast   {:ast [:var '+] :type :_}
             :state {:asts (list {:ast [:var 'if] :type :_})}}
            (pop-ast {:asts (list {:ast [:var 'if] :type :_}
                                  {:ast [:var '+] :type :_})})))))
@@ -63,11 +63,11 @@
               [:var 'in1]
               [:var 'int-add]
               :apply]
-        code (push->clj {:push      push
-                         :inputs    ['in1]
-                         :ret-type  int?
-                         :type-env  (conj environment [:= 'in1 int?])
-                         :dealiases lib/dealiases})
+        code (push->clj {:push        push
+                         :arg-symbols ['in1]
+                         :return-type int?
+                         :type-env    (conj environment [:= 'in1 int?])
+                         :dealiases   lib/dealiases})
         f (synth-fn ['in1] code)]
     (is (= 100 (f 0)))
     (is (= 200 (f 100)))
@@ -77,18 +77,18 @@
 (deftest conditional-logic-test
   ;; If input < 1000, return "small" else "large".
   (is (= '(if (< in1 1000) "small" "large")
-         (push->clj {:push      [[:lit "large"]
-                                 [:lit "small"]
-                                 [:lit 1000]
-                                 [:var 0]
-                                 [:var 'int-lt]
-                                 :apply
-                                 [:var 'if]
-                                 :apply]
-                     :inputs    ['in1]
-                     :ret-type  string?
-                     :type-env  (conj environment [:= 'in1 int?])
-                     :dealiases lib/dealiases}))))
+         (push->clj {:push        [[:lit "large"]
+                                   [:lit "small"]
+                                   [:lit 1000]
+                                   [:var 0]
+                                   [:var 'int-lt]
+                                   :apply
+                                   [:var 'if]
+                                   :apply]
+                     :arg-symbols ['in1]
+                     :return-type string?
+                     :type-env    (conj environment [:= 'in1 int?])
+                     :dealiases   lib/dealiases}))))
 
 (deftest let-binding-test
   ;; Square and then double the input.
@@ -103,11 +103,11 @@
                [:var 1]
                [:var 'int-add]
                :apply]]
-        code (push->clj {:push      push
-                         :inputs    ['in1]
-                         :ret-type  int?
-                         :type-env  (conj environment [:= 'in1 int?])
-                         :dealiases lib/dealiases})
+        code (push->clj {:push        push
+                         :arg-symbols ['in1]
+                         :return-type int?
+                         :type-env    (conj environment [:= 'in1 int?])
+                         :dealiases   lib/dealiases})
         f (synth-fn ['in1] code)]
     (is (= 0 (f 0)))
     (is (= 2 (f 1)))
@@ -123,43 +123,43 @@
                :apply]
               [:var 'mapv]
               :apply]
-        code (push->clj {:push      push
-                         :inputs    []
-                         :ret-type  [:vector int?]
-                         :type-env  environment
-                         :dealiases lib/dealiases})
+        code (push->clj {:push        push
+                         :arg-symbols []
+                         :return-type [:vector int?]
+                         :type-env    environment
+                         :dealiases   lib/dealiases})
         f (synth-fn [] code)]
     (is (= [2 3 4] (f)))))
 
 (deftest nullary-fn-test
   (is (= '(repeatedly 5 (clojure.core/fn [] (rand)))
-         (push->clj {:push      [[:var 'rand]
-                                 :apply
-                                 [:fn]
-                                 [:lit 5]
-                                 [:var 'repeatedly]
-                                 :apply]
-                     :inputs    []
-                     :ret-type  [:vector float?]
-                     :type-env  [[:= 'rand [:=> [:cat] float?]]
-                                 [:= 'repeatedly {:s-vars '[a]
-                                                  :body   [:=> [:cat int? [:=> [:cat] [:s-var 'a]]]
-                                                           [:vector [:s-var 'a]]]}]]
-                     :dealiases {}}))))
+         (push->clj {:push        [[:var 'rand]
+                                   :apply
+                                   [:fn]
+                                   [:lit 5]
+                                   [:var 'repeatedly]
+                                   :apply]
+                     :arg-symbols []
+                     :return-type [:vector float?]
+                     :type-env    [[:= 'rand [:=> [:cat] float?]]
+                                   [:= 'repeatedly {:s-vars '[a]
+                                                    :body   [:=> [:cat int? [:=> [:cat] [:s-var 'a]]]
+                                                             [:vector [:s-var 'a]]]}]]
+                     :dealiases   {}}))))
 
 
 (deftest side-effects-test
   (is (= '(do (println "Hello world!") 0)
-         (push->clj {:push      [[:lit 0]
-                                 [:lit "Hello world!"]
-                                 [:var 'println]
-                                 :apply
-                                 [:var 'do2]
-                                 :apply]
-                     :inputs    []
-                     :ret-type  int?
-                     :type-env  (mapv (fn [[symb typ]] [:= symb typ]) lib/library)
-                     :dealiases lib/dealiases}))))
+         (push->clj {:push        [[:lit 0]
+                                   [:lit "Hello world!"]
+                                   [:var 'println]
+                                   :apply
+                                   [:var 'do2]
+                                   :apply]
+                     :arg-symbols []
+                     :return-type int?
+                     :type-env    (mapv (fn [[symb typ]] [:= symb typ]) lib/library)
+                     :dealiases   lib/dealiases}))))
 
 (deftest replace-space-with-newline-test
   (let [push [[:lit \newline]
@@ -185,13 +185,13 @@
               :apply]
         func (c/synth-fn
                ['input1]
-               (c/push->clj {:push      (pl/plushy->push push)
-                             :inputs    ['input1]
-                             :ret-type  int?
-                             :type-env  (->> lib/library
-                                             (merge {'input1 string?})
-                                             (mapv (fn [[symb typ]] [:= symb typ])))
-                             :dealiases lib/dealiases}))]
+               (c/push->clj {:push        (pl/plushy->push push)
+                             :arg-symbols ['input1]
+                             :return-type int?
+                             :type-env    (->> lib/library
+                                               (merge {'input1 string?})
+                                               (mapv (fn [[symb typ]] [:= symb typ])))
+                             :dealiases   lib/dealiases}))]
     (is (= "Hello\nworld!\n"
            (with-out-str
              (is (= 11 (func "Hello world!"))))))))

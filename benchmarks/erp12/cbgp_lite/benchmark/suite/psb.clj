@@ -3,7 +3,8 @@
             [clojure.string :as str]
             [clojure.string]
             [erp12.cbgp-lite.benchmark.utils :as bu]
-            [psb2.core :as psb2]))
+            [psb2.core :as psb2]
+            [taoensso.timbre :as log]))
 
 (defn problems
   [{:keys [penalty]}]

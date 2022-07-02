@@ -1,6 +1,6 @@
-(ns erp12.cbgp-lite.gp.pluhsy-test
+(ns erp12.cbgp-lite.search.pluhsy-test
   (:require [clojure.test :refer [deftest is testing]]
-            [erp12.cbgp-lite.gp.pluhsy :refer :all]))
+            [erp12.cbgp-lite.search.pluhsy :refer :all]))
 
 (deftest random-gene-test
   (let [opts {:gene-distribution {:close         0.2
