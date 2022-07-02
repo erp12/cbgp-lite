@@ -4,7 +4,14 @@
             [erp12.cbgp-lite.search.pluhsy :as pl]
             [erp12.cbgp-lite.task :as task]
             [erp12.ga-clj.search.random :as rs]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [taoensso.timbre.appenders.core :as log-app]))
+
+(log/merge-config!
+  {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
+   :appenders {:println (assoc (log-app/println-appender) :min-level :debug)
+               ;:spit    (assoc (log-app/spit-appender {:fname "./errors.log"}) :min-level :debug)
+               }})
 
 (def default-config
   {:n-train              100
@@ -13,7 +20,6 @@
    :max-evaluations      (* 1000 300 100)
    :min-genome-size      50
    :max-genome-size      250
-   :simplification-steps 2000
    :report-period        100})
 
 (defn run
