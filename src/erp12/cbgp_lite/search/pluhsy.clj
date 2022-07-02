@@ -1,4 +1,4 @@
-(ns erp12.cbgp-lite.gp.pluhsy
+(ns erp12.cbgp-lite.search.pluhsy
   (:require [erp12.cbgp-lite.utils :as u]))
 
 (defn random-gene

@@ -8,8 +8,8 @@
 
 (defn rand-weighted
   [m]
-  (let [weights   (reductions + (vals m))
-        total   (last weights)
+  (let [weights (reductions + (vals m))
+        total (last weights)
         choices (map vector (keys m) weights)]
     (let [choice (rand total)]
       (loop [[[c w] & more] choices]
@@ -23,3 +23,21 @@
   (if (empty? coll)
     nil
     (rand-nth coll)))
+
+(defn enhance
+  ([m k f]
+   (assoc m k (f m)))
+  ([m k f & kfs]
+   (->> kfs
+        (partition 2 2)
+        (cons [k f])
+        (reduce (fn [m [k f]] (enhance m k f)) m))))
+
+(defn enhance-missing
+  ([m k f]
+   (if (contains? m k) m (enhance m k f)))
+  ([m k f & kfs]
+   (->> kfs
+        (partition 2 2)
+        (cons [k f])
+        (reduce (fn [m [k f]] (enhance-missing m k f)) m))))

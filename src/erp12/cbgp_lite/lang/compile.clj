@@ -4,7 +4,8 @@
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.schema-inference.ast :as ast]
             [erp12.schema-inference.inference :as inf]
-            [erp12.schema-inference.schema :as sch])
+            [erp12.schema-inference.schema :as sch]
+            [taoensso.timbre :as log])
   (:import (clojure.lang Compiler$CompilerException)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -258,12 +259,12 @@
 
 (defn push->clj
   "Translates Push code into a Clojure form that returns value of type `ret-type`."
-  [{:keys [push inputs ret-type type-env dealiases]
+  [{:keys [push arg-symbols return-type type-env dealiases]
     :or   {dealiases {}}}]
-  (let [input-vars (vec (map (fn [in] [:var in]) inputs))
+  (let [input-vars (vec (map (fn [in] [:var in]) arg-symbols))
         ast (:ast (push->ast {:push       push
                               :bound-vars input-vars
-                              :ret-type   ret-type
+                              :ret-type   return-type
                               :type-env   type-env}))]
     (->> ast ast/ast->form (w/postwalk-replace dealiases))))
 

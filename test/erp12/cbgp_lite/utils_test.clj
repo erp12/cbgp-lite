@@ -9,3 +9,10 @@
 
 (deftest safe-rand-nth-test
   (is (nil? (safe-rand-nth []))))
+
+(deftest enhance-test
+  (is (= {:a 0} (enhance {} :a count)))
+  (is (= {:a 0 :b 1}
+         (enhance {}
+                  :a count
+                  :b (fn [{:keys [a]}] (inc a))))))

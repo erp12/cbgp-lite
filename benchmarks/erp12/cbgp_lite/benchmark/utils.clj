@@ -1,28 +1,15 @@
 (ns erp12.cbgp-lite.benchmark.utils
-  (:require [clojure.set :as set]
-            [erp12.cbgp-lite.gp.pluhsy :as pl]
-            [erp12.cbgp-lite.lang.lib :as lib]))
+  (:require [taoensso.timbre :as log]))
 
-(defn problem-types
-  [{:keys [input->type return-type other-types]}]
-  (set/union (set (vals input->type)) #{return-type} other-types))
-
-(defn genetic-source
-  [{:keys [literals lit-generators gene-distribution] :as info}]
-  (let [types (problem-types info)
-        opts {:vars              (vec (keys (lib/lib-for-types types)))
-              :lits              literals
-              :lit-generators    lit-generators
-              :abstraction       (vec (concat [:let [:fn]]
-                                              ;; 1-arg functions
-                                              (map (partial vector :fn) types)
-                                              ;; 2-arg functions
-                                              (for [arg1 types
-                                                    arg2 types]
-                                                [:fn arg1 arg2])))
-              :gene-distribution gene-distribution}]
-    #(pl/random-gene opts)))
-
+(defn read-problem
+  [{:keys [suite-ns problem config]}]
+  (require suite-ns)
+  (let [suite-ns (find-ns suite-ns)
+        suite-problems ((ns-resolve suite-ns 'problems) config)
+        problem-info (get suite-problems (name problem))
+        read-cases (ns-resolve suite-ns 'read-cases)
+        task (merge config (read-cases config) problem-info)]
+    task))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ERC Generators
