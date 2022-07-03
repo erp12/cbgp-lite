@@ -9,15 +9,15 @@
 
 (log/merge-config!
   {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
-   :appenders {:println (assoc (log-app/println-appender) :min-level :debug)
+   :appenders {:println (assoc (log-app/println-appender) :min-level :info)
                ;:spit    (assoc (log-app/spit-appender {:fname "./errors.log"}) :min-level :debug)
                }})
 
 (def default-config
   {:n-train              100
    :n-test               300
-   ;; Comparable to GA: population size * max generations * training cases
-   :max-evaluations      (* 1000 300 100)
+   ;; Comparable to GA: population size * max generations
+   :max-evaluations      (* 500 100)
    :min-genome-size      50
    :max-genome-size      250
    :report-period        100})

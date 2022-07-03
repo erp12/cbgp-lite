@@ -136,7 +136,7 @@
    {:input->type    {'input1 [:vector int?]}
     :return-type    [:vector int?]
     :other-types    [int? boolean?]
-    :literals       []
+    :literals       [0]
     :lit-generators []
     :loss-fns       [lev/distance]}
 
