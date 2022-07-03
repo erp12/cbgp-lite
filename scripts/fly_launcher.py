@@ -20,11 +20,11 @@ Parameters
 ==========
 
 --help               Show help message and exit
+--search SEARCH      The search algorithm. Options: [ga, random-search, simulated-annealing]. Default is ga.
+--data-dir DATA_DIR  The directory to read (and in some cases, download) problem data files to.
 --num-runs NUM_RUNS  The number of runs of the problem to start.
 --out OUT            The path to put the log files of the run captured from stdout.
 --cbgp CBGP          The path to cbgp-lite.
---ns NS              The namespaces to use as an entrypoint. Must contain -main.
---args ARGS          The args to pass through to the main function.
 --id ID              The identifier for the overall flight of CBGP runs.
 --tag TAG            An optional tag to add to the runs.
 
@@ -34,9 +34,9 @@ Example
 =======
 
 python3 scripts/fly_launcher.py \
-    --main "erp12.cbgp-lite.benchmark.ga" \
-    --suite "erp12.cbgp-lite.benchmark.suite.psb" \
+    --search "ga" \
     --problem "replace-space-with-newline" \
+    --data-dir "./data/psb/" \
     --num-runs 3 \
     --out "~/runs/cbgp/my-experiment/" \
     --id my-gp-experiment \
@@ -55,12 +55,14 @@ CLJ = "/home/erp12/bin/clojure/bin/clojure"
 def alf_cmd(opts: argparse.Namespace, run_id: int) -> str:
     log_dir = os.path.join(opts.out, opts.start_time, opts.problem)
     log_file = os.path.join(log_dir, f"run{run_id}.txt")
+    main_ns = "erp12.cbgp-lite.benchmark." + opts.search
+    suite_ns = "erp12.cbgp-lite.benchmark.suite.psb"
     cmds = [
         'echo "Starting run"',
         "export PATH=$PATH:/usr/java/latest/bin",
         f"cd {opts.cbgp}",
         f"mkdir -p {log_dir}",
-        f"{CLJ} -X:benchmarks {opts.main}/run :suite-ns {opts.suite} :data-dir '\"{opts.data_dir}\"' :problem '\"{opts.problem}\"' 2>&1 | tee {log_file}",
+        f"{CLJ} -X:benchmarks {main_ns}/run :suite-ns {suite_ns} :data-dir '\"{opts.data_dir}\"' :problem '\"{opts.problem}\"' 2>&1 | tee {log_file}",
         'echo "Finished Run"',
     ]
     return f"""RemoteCmd {{/bin/sh -c {{{"; ".join(cmds)}}}}}"""
@@ -86,9 +88,10 @@ Job -title {{{opts.id}}} -subtasks {{
 def cli_opts() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--main", help="The namespaces to use as an entrypoint. Must contain -main."
+        "--search",
+        default="ga",
+        help="The search algorithm. Options: [ga, random-search, simulated-annealing]. Default is ga."
     )
-    parser.add_argument("--suite", help="The namespace of the benchmark problem suite.")
     parser.add_argument("--problem", help="The name of the problem to run.")
     parser.add_argument(
         "--data-dir",

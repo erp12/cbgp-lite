@@ -9,13 +9,15 @@ from multiprocessing import Pool, cpu_count
 def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
     log_dir = os.path.join(opts.out, opts.start_time, opts.problem)
     log_file = os.path.join(log_dir, f"run{run_id}.txt")
+    main_ns = "erp12.cbgp-lite.benchmark." + opts.search
+    suite_ns = "erp12.cbgp-lite.benchmark.suite.psb"
     return "; ".join(
         [
             f'echo "Starting run {run_id}"',
             "export PATH=$PATH:/usr/java/latest/bin",
             f"cd {opts.cbgp}",
             f"mkdir -p {log_dir}",
-            f"{opts.clj} -X:benchmarks {opts.main}/run :suite-ns {opts.suite} :data-dir '\"{opts.data_dir}\"' :problem '\"{opts.problem}\"' 2>&1 | tee {log_file}",
+            f"{opts.clj} -X:benchmarks {main_ns}/run :suite-ns {suite_ns} :data-dir '\"{opts.data_dir}\"' :problem '\"{opts.problem}\"' 2>&1 | tee {log_file}",
             f'echo "Finished Run {run_id}"',
         ]
     )
@@ -28,14 +30,9 @@ def start_run(opts: argparse.Namespace, run_id: int):
 def cli_opts() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--main",
-        default="erp12.cbgp-lite.benchmark.ga",
-        help="The namespaces to use as an entrypoint. Must contain a `run` function. Default is GA.",
-    )
-    parser.add_argument(
-        "--suite",
-        default="erp12.cbgp-lite.benchmark.suite.psb",
-        help="The namespace of the benchmark problem suite. Default is PSB.",
+        "--search",
+        default="ga",
+        help="Options: ga, random-search, simulated-annealing. Default is ga.",
     )
     parser.add_argument("--problem", help="The name of the problem to run.")
     parser.add_argument(
@@ -85,10 +82,10 @@ if __name__ == "__main__":
 Example:
 
 python3 scripts/local_runner.py \
-    --main "erp12.cbgp-lite.benchmark.ga" \
-    --suite "erp12.cbgp-lite.benchmark.suite.psb" \
-    --problem "replace-space-with-newline" \
+    --search "simulated-annealing" \
+    --problem "vectors-summed" \
+    --data-dir "./data/psb/" \
     --num-runs 3 \
     --out "./data/logs/test/" \
-    --parallelism 5
+    --parallelism 1
 """

@@ -10,7 +10,7 @@
 
 (log/merge-config!
   {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
-   :appenders {:println (assoc (log-app/println-appender) :min-level :debug)
+   :appenders {:println (assoc (log-app/println-appender) :min-level :info)
                ;:spit    (assoc (log-app/spit-appender {:fname "./errors.log"}) :min-level :debug)
                }})
 
@@ -18,12 +18,13 @@
   {:n-train              100
    :n-test               300
    ;; Comparable to GA: population size * max generations
-   :max-steps            (* 1000 300)
+   :max-steps            (* 500 100)
    :umad-rate            0.1
    :min-genome-size      50
    :max-genome-size      250
+   :penalty              1e5
    :simplification-steps 2000
-   :report-period        1000})
+   :report-period        100})
 
 (defn run
   [opts]
@@ -55,9 +56,13 @@
                                        :stop-fn            (let [{:keys [report-period max-steps]} opts]
                                                              (fn [{:keys [step individual temp]}]
                                                                (when (zero? (mod step report-period))
-                                                                 (println "Step:" step "\tTemp:" temp "\tBest Code:" (:code individual)))
+                                                                 (log/info "REPORT"
+                                                                           {:step       step
+                                                                            :temp       temp
+                                                                            :best-error (:total-error individual)
+                                                                            :best-code  (:code individual)}))
                                                                (cond
-                                                                 (= (:error individual) 0) :solution-found
+                                                                 (= (:total-error individual) 0) :solution-found
                                                                  (>= step max-steps) :max-step-reached)))
                                        :max-steps          (:max-steps opts)})
         ;; Simplify the best individual seen during evolution.
@@ -65,10 +70,15 @@
                           :simplification-steps (:simplification-steps config)
                           :individual-factory   individual-factory})
         ;; Evaluate the final program on the unseen test cases.
-        {:keys [solution?]} (i/evaluate-until-first-failure {:code        (:code best)
-                                                             :arg-symbols (:arg-symbols task)
-                                                             :cases       (:test task)
-                                                             :loss-fns    (:loss-fns task)})]
+        {:keys [solution?]} (i/evaluate-full-behavior {:code        (:code best)
+                                                       :arg-symbols (:arg-symbols task)
+                                                       :cases       (:test task)
+                                                       :loss-fns    (:loss-fns task)})]
+    (log/info "BEST INDIVIDUAL" best)
+    (log/info "BEST CODE" (let [code (:code best)]
+                            (if (coll? code)
+                              (reverse (into '() code))
+                              code)))
     (if (= :solution-found result)
       (do
         (log/info "SOLUTION FOUND")

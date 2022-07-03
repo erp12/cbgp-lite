@@ -10,7 +10,7 @@
 
 (log/merge-config!
   {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
-   :appenders {:println (assoc (log-app/println-appender) :min-level :debug)
+   :appenders {:println (assoc (log-app/println-appender) :min-level :info)
                ;:spit    (assoc (log-app/spit-appender {:fname "./errors.log"}) :min-level :debug)
                }})
 
@@ -26,8 +26,8 @@
 (def default-config
   {:n-train              100
    :n-test               300
-   :population-size      1000
-   :max-generations      300
+   :population-size      500                                ; 1000
+   :max-generations      100                                ; 300
    :umad-rate            0.1
    :min-genome-size      50
    :max-genome-size      250
@@ -98,7 +98,10 @@
                                                        :loss-fns    (:loss-fns task)
                                                        :penalty     (:penalty default-config)})]
     (log/info "BEST INDIVIDUAL" best)
-    (log/info "BEST CODE" (reverse (into '() (:code best))))
+    (log/info "BEST CODE" (let [code (:code best)]
+                            (if (coll? code)
+                              (reverse (into '() code))
+                              code)))
     (if (= :solution-found result)
       (do
         (log/info "SOLUTION FOUND")
@@ -112,6 +115,6 @@
 
   (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
         :data-dir "data/psb/"
-        :problem  "number-io"})
+        :problem  "replace-space-with-newline"})
 
   )
