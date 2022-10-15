@@ -1,5 +1,6 @@
 errors.log
 data/
+scripts/pull_fly_logs.sh
 
 # Clojure
 pom.xml

@@ -1,6 +1,7 @@
 (ns erp12.cbgp-lite.search.individual
   (:require [clj-fuzzy.levenshtein :as lev]
             [erp12.cbgp-lite.lang.compile :as c]
+            [erp12.cbgp-lite.lang.form :as f]
             [erp12.cbgp-lite.search.pluhsy :as pl]
             [taoensso.timbre :as log])
   (:import (java.io StringWriter)))
@@ -15,6 +16,14 @@
          {:output  result#
           :std-out (str s#)}))))
 
+(defn- invoke-func
+  "Invokes the `func` on `args` and captures its stdout. Also captures exceptions."
+  [func args]
+  (try
+    (with-out-and-stdout (apply func args))
+    (catch Exception e
+      {:output e :std-out nil})))
+
 (defn log-program-execution-errors
   "Debug log any errors thrown during program evaluation to help with
   debugging the library of functions and their type annotations."
@@ -25,16 +34,25 @@
                 :code code})
     true))
 
-(defn compute-errors-on-case
-  [{:keys [case penalty loss-fns prog-output]}]
+(defn errors-for-case
+  "Compute errors on a single case given a program's output.
+
+  Options:
+      :case        - The case. Contains `output` and optionally `std-out`.
+      :prog-output - A programs output containing `output` and optionally `std-out`.
+      :penalty     - The penalty error for exceptions or nil output.
+      :loss-fns    - A collection of loss functions for compute a single error."
+  [{:keys [case prog-output penalty loss-fns]}]
   (let [{actual-output :output actual-stdout :std-out} prog-output
         {expected-output :output expected-stdout :std-out} case]
     (->> (conj
+           ;; Compute loss values on returned value
            (mapv (fn [lf]
                    (if (or (nil? actual-output) (instance? Exception actual-output))
                      penalty
                      (lf actual-output expected-output)))
                  loss-fns)
+           ;; Compute loss on printed output using string edit distance.
            (when (contains? case :std-out)
              (if (nil? actual-stdout)
                penalty
@@ -43,96 +61,89 @@
          vec)))
 
 (defn evaluate-until-first-failure
-  [{:keys [code arg-symbols cases loss-fns]}]
-  (if (nil? code)
-    {:func       nil
-     :cases-used 0}
-    (let [;; Create a Clojure function with the compiled code.
-          func (c/synth-fn arg-symbols code)]
-      (loop [cases cases
-             cases-used 0]
-        (if (empty? cases)
-          {:func       func
-           :solution?  true
-           :cases-used cases-used}
-          (let [{:keys [inputs] :as case} (first cases)
-                prog-output (try
-                              (with-out-and-stdout (apply func inputs))
-                              (catch Exception e
-                                {:output e :std-out nil}))
-                _ (log-program-execution-errors (assoc prog-output :code code))
-                errors (compute-errors-on-case {:case        case
-                                                :penalty     1 ;; Any positive number will short-circuit evaluation.
-                                                :loss-fns    loss-fns
-                                                :prog-output prog-output})]
-            (if (some pos? errors)
-              {:func       func
-               :cases-used (inc cases-used)}
-              (recur (rest cases) (inc cases-used)))))))))
+  [{:keys [func cases loss-fns]}]
+  (if (nil? func)
+    {:cases-used 0}
+    (loop [cases cases
+           cases-used 0]
+      (if (empty? cases)
+        {:solution?  true
+         :cases-used cases-used}
+        (let [{:keys [inputs] :as case} (first cases)
+              prog-output (invoke-func func inputs)
+              errors (errors-for-case {:case        case
+                                       :prog-output prog-output
+                                       :penalty     1       ;; Any positive number will short-circuit evaluation.
+                                       :loss-fns    loss-fns})]
+          (if (some pos? errors)
+            (if-let [ex (when (instance? Exception (:output prog-output))
+                          (:output prog-output))]
+              {:cases-used (inc cases-used)
+               :exception  ex
+               :case       case}
+              {:cases-used (inc cases-used)})
+            (recur (rest cases)
+                   (inc cases-used))))))))
 
 (defn evaluate-full-behavior
-  [{:keys [code arg-symbols cases loss-fns penalty]}]
-  (if (nil? code)
-    ;; If the compilation process did not produce any code. Assume all penalties.
+  [{:keys [func cases loss-fns penalty]}]
+  (if (nil? func)
+    ;; If the compilation process did not produce any code
+    ;; give penalty for all loss functions and std-out for each case.
+    ;; May be too many errors (if no std-out) but they are all penalty, so that's okay.
     (let [errors (repeat (* (count cases) (inc (count loss-fns))) penalty)]
       {:func        nil
        :behavior    nil
-       ;; Assume penalty errors for all loss functions and std-out for each case.
-       ;; May be too many errors (if no std-out but they are all the same, so that's okay.
        :errors      errors
        :total-error (reduce + errors)
        :cases-used  0})
-    (let [;; Create a Clojure function with the compiled code.
-          func (c/synth-fn arg-symbols code)
-          ;; Call the function on each training case.
-          behavior (->> cases
-                        (map :inputs)
-                        (map #(try
-                                (with-out-and-stdout (apply func %))
-                                (catch Exception e
-                                  {:output e :std-out nil}))))
-
-          ;; Log the first execution error seen.
-          _ (log-program-execution-errors (assoc (first (filter #(instance? Exception (:output %)) behavior))
-                                            :code code))
-
+    (let [behavior (map #(invoke-func func (:inputs %)) cases)
           ;; Compute the error on each case.
           errors (->> cases
                       (mapcat (fn [b case]
-                                (compute-errors-on-case {:case        case
-                                                         :prog-output b
-                                                         :loss-fns    loss-fns
-                                                         :penalty     penalty}))
+                                (errors-for-case {:case        case
+                                                  :prog-output b
+                                                  :loss-fns    loss-fns
+                                                  :penalty     penalty}))
                               behavior)
                       ;; When there is no std-out error, filter out the nils.
                       (filter some?)
                       vec)
           total-error (apply + errors)]
-      {:func        func
-       :behavior    behavior
+      {:behavior    behavior
        :errors      errors
        :total-error total-error
        :solution?   (zero? total-error)
-       :cases-used  (count cases)})))
+       :cases-used  (count cases)
+       :exception   (:output (first (filter #(instance? Exception (:output %)) behavior)))})))
 
 (defn make-individual-factory
-  [{:keys [evaluate-fn cases] :as opts}]
+  [{:keys [evaluate-fn cases arg-symbols] :as opts}]
   (fn [gn context]
-    ;(log/debug "Processing genome" (vec gn))
+    ;(log/debug "Genome" gn)
     (let [cases (or (:cases context) cases)
           ;_ (log/debug "Evaluating on" (count cases) "cases")
           ;; Get Push code from the genome.
           push (pl/plushy->push gn)
-          ;_ (log/debug "Compiling push" push)
+          ;_ (log/debug "Push" push)
           ;; Compile the Push into a Clojure form that accepts and returns the
           ;; correct types.
-          code (c/push->clj (assoc opts :push push))]
-      ;(log/debug "Evaluating code" code)
-      (merge (evaluate-fn (assoc opts
-                            :code code
-                            :cases cases))
-             {:push push
-              :code code}))))
+          ast (::c/ast (c/push->ast (assoc opts
+                                      :push push
+                                      :locals arg-symbols)))
+          ;_ (log/debug "AST" ast)
+          form (when ast
+                 (f/ast->form ast))
+          ;_ (log/debug "Form" form)
+          func (when form
+                 (f/form->fn (vec arg-symbols) form))
+          evaluation (evaluate-fn (merge {:func func :cases cases} opts))]
+      (when-let [ex (:exception evaluation)]
+        (log-program-execution-errors {:code form :ex ex}))
+      (merge {:push push
+              :code form
+              :func func}
+             evaluation))))
 
 (defn simplify
   [{:keys [individual simplification-steps individual-factory context]}]

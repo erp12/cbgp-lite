@@ -1,39 +1,47 @@
 (ns erp12.cbgp-lite.search.pluhsy-test
   (:require [clojure.test :refer [deftest is testing]]
-            [erp12.cbgp-lite.search.pluhsy :refer :all]))
+            [erp12.cbgp-lite.search.pluhsy :as pl]))
 
 (deftest random-gene-test
-  (let [opts {:gene-distribution {:close         0.2
-                                  :local         0.2
-                                  :var           0.2
-                                  :lit           0.2
-                                  :lit-generator 0.1
-                                  :apply         0.1}
-              :vars              ['+ '- '* '/]
-              :lits              [1 2 10]
-              :lit-generators    [rand]}]
+  (let [genes [{:gene :var :name '+}
+               {:gene :var :name '-}
+               {:gene :var :name '*}
+               {:gene :var :name '/}
+               {:gene :lit :val 1}
+               {:gene :lit :val 2}
+               {:gene :lit :val 10}
+               {:gene :lit-generator :fn rand}
+               {:gene :local}
+               {:gene :apply}
+               {:gene :close}]
+        gene+prob (pl/prob-by-gene-kind genes
+                                        {:close         0.2
+                                         :local         0.2
+                                         :var           0.2
+                                         :lit           0.2
+                                         :lit-generator 0.1
+                                         :apply         0.1})
+
+        source (pl/make-genetic-source gene+prob)]
     (testing "Only valid genes are generated"
-      (doseq [gene (repeatedly 1000 #(random-gene opts))]
-        (is (or (contains? #{:open :close :apply} gene)
-                (and (vector? gene)
-                     (contains? #{:lit :var} (first gene))
-                     (some? (second gene)))))))
+      (doseq [gene (repeatedly 1000 source)]
+        ;; @todo Consider using malli for better test
+        (is (contains? #{:lit :var :local :apply :close}
+                       (:gene gene)))))
     (testing "Random generation follows the distribution"
-      (is (= (repeat 100 :apply)
-             (repeatedly 100 #(random-gene (assoc opts
-                                             :gene-distribution
-                                             {:apply 1.0
-                                              :local 0.0
-                                              :var   0.0
-                                              :lit   0.0}))))))))
+      (is (= (repeat 100 {:gene :apply})
+             (repeatedly 100 (pl/make-genetic-source (pl/prob-by-gene-kind [{:gene :apply}] {:apply 1}))))))))
 
 (deftest plushy->push-test
-  (is (= [:a [:b [:c] []]]
-         (plushy->push '(:a :open :b :open :c :close :open))))
-  (is (= '[:a [:b [[[:c]]]]]
-         (plushy->push '(:a :open :b :open :open :open :c :close))))
-  (is (= '[:a [:b] :c]
-         (plushy->push '(:a :open :b :close :close :close :c :close))))
-  (testing "implicit opens"
-    (is (= [:a :let [:b] :c [:fn :int] []]
-           (plushy->push '(:a :let :b :close :c [:fn :int]))))))
+  (is (= (pl/plushy->push '({:gene :lit :val 0}
+                            {:gene :let}
+                            {:gene :lit :val 1}
+                            {:gene :close}
+                            {:gene :lit :val 2}
+                            {:gene :fn :arg-types [:int]}))
+         [{:gene :lit :val 0}
+          {:gene :let}
+          [{:gene :lit :val 1}]
+          {:gene :lit :val 2}
+          {:gene :fn :arg-types [:int]}
+          []])))

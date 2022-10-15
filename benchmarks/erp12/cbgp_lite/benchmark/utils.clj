@@ -1,15 +1,13 @@
-(ns erp12.cbgp-lite.benchmark.utils
-  (:require [taoensso.timbre :as log]))
+(ns erp12.cbgp-lite.benchmark.utils)
 
 (defn read-problem
-  [{:keys [suite-ns problem config]}]
+  [{:keys [suite-ns problem] :as config}]
   (require suite-ns)
   (let [suite-ns (find-ns suite-ns)
         suite-problems ((ns-resolve suite-ns 'problems) config)
         problem-info (get suite-problems (name problem))
-        read-cases (ns-resolve suite-ns 'read-cases)
-        task (merge config (read-cases config) problem-info)]
-    task))
+        read-cases (ns-resolve suite-ns 'read-cases)]
+    (merge config (read-cases config) problem-info)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ERC Generators
@@ -22,15 +20,23 @@
   [magnitude]
   #(- (rand-int (inc (* 2 magnitude))) magnitude))
 
+(defn rand-char
+  []
+  (rand-nth (concat [\newline \tab] (map char (range 32 127)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loss Function Utils
 
 (defn round
   "Round a double to the given precision (number of significant digits)"
   [precision n]
-  (let [factor (Math/pow 10 precision)]
-    (/ (Math/round (* n factor)) factor)))
+  (if (nil? n)
+    nil
+    (let [factor (Math/pow 10 precision)]
+      (/ (Math/round (* n factor)) factor))))
 
 (defn absolute-distance
   [actual expected]
-  (Math/abs (- actual expected)))
+  (if (or (nil? actual) (nil? expected))
+    nil
+    (Math/abs (- actual expected))))
