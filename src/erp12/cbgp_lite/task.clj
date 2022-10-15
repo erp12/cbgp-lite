@@ -2,16 +2,17 @@
   (:require [clojure.set :as set]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.pluhsy :as pl]
-            [erp12.cbgp-lite.utils :as u]
-            [taoensso.timbre :as log]))
+            [erp12.cbgp-lite.utils :as u]))
 
 (defn arg-symbols
   [{:keys [input->type]}]
   (vec (sort (keys input->type))))
 
 (defn task-types
-  [{:keys [input->type return-type other-types] :or {other-types #{}}}]
-  (set/union (set (vals input->type)) #{return-type} (set other-types)))
+  [{:keys [input->type ret-type other-types] :or {other-types #{}}}]
+  (set/union (set (vals input->type))
+             #{ret-type}
+             (set other-types)))
 
 (defn vars-for-types
   [types]
@@ -19,42 +20,49 @@
 
 (defn type-environment
   [{:keys [input->type vars]}]
-  (->> lib/library
+  (->> lib/type-env
        (filter (fn [[symb _]] (contains? vars symb)))
-       (merge input->type)
-       (mapv (fn [[symb typ]] [:= symb typ]))))
+       (merge input->type)))
 
 (def default-gene-distribution
-  {:close         0.1
-   :var           0.2
-   :local         0.15
-   :lit           0.15
+  ;; @todo Calibrate by analyzing real code.
+  {:var           0.2
+   :local         0.2
+   :lit           0.2
    :lit-generator 0.1
-   :abstraction   0.15
-   :apply         0.15})
+   :apply         0.2
+   :fn            0.025
+   :let           0.025
+   :close         0.05})
 
-(defn genetic-source
-  [{:keys [types vars literals lit-generators]}]
-  (let [vars (vec vars)
-        abstraction (vec (concat [:let [:fn]]
-                                 ;; 1-arg functions
-                                 (map (partial vector :fn) types)
-                                 ;; 2-arg functions
-                                 (for [arg1 types
-                                       arg2 types]
-                                   [:fn arg1 arg2])))]
-    (fn []
-      (pl/random-gene {:vars              vars
-                       :lits              literals
-                       :lit-generators    lit-generators
-                       :abstraction       abstraction
-                       :gene-distribution default-gene-distribution}))))
+(defn default-genetic-source
+  [{:keys [types vars extra-genes]}]
+  (pl/make-genetic-source
+    (pl/prob-by-gene-kind (concat (map (fn [v] {:gene :var :name v}) vars)
+                                  ;; Task-specific genes
+                                  extra-genes
+                                  ;; 1-arg functions
+                                  (map (fn [t] {:gene :fn :arg-types [t]}) types)
+                                  ;; 2-arg functions
+                                  (for [arg1 types arg2 types]
+                                    {:gene :fn :arg-types [arg1 arg2]})
+                                  ;; Always used genes
+                                  [{:gene :local}
+                                   {:gene :apply}
+                                   {:gene :let}
+                                   {:gene :fn}
+                                   {:gene :close}])
+                          default-gene-distribution)))
 
 (defn enhance-task
   [opts]
   (-> opts
       (assoc :dealiases lib/dealiases)
       (u/enhance
+        ;; The size of an individual's error vector
+        :num-errors (fn [{:keys [train loss-fns stdout-key]}]
+                      (+ (* (count train) (count loss-fns))
+                         (if (nil? stdout-key) 0 (count train))))
         ;; Create a sequence of program argument symbols
         :arg-symbols arg-symbols
         ;; Find all types related to the task
@@ -65,6 +73,6 @@
         ;; Derive the full type-environment used to compile programs from genomes.
         :type-env type-environment
         ;; Derive the genetic source.
-        :genetic-source genetic-source
+        :genetic-source default-genetic-source
         ;; Derive a function for generating genomes.
         :genome-factory (fn [opts] #(pl/random-plushy-genome opts)))))

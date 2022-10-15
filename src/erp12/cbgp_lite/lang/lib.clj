@@ -2,8 +2,7 @@
   (:refer-clojure :exclude [and or])
   (:require [clojure.core :as core]
             [clojure.string :as str]
-            [erp12.schema-inference.ast :as ast]
-            [erp12.schema-inference.schema :as sch]))
+            [erp12.cbgp-lite.lang.schema :as schema]))
 
 ;; @todo What do do about nil?
 ;; first, last, etc. return nil on empty collections.
@@ -197,10 +196,6 @@
   [^Character c]
   (Character/isLetter c))
 
-(defn iff
-  [cond then else]
-  (if cond then else))
-
 (defn and
   [a b]
   (core/and a b))
@@ -211,171 +206,264 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Ground Schemas
-;; nil? boolean? int? float? char? string? keyword?
+;; nil? boolean? int? double? char? string? keyword?
 
 (defn unary-transform
   [type]
-  [:=> [:cat type] type])
+  {:type   :=>
+   :input  {:type :cat :children [type]}
+   :output type})
 
 (defn binary-transform
   [type]
-  [:=> [:cat type type] type])
+  {:type   :=>
+   :input  {:type :cat :children [type type]}
+   :output type})
 
 (defn unary-pred
   [type]
-  [:=> [:cat type] boolean?])
+  {:type   :=>
+   :input  {:type :cat :children [type]}
+   :output {:type 'boolean?}})
 
 (defn binary-pred
   [type]
-  [:=> [:cat type type] boolean?])
+  {:type   :=>
+   :input  {:type :cat :children [type type]}
+   :output {:type 'boolean?}})
 
-(def library
+(defn simple-fn-schema
+  [args ret]
+  {:type   :=>
+   :input  {:type :cat :children (vec args)}
+   :output ret})
+
+(defn s-var
+  [sym]
+  {:type :s-var :sym sym})
+
+(defn vector-schema
+  [el]
+  {:type :vector :child el})
+
+(def type-env
   {;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Conditional Control Flow
-   'if                  {:s-vars ['t]
-                         :body [:=> [:cat boolean? [:s-var 't] [:s-var 't]] [:s-var 't]]}
+   'if                  {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [{:type 'boolean?} (s-var 'a) (s-var 'a)]
+                                                   (s-var 'a))}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Higher Order Functions
-   'mapv                {:s-vars ['a 'b]
-                         :body   [:=> [:cat [:=> [:cat [:s-var 'a]] [:s-var 'b]]
-                                       [:vector [:s-var 'a]]]
-                                  [:vector [:s-var 'b]]]}
-   'mapv2               {:s-vars ['a1 'a2 'b]
-                         :body   [:=> [:cat [:=> [:cat [:s-var 'a1] [:s-var 'a2]] [:s-var 'b]]
-                                       [:vector [:s-var 'a1]]
-                                       [:vector [:s-var 'a2]]]
-                                  [:vector [:s-var 'b]]]}
-   'filterv             {:s-vars ['a]
-                         :body   [:=> [:cat [:=> [:cat [:s-var 'a]] boolean?]
-                                       [:vector [:s-var 'a]]]
-                                  [:vector [:s-var 'a]]]}
-   `removev             {:s-vars ['a]
-                         :body   [:=> [:cat [:=> [:cat [:s-var 'a]] boolean?]
-                                       [:vector [:s-var 'a]]]
-                                  [:vector [:s-var 'a]]]}
-   `mapcatv             {:s-vars ['a 'b]
-                         :body   [:=> [:cat [:=> [:cat [:s-var 'a]] [:vector [:s-var 'b]]]
-                                       [:vector [:s-var 'a]]]
-                                  [:vector [:s-var 'b]]]}
-   'reduce              {:s-vars ['a]
-                         :body   [:=> [:cat [:=> [:cat [:s-var 'a] [:s-var 'a]] [:s-var 'a]]
-                                       [:vector [:s-var 'a]]]
-                                  [:s-var 'a]]}
-   'fold                {:s-vars ['a 'b]
-                         :body   [:=> [:cat [:=> [:cat [:s-var 'b] [:s-var 'a]] [:s-var 'b]]
-                                       [:s-var 'b]
-                                       [:vector [:s-var 'a]]]
-                                  [:s-var 'b]]}
+   'mapv                {:type   :scheme
+                         :s-vars ['a 'b]
+                         :body   (simple-fn-schema [(simple-fn-schema [(s-var 'a)] (s-var 'b))
+                                                    (vector-schema (s-var 'a))]
+                                                   (vector-schema (s-var 'b)))}
+   'mapv2               {:type   :scheme
+                         :s-vars ['a1 'a2 'b]
+                         :body   (simple-fn-schema [(simple-fn-schema [(s-var 'a1) (s-var 'a2)] (s-var 'b))
+                                                    (vector-schema (s-var 'a1))
+                                                    (vector-schema (s-var 'a2))]
+                                                   (vector-schema (s-var 'b)))}
+   'filterv             {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(simple-fn-schema [(s-var 'a)] {:type 'boolean?})
+                                                    (vector-schema (s-var 'a))]
+                                                   (vector-schema (s-var 'a)))}
+   `removev             {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(simple-fn-schema [(s-var 'a)] {:type 'boolean?})
+                                                    (vector-schema (s-var 'a))]
+                                                   (vector-schema (s-var 'a)))}
+   `mapcatv             {:type   :scheme
+                         :s-vars ['a 'b]
+                         :body   (simple-fn-schema [(simple-fn-schema [(s-var 'a)] (vector-schema (s-var 'b)))
+                                                    (vector-schema (s-var 'a))]
+                                                   (vector-schema (s-var 'b)))}
+   'reduce              {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(simple-fn-schema [(s-var 'a) (s-var 'a)] (s-var 'a))
+                                                    (vector-schema (s-var 'a))]
+                                                   (s-var 'a))}
+   'fold                {:type   :scheme
+                         :s-vars ['a 'b]
+                         :body   (simple-fn-schema [(simple-fn-schema [(s-var 'b) (s-var 'a)] (s-var 'b))
+                                                    (s-var 'b)
+                                                    (vector-schema (s-var 'a))]
+                                                   (s-var 'b))}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Common
-   '=                   {:s-vars ['a] :body [:=> [:cat [:s-var 'a] [:s-var 'a]] boolean?]}
-   'not=                {:s-vars ['a] :body [:=> [:cat [:s-var 'a] [:s-var 'a]] boolean?]}
+   '=                   {:type   :scheme
+                         :s-vars ['a 'b]
+                         :body   (simple-fn-schema [(s-var 'a) (s-var 'b)] {:type 'boolean?})}
+   'not=                {:type   :scheme
+                         :s-vars ['a 'b]
+                         :body   (simple-fn-schema [(s-var 'a) (s-var 'b)] {:type 'boolean?})}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Numeric
-   'int-add             (binary-transform int?)
-   'int-sub             (binary-transform int?)
-   'int-mult            (binary-transform int?)
-   'int-div             [:=> [:cat int? int?] float?]
-   'int-mod             (binary-transform int?)
-   'int-inc             (unary-transform int?)
-   'int-dec             (unary-transform int?)
-   'int-lt              (binary-pred int?)
-   'int-gt              (binary-pred int?)
-   'int-le              (binary-pred int?)
-   'int-ge              (binary-pred int?)
-   'float-add           (binary-transform float?)
-   'float-sub           (binary-transform float?)
-   'float-mult          (binary-transform float?)
-   'float-div           (binary-transform float?)
-   'float-mod           (binary-transform float?)
-   'float-inc           (unary-transform float?)
-   'float-dec           (unary-transform float?)
-   'float-lt            (binary-pred float?)
-   'float-gt            (binary-pred float?)
-   'float-le            (binary-pred float?)
-   'float-ge            (binary-pred float?)
-   'int                 [:=> [:cat float?] int?]
-   'float               [:=> [:cat int?] float?]
-   'char->int           [:=> [:cat char?] int?]
-   'min-int             (binary-transform int?)
-   'min-float           (binary-transform float?)
-   'max-int             (binary-transform int?)
-   'max-float           (binary-transform float?)
-   `sin                 (unary-transform float?)
-   `cos                 (unary-transform float?)
-   `tan                 (unary-transform float?)
+   'int-add             (binary-transform {:type 'int?})
+   'int-sub             (binary-transform {:type 'int?})
+   'int-mult            (binary-transform {:type 'int?})
+   'int-div             (simple-fn-schema [{:type 'int?} {:type 'int?}] {:type 'double})
+   'int-mod             (binary-transform {:type 'int?})
+   'int-inc             (unary-transform {:type 'int?})
+   'int-dec             (unary-transform {:type 'int?})
+   'int-lt              (binary-pred {:type 'int?})
+   'int-gt              (binary-pred {:type 'int?})
+   'int-le              (binary-pred {:type 'int?})
+   'int-ge              (binary-pred {:type 'int?})
+   'double-add          (binary-transform {:type 'double?})
+   'double-sub          (binary-transform {:type 'double?})
+   'double-mult         (binary-transform {:type 'double?})
+   'double-div          (binary-transform {:type 'double?})
+   'double-mod          (binary-transform {:type 'double?})
+   'double-inc          (unary-transform {:type 'double?})
+   'double-dec          (unary-transform {:type 'double?})
+   'double-lt           (binary-pred {:type 'double?})
+   'double-gt           (binary-pred {:type 'double?})
+   'double-le           (binary-pred {:type 'double?})
+   'double-ge           (binary-pred {:type 'double?})
+   'int                 (simple-fn-schema [{:type 'double?}] {:type 'int?})
+   'double              (simple-fn-schema [{:type 'int?}] {:type 'double?})
+   'char->int           (simple-fn-schema [{:type 'char?}] {:type 'int?})
+   'min-int             (binary-transform {:type 'int?})
+   'min-double          (binary-transform {:type 'double?})
+   'max-int             (binary-transform {:type 'int?})
+   'max-double          (binary-transform {:type 'double?})
+   `sin                 (unary-transform {:type 'double?})
+   `cos                 (unary-transform {:type 'double?})
+   `tan                 (unary-transform {:type 'double?})
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Text
-   'str                 {:s-vars ['t] :body [:=> [:cat [:s-var 't]] string?]}
-   `int->char           [:=> [:cat int?] char?]
-   `whitespace?         (unary-pred char?)
-   `digit?              (unary-pred char?)
-   `letter?             (unary-pred char?)
-   `string-concat       [:=> [:cat string? string?] string?]
-   `append-str          [:=> [:cat string? char?] string?]
-   `take-str            [:=> [:cat int? string?] string?]
-   `safe-subs           [:=> [:cat string? int? int?] string?]
-   'first-str           [:=> [:cat string?] char?]
-   'last-str            [:=> [:cat string?] char?]
-   `rest-str            (unary-transform string?)
-   `butlast-str         (unary-transform string?)
-   'nth-str             [:=> [:cat string? int?] char?]
-   'length              [:=> [:cat string?] int?]
-   `str/reverse         (unary-transform string?)
-   'string->chars       [:=> [:cat string?] [:vector char?]]
-   `split-str           [:=> [:cat string? string?] [:vector string?]]
-   `split-str-on-char   [:=> [:cat string? char?] [:vector string?]]
-   `split-str-on-ws     [:=> [:cat string?] [:vector string?]]
-   'empty-str?          (unary-pred string?)
-   `substring?          (binary-pred string?)
-   `contains-char?      [:=> [:cat string? char?] boolean?]
-   `index-of-char       [:=> [:cat string? char?] int?]
-   `occurrences-of-char [:=> [:cat string? char?] int?]
-   `str/replace         [:=> [:cat string? string? string?] string?]
-   `str/replace-first   [:=> [:cat string? string? string?] string?]
-   `replace-char        [:=> [:cat string? char? char?] string?]
-   `replace-first-char  [:=> [:cat string? char? char?] string?]
-   `remove-char         [:=> [:cat string? char?] string?]
-   `set-char            [:=> [:cat string? int? char?] string?]
-   `str/join            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] string?]}
+   'str                 {:type   :scheme
+                         :s-vars ['t]
+                         :body   (simple-fn-schema [(s-var 't)] {:type 'string?})}
+   `int->char           (simple-fn-schema [{:type 'int?}] {:type 'char?})
+   `whitespace?         (unary-pred {:type 'char?})
+   `digit?              (unary-pred {:type 'char?})
+   `letter?             (unary-pred {:type 'char?})
+   `string-concat       (simple-fn-schema [{:type 'string?} {:type 'string?}] {:type 'string?})
+   `append-str          (simple-fn-schema [{:type 'string?} {:type 'char?}] {:type 'string?})
+   `take-str            (simple-fn-schema [{:type 'int?} {:type 'string?}] {:type 'string?})
+   `safe-subs           (simple-fn-schema [{:type 'string?} {:type 'int?} {:type 'int?}] {:type 'string?})
+   'first-str           (simple-fn-schema [{:type 'string?}] {:type 'char?})
+   'last-str            (simple-fn-schema [{:type 'string?}] {:type 'char?})
+   `rest-str            (unary-transform {:type 'string?})
+   `butlast-str         (unary-transform {:type 'string?})
+   'nth-str             (simple-fn-schema [{:type 'string?} {:type 'int?}] {:type 'char?})
+   'length              (simple-fn-schema [{:type 'string?}] {:type 'int?})
+   `str/reverse         (unary-transform {:type 'string?})
+   'string->chars       (simple-fn-schema [{:type 'sing?}] (vector-schema {:type 'char?}))
+   `split-str           (simple-fn-schema [{:type 'strtring?} {:type 'string?}] (vector-schema {:type 'string?}))
+   `split-str-on-char   (simple-fn-schema [{:type 'string?} {:type 'char?}] (vector-schema {:type 'string?}))
+   `split-str-on-ws     (simple-fn-schema [{:type 'string?}] (vector-schema {:type 'string?}))
+   'empty-str?          (unary-pred {:type 'string?})
+   `substring?          (binary-pred {:type 'string?})
+   `contains-char?      (simple-fn-schema [{:type 'string?} {:type 'char?}] {:type 'boolean?})
+   `index-of-char       (simple-fn-schema [{:type 'string?} {:type 'char?}] {:type 'int?})
+   `occurrences-of-char (simple-fn-schema [{:type 'string?} {:type 'char?}] {:type 'int?})
+   `str/replace         (simple-fn-schema [{:type 'string?} {:type 'string?} {:type 'string?}] {:type 'string?})
+   `str/replace-first   (simple-fn-schema [{:type 'string?} {:type 'string?} {:type 'string?}] {:type 'string?})
+   `replace-char        (simple-fn-schema [{:type 'string?} {:type 'char?} {:type 'char?}] {:type 'string?})
+   `replace-first-char  (simple-fn-schema [{:type 'string?} {:type 'char?} {:type 'char?}] {:type 'string?})
+   `remove-char         (simple-fn-schema [{:type 'string?} {:type 'char?}] {:type 'string?})
+   `set-char            (simple-fn-schema [{:type 'string?} {:type 'int?} {:type 'char?}] {:type 'string?})
+   `str/join            {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))] {:type 'string?})}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Boolean
-   `and                 (binary-transform boolean?)
-   `or                  (binary-transform boolean?)
-   'not                 (unary-transform boolean?)
-   'zero-int?           [:=> [:cat int?] boolean?]
-   'zero-float?         [:=> [:cat float] boolean?]
+   `and                 (binary-transform {:type 'boolean?})
+   `or                  (binary-transform {:type 'boolean?})
+   'not                 (unary-transform {:type 'boolean?})
+   'zero-int?           (simple-fn-schema [{:type 'int?}] {:type 'boolean?})
+   'zero-double?        (simple-fn-schema [{:type 'double}] {:type 'boolean?})
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Vector
-   `concatv             {:s-vars ['a] :body (binary-transform [:vector [:s-var 'a]])}
-   'conj                {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] [:vector [:s-var 'a]]]}
-   `takev               {:s-vars ['a] :body [:=> [:cat int? [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
-   `safe-subvec         {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] int? int?] [:vector [:s-var 'a]]]}
-   'first               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:s-var 'a]]}
-   'last                {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:s-var 'a]]}
-   `restv               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
-   `butlastv            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
-   `safe-nth            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] int?] [:s-var 'a]]}
-   'count               {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] int?]}
-   `reversev            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] [:vector [:s-var 'a]]]}
-   'empty?              {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]]] boolean?]}
-   `in?                 {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] boolean?]}
-   `index-of            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] int?]}
-   `occurrences-of      {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] int?]}
-   `safe-assoc          {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] int? [:s-var 'a]] [:vector [:s-var 'a]]]}
-   `replacev            {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a] [:s-var 'a]] [:vector [:s-var 'a]]]}
-   `replacev-first      {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a] [:s-var 'a]] [:vector [:s-var 'a]]]}
-   `remove-element      {:s-vars ['a] :body [:=> [:cat [:vector [:s-var 'a]] [:s-var 'a]] [:vector [:s-var 'a]]]}
+   `concatv             {:type   :scheme
+                         :s-vars ['a]
+                         :body   (binary-transform (vector-schema (s-var 'a)))}
+   'conj                {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a)) (s-var 'a)] (vector-schema (s-var 'a)))}
+   `takev               {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [{:type 'int?} (vector-schema (s-var 'a))]
+                                                   (vector-schema (s-var 'a)))}
+   `safe-subvec         {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a)) {:type 'int?} {:type 'int?}]
+                                                   (vector-schema (s-var 'a)))}
+   'first               {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))] (s-var 'a))}
+   'last                {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))] (s-var 'a))}
+   `restv               {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))] (vector-schema (s-var 'a)))}
+   `butlastv            {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))] (vector-schema (s-var 'a)))}
+   `safe-nth            {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a)) {:type 'int?}] (s-var 'a))}
+   'count               {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))] {:type 'int?})}
+   `reversev            {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))] (vector-schema (s-var 'a)))}
+   'empty?              {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))] {:type 'boolean?})}
+   `in?                 {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a)) (s-var 'a)] {:type 'boolean?})}
+   `index-of            {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a)) (s-var 'a)] {:type 'int?})}
+   `occurrences-of      {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a)) (s-var 'a)] {:type 'int?})}
+   `safe-assoc          {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))
+                                                    {:type 'int?}
+                                                    (s-var 'a)]
+                                                   (vector-schema (s-var 'a)))}
+   `replacev            {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))
+                                                    (s-var 'a)
+                                                    (s-var 'a)]
+                                                   (vector-schema (s-var 'a)))}
+   `replacev-first      {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a))
+                                                    (s-var 'a)
+                                                    (s-var 'a)]
+                                                   (vector-schema (s-var 'a)))}
+   `remove-element      {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(vector-schema (s-var 'a)) (s-var 'a)]
+                                                   (vector-schema (s-var 'a)))}
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Printing & Side Effects
-   'do2                 {:s-vars ['a]
-                         :body   [:=> [:cat nil? [:s-var 'a]]
-                                  [:s-var 'a]]}
-   'do3                 {:s-vars ['a]
-                         :body   [:=> [:cat nil? nil? [:s-var 'a]]
-                                  [:s-var 'a]]}
-   'print               {:s-vars ['a] :body [:=> [:cat [:s-var 'a]] nil?]}
-   'println             {:s-vars ['a] :body [:=> [:cat [:s-var 'a]] nil?]}
+   'do2                 {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [{:type 'nil?} (s-var 'a)] (s-var 'a))}
+   'do3                 {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [{:type 'nil?} {:type 'nil?} (s-var 'a)] (s-var 'a))}
+   'print               {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(s-var 'a)] {:type 'nil?})}
+   'println             {:type   :scheme
+                         :s-vars ['a]
+                         :body   (simple-fn-schema [(s-var 'a)] {:type 'nil?})}
    })
 
 (def dealiases
@@ -384,17 +472,17 @@
     do3           do
     empty-str?    empty?
     first-str     first
-    float-add     +
-    float-dec     dec
-    float-div     erp12.cbgp-lite.lang.lib/safe-div
-    float-ge      >=
-    float-gt      >
-    float-inc     inc
-    float-le      <=
-    float-lt      <
-    float-mod     erp12.cbgp-lite.lang.lib/safe-mod
-    float-mult    *
-    float-sub     -
+    double-add    +
+    double-dec    dec
+    double-div    erp12.cbgp-lite.lang.lib/safe-div
+    double-ge     >=
+    double-gt     >
+    double-inc    inc
+    double-le     <=
+    double-lt     <
+    double-mod    erp12.cbgp-lite.lang.lib/safe-mod
+    double-mult   *
+    double-sub    -
     fold          reduce
     int-add       +
     int-dec       dec
@@ -410,13 +498,13 @@
     last-str      last
     length        count
     mapv2         map
-    max-float     max
+    max-double    max
     max-int       max
-    min-float     min
+    min-double    min
     min-int       min
     nth-str       erp12.cbgp-lite.lang.lib/safe-nth
     string->chars vec
-    zero-float?   zero?
+    zero-double?  zero?
     zero-int?     zero?})
 
 (def macros
@@ -424,8 +512,8 @@
 
 (defn lib-for-types
   [types]
-  (->> library
+  (->> type-env
        (filter (fn [[_ typ]]
-                 (core/or (sch/scheme? typ)
-                          (some #(ast/occurs? % typ) types))))
+                 (core/or (= (:type typ) :scheme)
+                          (some #(schema/occurs? % typ) types))))
        (into {})))

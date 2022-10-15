@@ -32,8 +32,7 @@
   ;(doseq [[k v] opts]
   ;  (println k ":" (class k) " -> " v ":" (class v)))
   (let [config (merge default-config opts)
-        task (-> opts
-                 (assoc :config config)
+        task (-> config
                  bu/read-problem
                  task/enhance-task
                  (assoc :evaluate-fn i/evaluate-full-behavior))
@@ -71,10 +70,10 @@
                           :simplification-steps (:simplification-steps config)
                           :individual-factory   individual-factory})
         ;; Evaluate the final program on the unseen test cases.
-        {:keys [solution?]} (i/evaluate-full-behavior {:code        (:code best)
-                                                       :arg-symbols (:arg-symbols task)
-                                                       :cases       (:test task)
-                                                       :loss-fns    (:loss-fns task)})]
+        {:keys [solution?]} (i/evaluate-full-behavior {:func     (:func best)
+                                                       :cases    (:test task)
+                                                       :loss-fns (:loss-fns task)
+                                                       :penalty  (:penalty default-config)})]
     (log/info "BEST INDIVIDUAL" best)
     (log/info "BEST CODE" (let [code (:code best)]
                             (if (coll? code)
@@ -88,11 +87,3 @@
           (log/info "SOLUTION FAILED TO GENERALIZE")))
       (log/info "SOLUTION NOT FOUND"))
     (:func best)))
-
-(comment
-
-  (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
-        :data-dir "data/psb/"
-        :problem  "smallest"})
-
-  )

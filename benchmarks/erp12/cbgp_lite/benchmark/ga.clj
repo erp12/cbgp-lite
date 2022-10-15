@@ -1,5 +1,6 @@
 (ns erp12.cbgp-lite.benchmark.ga
   (:require [erp12.cbgp-lite.benchmark.utils :as bu]
+            [erp12.cbgp-lite.lang.compile]
             [erp12.cbgp-lite.search.individual :as i]
             [erp12.cbgp-lite.search.pluhsy :as pl]
             [erp12.cbgp-lite.task :as task]
@@ -26,8 +27,8 @@
 (def default-config
   {:n-train              100
    :n-test               300
-   :population-size      500                                ; 1000
-   :max-generations      100                                ; 300
+   :population-size      1000
+   :max-generations      300
    :umad-rate            0.1
    :min-genome-size      50
    :max-genome-size      250
@@ -39,8 +40,7 @@
   ;(doseq [[k v] opts]
   ;  (println k ":" (class k) " -> " v ":" (class v)))
   (let [config (merge default-config opts)
-        task (-> opts
-                 (assoc :config config)
+        task (-> config
                  bu/read-problem
                  task/enhance-task
                  (assoc :evaluate-fn i/evaluate-full-behavior))
@@ -54,15 +54,21 @@
                                        :genome-factory     #(pl/random-plushy-genome opts)
                                        ;; An initialization function for each generation.
                                        ;; Optionally, will select a subset of training cases to use as the downsample.
-                                       :pre-generation     (let [{:keys [downsample-rate cases]} opts]
+                                       :pre-generation     (let [{:keys [downsample-rate train]} opts]
                                                              (fn [{:keys [step]}]
-                                                               (log/info "STARTING STEP" step)
-                                                               {:cases (if downsample-rate
-                                                                         (random-sample downsample-rate cases)
-                                                                         cases)}))
+                                                               (log/info "Starting step" step)
+                                                               {:cases    (if downsample-rate
+                                                                            (random-sample downsample-rate train)
+                                                                            train)
+                                                                :start-ts (System/currentTimeMillis)}))
                                        ;; Function for converting genomes into compiled Clojure functions
                                        ;; and associated metadata for tracking progress (number of evaluations).
                                        :individual-factory individual-factory
+                                       ;; Debug
+                                       :post-generation    (fn [{:keys [step start-ts population]}]
+                                                             ;; Force evaluation now to get accurate timings.
+                                                             (doall population)
+                                                             (log/info "Finished step" step {:duration-ms (- (System/currentTimeMillis) start-ts)}))
                                        ;; A function for breeding child genomes from a population of individuals.
                                        :breed              (make-breed opts)
                                        ;; A comparator function between individuals for selecting the best
@@ -71,7 +77,7 @@
                                        ;; A predicate function for determining when evolution should stop.
                                        :stop-fn            (let [{:keys [max-generations cases]} opts]
                                                              (fn [{:keys [step best new-best?]}]
-                                                               (log/info "REPORT"
+                                                               (log/info "Report"
                                                                          {:step       step
                                                                           :best-error (:total-error best)
                                                                           :best-code  (:code best)})
@@ -86,17 +92,17 @@
                                                                    ;; no individual can become the new best and the run will fail.
                                                                    ;; @todo Fix this in ga-clj somehow?
                                                                    (log/info "Best individual solved a batch but not all training cases.")))))
-                                       :mapper             pmap})
+                                       :mapper             pmap
+                                       })
         ;; Simplify the best individual seen during evolution.
         best (i/simplify {:individual           best
                           :simplification-steps (:simplification-steps config)
                           :individual-factory   individual-factory})
         ;; Evaluate the final program on the unseen test cases.
-        {:keys [solution?]} (i/evaluate-full-behavior {:code        (:code best)
-                                                       :arg-symbols (:arg-symbols task)
-                                                       :cases       (:test task)
-                                                       :loss-fns    (:loss-fns task)
-                                                       :penalty     (:penalty default-config)})]
+        {:keys [solution?]} (i/evaluate-full-behavior {:func     (:func best)
+                                                       :cases    (:test task)
+                                                       :loss-fns (:loss-fns task)
+                                                       :penalty  (:penalty default-config)})]
     (log/info "BEST INDIVIDUAL" best)
     (log/info "BEST CODE" (let [code (:code best)]
                             (if (coll? code)
@@ -110,11 +116,3 @@
           (log/info "SOLUTION FAILED TO GENERALIZE")))
       (log/info "SOLUTION NOT FOUND"))
     (:func best)))
-
-(comment
-
-  (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
-        :data-dir "data/psb/"
-        :problem  "replace-space-with-newline"})
-
-  )

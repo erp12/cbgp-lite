@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from functools import partial
 import subprocess
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 
 
 def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
@@ -54,8 +54,8 @@ def cli_opts() -> argparse.ArgumentParser:
     parser.add_argument(
         "--parallelism",
         type=int,
-        default=cpu_count(),
-        help="The number of runs that can be running concurrently.",
+        default=1,
+        help="The number of runs to perform concurrently. If runs are multi-threaded, recommend this be 1.",
     )
     return parser
 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 Example:
 
 python3 scripts/local_runner.py \
-    --search "simulated-annealing" \
+    --search "ga" \
     --problem "vectors-summed" \
     --data-dir "./data/psb/" \
     --num-runs 3 \

@@ -6,6 +6,15 @@
   [coll]
   (first (filter some? coll)))
 
+(defn weights-to-probs
+  "Normalizes the numeric values of `m` into a proportion of the total.
+  Returns a map with values that sum to 1."
+  [m]
+  (let [total (reduce + (vals m))]
+    (->> m
+         (map (fn [[k w]] [k (/ w total)]))
+         (into {}))))
+
 (defn rand-weighted
   [m]
   (let [weights (reductions + (vals m))
@@ -17,6 +26,7 @@
           (if (< choice w)
             c
             (recur more)))))))
+
 
 (defn safe-rand-nth
   [coll]
