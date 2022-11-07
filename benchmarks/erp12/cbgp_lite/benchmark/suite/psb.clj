@@ -11,163 +11,153 @@
 (defn problems
   [{:keys [penalty]}]
   {"checksum"
-   {:input->type    {'input1 {:type 'string?}}
-    :ret-type       {:type 'string?}
-    :other-types    [{:type 'int?} {:type 'boolean?} {:type 'char?}]
-    :literals       ["Check sum is " \space 64]
-    :lit-generators [(bu/int-generator 128)
-                     #(rand-nth (concat [\newline \tab] (map char (range 32 127))))]
-    :loss-fns       [lev/distance
-                     #(if (not (empty? %1))
-                        (Math/abs (- (int (last %2)) (int (last %1)))) ;distance from correct last character
-                        penalty)]}
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val "Check sum is ", :type {:type 'string?}}
+                  {:gene :lit, :val \space, :type {:type 'char?}}
+                  {:gene :lit, :val 64, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 128), :type {:type 'int?}}
+                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
+    :loss-fns    [lev/distance
+                  #(if (not (empty? %1))
+                     (Math/abs (- (int (last %2)) (int (last %1)))) ;distance from correct last character
+                     penalty)]}
 
    "collatz-numbers"
-   {:input->type    {'input1 {:type 'int?}}
-    :ret-type       {:type 'int?}
-    :other-types    [{:type 'int?} {:type 'double?} {:type 'boolean?}]
-    :literals       [0 1]
-    :lit-generators [(bu/int-generator 100)]
-    :loss-fns       [bu/absolute-distance]}
+   {:input->type {'input1 {:type 'int?}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'int?} {:type 'double?} {:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 128), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}
 
    "compare-string-lengths"
-   {:input->type    {'input1 {:type 'string?}
-                     'input2 {:type 'string?}
-                     'input3 {:type 'string?}}
-    :ret-type       {:type 'boolean?}
-    :other-types    [{:type 'int?}]
-    :literals       []
-    :lit-generators [bu/rand-bool]
-    :loss-fns       [#(if (= %1 %2) 0 1)]}
+   {:input->type {'input1 {:type 'string?}
+                  'input2 {:type 'string?}
+                  'input3 {:type 'string?}}
+    :ret-type    {:type 'boolean?}
+    :other-types [{:type 'int?}]
+    :extra-genes [{:gene :lit-generator, :fn bu/rand-bool, :type {:type 'boolean?}}]
+    :loss-fns    [#(if (= %1 %2) 0 1)]}
 
    "count-odds"
-   {:input->type    {'input1 {:type :vector :child {:type 'int?}}}
-    :ret-type       {:type 'int?}
-    :other-types    [{:type 'boolean?}]
-    :literals       [0 1 2]
-    :lit-generators [(bu/int-generator 1000)]
-    :loss-fns       [bu/absolute-distance]
-    :solution       (list {:gene :local :idx 0}
-                          {:gene :fn :arg-types [{:type 'int?}]}
-                          {:gene :lit :val 2 :type {:type 'int?}}
-                          {:gene :local :idx 1}
-                          {:gene :var :name 'int-mod}
-                          {:gene :apply}
-                          {:gene :lit :val 1 :type {:type 'int?}}
-                          {:gene :var :name '=}
-                          {:gene :apply}
-                          {:gene :close}
-                          {:gene :var :name 'filterv}
-                          {:gene :apply}
-                          {:gene :var :name 'count}
-                          {:gene :apply})}
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}
+                  {:gene :lit, :val 2, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]
+    :solution    (list {:gene :local :idx 0}
+                       {:gene :fn :arg-types [{:type 'int?}]}
+                       {:gene :lit :val 2 :type {:type 'int?}}
+                       {:gene :local :idx 1}
+                       {:gene :var :name 'int-mod}
+                       {:gene :apply}
+                       {:gene :lit :val 1 :type {:type 'int?}}
+                       {:gene :var :name '=}
+                       {:gene :apply}
+                       {:gene :close}
+                       {:gene :var :name 'filterv}
+                       {:gene :apply}
+                       {:gene :var :name 'count}
+                       {:gene :apply})}
 
    "digits"
-   {:input->type    {'input1 {:type 'int?}}
-    :ret-type       {:type 'string?}
-    :other-types    [{:type 'boolean?} {:type 'char?}]
-    :literals       [\newline]
-    :lit-generators [(bu/int-generator 10)]
-    :loss-fns       [lev/distance]}
+   {:input->type {'input1 {:type 'int?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val \newline, :type {:type 'char?}}
+                  {:gene :lit, :fn (bu/int-generator 10), :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
 
    "double-letters"
-   {:input->type    {'input1 {:type 'string?}}
-    :ret-type       {:type 'string?}
-    :other-types    [{:type 'int?} {:type 'boolean?} {:type 'char?}]
-    :literals       [\!]
-    :lit-generators []
-    :loss-fns       [lev/distance]}
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val \!, :type {:type 'char?}}]
+    :loss-fns    [lev/distance]}
 
    ;"even-squares"
-   ;{:input->type    {'input1 {:type 'int?}}
-   ; :ret-type    {:type 'string?}
-   ; :other-types    [{:type 'int?} {:type 'boolean?}]
-   ; :literals       []
-   ; :lit-generators []
-   ; :loss-fns        [lev/distance
-   ;                   #(+ (Math/abs (- ...))
-   ;                       ..)
-   ;                   #(let [])]}
 
    "for-loop-index"
-   {:input->type    {'input1 {:type 'int?}
-                     'input2 {:type 'int?}
-                     'input3 {:type 'int?}}
-    :ret-type       {:type 'string?}
-    :other-types    [{:type 'int?} {:type 'boolean?}]
-    :literals       []
-    :lit-generators []
-    :loss-fns       [lev/distance]}
+   {:input->type {'input1 {:type 'int?}
+                  'input2 {:type 'int?}
+                  'input3 {:type 'int?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'boolean?}]
+    :loss-fns    [lev/distance]}
 
    "grade"
-   {:input->type    {'input1 {:type 'int?}
-                     'input2 {:type 'int?}
-                     'input3 {:type 'int?}
-                     'input4 {:type 'int?}
-                     'input5 {:type 'int?}}
-    :ret-type       {:type 'string?}
-    :other-types    [{:type 'boolean?}]
-    :literals       ["Student has a"
-                     " grade."
-                     "A" "B" "C" "D" "F"]
-    :lit-generators [#(rand-int 101)]
-    :loss-fns       [lev/distance
-                     ;; If correct format, distance from correct letter grade char.
-                     (let [extract-letter #(second (re-find #"^Student has a (.) grade.$" %))]
-                       #(let [actual-letter (extract-letter %1)
-                              expected-letter (extract-letter %2)]
-                          (if actual-letter
-                            (Math/abs (- (int (first expected-letter))
-                                         (int (first actual-letter))))
-                            penalty)))]}
+   {:input->type {'input1 {:type 'int?}
+                  'input2 {:type 'int?}
+                  'input3 {:type 'int?}
+                  'input4 {:type 'int?}
+                  'input5 {:type 'int?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val "Student has a ", :type {:type 'string?}}
+                  {:gene :lit, :val " grade.", :type {:type 'string?}}
+                  {:gene :lit, :val "A", :type {:type 'string?}}
+                  {:gene :lit, :val "B", :type {:type 'string?}}
+                  {:gene :lit, :val "C", :type {:type 'string?}}
+                  {:gene :lit, :val "D", :type {:type 'string?}}
+                  {:gene :lit, :val "F", :type {:type 'string?}}
+                  {:gene :lit-generator, :fn #(rand-int 101), :type {:type 'string?}}]
+    :loss-fns    [lev/distance
+                  ;; If correct format, distance from correct letter grade char.
+                  (let [extract-letter #(second (re-find #"^Student has a (.) grade.$" %))]
+                    #(let [actual-letter (extract-letter %1)
+                           expected-letter (extract-letter %2)]
+                       (if actual-letter
+                         (Math/abs (- (int (first expected-letter))
+                                      (int (first actual-letter))))
+                         penalty)))]}
 
    "last-index-of-zero"
-   {:input->type    {'input1 {:type :vector :child {:type 'int?}}}
-    :ret-type       {:type 'int?}
-    :other-types    [{:type 'boolean?}]
-    :literals       []
-    :lit-generators [(bu/int-generator 50)]
-    :loss-fns       [bu/absolute-distance]}
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 50), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}
 
    "median"
-   {:input->type    {'input1 {:type 'int?}
-                     'input2 {:type 'int?}
-                     'input3 {:type 'int?}}
-    :ret-type       {:type 'int?}
-    :other-types    [{:type 'boolean?}]
-    :literals       []
-    :lit-generators [(bu/int-generator 100)]
-    :loss-fns       [bu/absolute-distance]}
+   {:input->type {'input1 {:type 'int?}
+                  'input2 {:type 'int?}
+                  'input3 {:type 'int?}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}
 
    "mirror-image"
-   {:input->type    {'input1 {:type :vector :child {:type 'int?}}
-                     'input2 {:type :vector :child {:type 'int?}}}
-    :ret-type       {:type 'boolean?}
-    :other-types    [{:type 'int?}]
-    :literals       []
-    :lit-generators [bu/rand-bool]
-    :loss-fns       [#(if (= %1 %2) 0 1)]
-    :solution       (list {:gene :local :idx 0}
-                          {:gene :local :idx 1}
-                          {:gene :var :name `lib/reversev}
-                          {:gene :apply}
-                          {:gene :var :name '=}
-                          {:gene :apply})}
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}
+                  'input2 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type 'boolean?}
+    :other-types [{:type 'int?}]
+    :extra-genes [{:gene :lit-generator, :fn bu/rand-bool, :type {:type 'int?}}]
+    :loss-fns    [#(if (= %1 %2) 0 1)]
+    :solution    (list {:gene :local :idx 0}
+                       {:gene :local :idx 1}
+                       {:gene :var :name `lib/reversev}
+                       {:gene :apply}
+                       {:gene :var :name '=}
+                       {:gene :apply})}
 
    "negative-to-zero"
-   {:input->type    {'input1 {:type :vector :child {:type 'int?}}}
-    :ret-type       {:type :vector :child {:type 'int?}}
-    :other-types    [{:type 'int?} {:type 'boolean?}]
-    :literals       [0]
-    :lit-generators []
-    :loss-fns       [lev/distance]}
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type :vector :child {:type 'int?}}
+    :other-types [{:type 'int?} {:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
 
    "number-io"
    {:input->type    {'input1 {:type 'double?}
                      'input2 {:type 'int?}}
     :ret-type       {:type 'string?}
-    :other-types    []
-    :literals       []
     :lit-generators [(bu/int-generator 100)
                      #(- (rand 201.0) 100.0)]
     :loss-fns       [#(try
@@ -191,9 +181,9 @@
     :ret-type    {:type 'int?}
     ;; The `nil?` functions are side effects, like printing.
     :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?} {:type 'nil?}]
-    :extra-genes [{:gene :lit :val \space :type {:type 'char?}}
-                  {:gene :lit :val \newline :type {:type 'char?}}
-                  {:gene :lit-generator :fn bu/rand-char :type {:type 'char?}}]
+    :extra-genes [{:gene :lit, :val \space, :type {:type 'char?}}
+                  {:gene :lit, :val \newline, :type {:type 'char?}}
+                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
     :loss-fns    [bu/absolute-distance]
     ;; Config for how to unpack the cases from data files.
     :out-key     :output2
@@ -222,43 +212,42 @@
    ; "scrabble-score"
 
    "small-or-large"
-   {:input->type    {'input1 {:type 'int?}}
-    :ret-type       {:type 'string?}
-    :other-types    [{:type 'boolean?}]
-    :literals       ["small" "large"]
-    :lit-generators [(bu/int-generator 10000)]
-    :loss-fns       [lev/distance]}
+   {:input->type {'input1 {:type 'int?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val "small", :type {:type 'string?}}
+                  {:gene :lit, :val "large", :type {:type 'string?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 10000), :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
 
    "smallest"
-   {:input->type    {'input1 {:type 'int?}
-                     'input2 {:type 'int?}
-                     'input3 {:type 'int?}
-                     'input4 {:type 'int?}}
-    :ret-type       {:type 'int?}
-    :other-types    [{:type 'boolean?}]
-    :literals       []
-    :lit-generators [(bu/int-generator 100)]
-    :loss-fns       [bu/absolute-distance]
-    :solution       [{:gene :local :idx 0}
-                     {:gene :local :idx 1}
-                     {:gene :local :idx 2}
-                     {:gene :local :idx 3}
-                     {:gene :var :name 'min-int}
-                     {:gene :var :name 'min-int}
-                     {:gene :var :name 'min-int}
-                     {:gene :apply}
-                     {:gene :apply}
-                     {:gene :apply}]}
+   {:input->type {'input1 {:type 'int?}
+                  'input2 {:type 'int?}
+                  'input3 {:type 'int?}
+                  'input4 {:type 'int?}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]
+    :solution    [{:gene :local :idx 0}
+                  {:gene :local :idx 1}
+                  {:gene :local :idx 2}
+                  {:gene :local :idx 3}
+                  {:gene :var :name 'min-int}
+                  {:gene :var :name 'min-int}
+                  {:gene :var :name 'min-int}
+                  {:gene :apply}
+                  {:gene :apply}
+                  {:gene :apply}]}
 
    ; "string-differences"
 
    "string-lengths-backwards"
-   {:input->type    {'input1 {:type :vector :child {:type 'string?}}}
-    :ret-type       {:type 'string?}
-    :other-types    [{:type 'string?} {:type 'int?} {:type 'boolean?} {:type :vector :child {:type 'string?}}]
-    :literals       []
-    :lit-generators [(bu/int-generator 100)]
-    :loss-fns       [lev/distance]}
+   {:input->type {'input1 {:type :vector :child {:type 'string?}}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'string?} {:type 'int?} {:type 'boolean?} {:type :vector :child {:type 'string?}}]
+    :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
 
    ; "sum-of-squares"
    ; "super-anagrams"
@@ -267,16 +256,16 @@
    {:input->type    {'input1 {:type 'string?}}
     :ret-type       {:type 'string?}
     :other-types    [{:type 'int?} {:type 'boolean?} {:type 'char?}]
-    :literals       ["The number of syllables is "
-                     \a
-                     \e
-                     \i
-                     \o
-                     \u
-                     \y
-                     "aeiouy"]
-    :lit-generators [;; Random visible character
-                     #(rand-nth (concat [\newline \tab] (map char (range 32 127))))]
+
+    :extra-genes    [{:gene :lit, :val "The number of syllables is ", :type {:type 'string?}}
+                     {:gene :lit, :val \a, :type {:type 'char?}}
+                     {:gene :lit, :val \e, :type {:type 'char?}}
+                     {:gene :lit, :val \i, :type {:type 'char?}}
+                     {:gene :lit, :val \o, :type {:type 'char?}}
+                     {:gene :lit, :val \u, :type {:type 'char?}}
+                     {:gene :lit, :val \y, :type {:type 'char?}}
+                     {:gene :lit, :val "aeiouy", :type {:type 'string?}}
+                     {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
     :loss-fns       [lev/distance
                      (let [parse #(try (Integer/parseInt (last (str/split % #"\s+")))
                                        (catch Exception e nil))]
@@ -288,8 +277,6 @@
    {:input->type    {'input1 {:type :vector :child {:type 'double?}}}
     :ret-type       {:type 'double?}
     :other-types    [{:type 'int?}]
-    :literals       []
-    :lit-generators []
     :loss-fns       [#(bu/round 4 (bu/absolute-distance %1 %2))]}
 
    "vectors-summed"
@@ -297,8 +284,6 @@
                      'input2 {:type :vector :child {:type 'int?}}}
     :ret-type       {:type :vector :child {:type 'int?}}
     :other-types    [{:type 'int?}]
-    :literals       []
-    :lit-generators []
     :loss-fns       [(fn [y-hat y]
                        (reduce + (map #(or (bu/absolute-distance %1 %2) penalty)
                                       y-hat y)))
@@ -337,7 +322,6 @@
 
 (defn validate-solutions
   [{:keys [data-dir num-cases]}]
-  (println data-dir (type data-dir))
   (let [suite (problems {:penalty 1000})]
     (doseq [[problem-name task] (filter (fn [[_ task]] (contains? task :solution)) suite)]
       (println "Starting" problem-name)
@@ -364,7 +348,6 @@
 
 (comment
 
-  ;; @todo Validate: negative-to-zero, replace-space-with-newline
-  (validate-solutions {:data-dir "data/psb/" :num-cases 20})
+  (validate-solutions {:data-dir "data/psb/" :num-cases 10})
 
   )
