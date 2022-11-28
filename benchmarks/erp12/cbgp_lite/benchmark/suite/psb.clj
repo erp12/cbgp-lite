@@ -310,7 +310,19 @@
   ;;  "cut-vector"
   ;;  "dice-game"
   ;;  "find-pair"
-  ;;  "fizz-buzz"
+   
+   "fizz-buzz"
+   {:input->type {'input1 {:type 'int?}}
+    :ret-type    {:type 'string}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val "Fizz", :type {:type 'string}}
+                  {:gene :lit, :val "Buzz", :type {:type 'string}}
+                  {:gene :lit, :val "FizzBuzz", :type {:type 'string}}
+                  {:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 3, :type {:type 'int?}}
+                  {:gene :lit, :val 5, :type {:type 'int?}}]
+    :loss-fns    [lev/distance]
+    }
 
    "fuel-cost"
    {:input->type {'input1 {:type :vector :child {:type 'int?}}}
@@ -322,9 +334,9 @@
                   {:gene :lit, :val 2, :type {:type 'int?}}
                   {:gene :lit, :val 3, :type {:type 'int?}}]
     :loss-fns    [bu/absolute-distance]
-    :solution    [{:gene :local :idx 0}
-                  {:gene :var :name 'int-add}
-                  #_{:gene :var :name 'reduce}]
+    ;; :solution    [{:gene :local :idx 0}
+    ;;               {:gene :var :name 'int-add}
+    ;;               #_{:gene :var :name 'reduce}]
     }
 
 
