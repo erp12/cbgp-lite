@@ -306,18 +306,27 @@
   ;;  "bouncing-balls"
   ;;  "bowling"
   ;;  "camel-case"
-  ;;  "coin-sums"
-  ;;  "cut-vector"
-  ;;  "dice-game"
-  ;;  "find-pair"
+  ;;  "coin-sums" ;; NEEDS MULTIPLE OUTPUTS
+  ;;  "cut-vector" ;; NEEDS MULTIPLE OUTPUTS 
+   
+   "dice-game"
+   {:input->type {'input1 {:type 'int?}
+                  'input2 {:type 'int?}}
+    :ret-type    {:type 'double?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0.0, :type {:type 'double?}}
+                  {:gene :lit, :val 1.0, :type {:type 'double?}}]
+    :loss-fns    [bu/absolute-distance]}
+   
+  ;;  "find-pair" ;; NEEDS MULTIPLE OUTPUTS
    
    "fizz-buzz"
    {:input->type {'input1 {:type 'int?}}
-    :ret-type    {:type 'string}
+    :ret-type    {:type 'string?}
     :other-types [{:type 'boolean?}]
-    :extra-genes [{:gene :lit, :val "Fizz", :type {:type 'string}}
-                  {:gene :lit, :val "Buzz", :type {:type 'string}}
-                  {:gene :lit, :val "FizzBuzz", :type {:type 'string}}
+    :extra-genes [{:gene :lit, :val "Fizz", :type {:type 'string?}}
+                  {:gene :lit, :val "Buzz", :type {:type 'string?}}
+                  {:gene :lit, :val "FizzBuzz", :type {:type 'string?}}
                   {:gene :lit, :val 0, :type {:type 'int?}}
                   {:gene :lit, :val 3, :type {:type 'int?}}
                   {:gene :lit, :val 5, :type {:type 'int?}}]
@@ -344,7 +353,7 @@
   ;;  "indices-of-substring"
   ;;  "leaders"
   ;;  "luhn"
-  ;;  "mastermind"
+  ;;  "mastermind" ;; NEEDS MULTIPLE OUTPUTS
   ;;  "middle-character"
   ;;  "paired-digits"
   ;;  "shopping-list"
