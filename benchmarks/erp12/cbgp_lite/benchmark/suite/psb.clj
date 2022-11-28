@@ -1,7 +1,6 @@
 (ns erp12.cbgp-lite.benchmark.suite.psb
   (:require [clj-fuzzy.levenshtein :as lev]
             [clojure.string :as str]
-            [clojure.string]
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.individual :as i]
@@ -299,6 +298,51 @@
    ; "word-stats"
    ; "x-word-lines"
 
+   ;;;;;;;;;;;;;;;;;;;
+   ;; PSB2 Problems ;;
+   ;;;;;;;;;;;;;;;;;;;
+
+  ;;  "basement"
+  ;;  "bouncing-balls"
+  ;;  "bowling"
+  ;;  "camel-case"
+  ;;  "coin-sums"
+  ;;  "cut-vector"
+  ;;  "dice-game"
+  ;;  "find-pair"
+  ;;  "fizz-buzz"
+
+   "fuel-cost"
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}
+                  {:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}
+                  {:gene :lit, :val 2, :type {:type 'int?}}
+                  {:gene :lit, :val 3, :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]
+    :solution    [{:gene :local :idx 0}
+                  {:gene :var :name 'int-add}
+                  #_{:gene :var :name 'reduce}]
+    }
+
+
+  ;;  "gcd"
+  ;;  "indices-of-substring"
+  ;;  "leaders"
+  ;;  "luhn"
+  ;;  "mastermind"
+  ;;  "middle-character"
+  ;;  "paired-digits"
+  ;;  "shopping-list"
+  ;;  "snow-day"
+  ;;  "solve-boolean"
+  ;;  "spin-words"
+  ;;  "square-digits"
+  ;;  "substitution-cipher"
+  ;;  "twitter"
+  ;;  "vector-distance"
    })
 
 (defn reshape-case
@@ -334,7 +378,7 @@
                                                                                      :n-train  0})))))
             start-time (System/currentTimeMillis)
             evaluation (factory (:solution task) nil)
-            duration (/ (- (System/currentTimeMillis) start-time) 1000)]
+            duration (/ (- (System/currentTimeMillis) start-time) 1000.0)]
         (cond
           (> (:total-error evaluation) 0)
           (throw (ex-info (str problem-name " solution has non-zero error.") {:eval evaluation}))
@@ -350,4 +394,6 @@
 
   (validate-solutions {:data-dir "data/psb/" :num-cases 10})
 
+
+  
   )
