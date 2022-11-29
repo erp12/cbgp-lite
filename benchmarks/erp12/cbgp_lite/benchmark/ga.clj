@@ -25,8 +25,8 @@
         (mutate to-mutate)))))
 
 (def default-config
-  {:n-train              100
-   :n-test               300
+  {:n-train              200
+   :n-test               2000
    :population-size      1000
    :max-generations      300
    :umad-rate            0.1

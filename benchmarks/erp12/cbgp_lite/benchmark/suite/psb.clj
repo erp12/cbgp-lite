@@ -302,13 +302,64 @@
    ;; PSB2 Problems ;;
    ;;;;;;;;;;;;;;;;;;;
 
-  ;;  "basement"
-  ;;  "bouncing-balls"
-  ;;  "bowling"
-  ;;  "camel-case"
+   "basement"
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
+                  {:gene :lit, :val -1, :type {:type 'int?}}
+                  {:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}   
+   
+   "bouncing-balls"
+   {:input->type {'input1 {:type 'double?}
+                  'input2 {:type 'double?}
+                  'input3 {:type 'int?}}
+    :ret-type    {:type 'double?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0.0, :type {:type 'double?}}
+                  {:gene :lit, :val 1.0, :type {:type 'double?}}
+                  {:gene :lit, :val 2.0, :type {:type 'double?}}]
+    :loss-fns    [bu/absolute-distance]}
+
+   "bowling"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val \-, :type {:type 'char?}}
+                  {:gene :lit, :val \X, :type {:type 'char?}}
+                  {:gene :lit, :val \/, :type {:type 'char?}}
+                  {:gene :lit, :val \1, :type {:type 'char?}}
+                  {:gene :lit, :val \2, :type {:type 'char?}}
+                  {:gene :lit, :val \3, :type {:type 'char?}}
+                  {:gene :lit, :val \4, :type {:type 'char?}}
+                  {:gene :lit, :val \5, :type {:type 'char?}}
+                  {:gene :lit, :val \6, :type {:type 'char?}}
+                  {:gene :lit, :val \7, :type {:type 'char?}}
+                  {:gene :lit, :val \8, :type {:type 'char?}}
+                  {:gene :lit, :val \9, :type {:type 'char?}}
+                  {:gene :lit, :val 10, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 10), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}
+
+   "camel-case"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val \-, :type {:type 'char?}}
+                  {:gene :lit, :val \space, :type {:type 'char?}}
+                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (fn [] (apply str
+                                                           (repeatedly (rand-int 21)
+                                                                       bu/rand-char))), :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
+
+
   ;;  "coin-sums" ;; NEEDS MULTIPLE OUTPUTS
   ;;  "cut-vector" ;; NEEDS MULTIPLE OUTPUTS 
-   
+
    "dice-game"
    {:input->type {'input1 {:type 'int?}
                   'input2 {:type 'int?}}
@@ -317,9 +368,9 @@
     :extra-genes [{:gene :lit, :val 0.0, :type {:type 'double?}}
                   {:gene :lit, :val 1.0, :type {:type 'double?}}]
     :loss-fns    [bu/absolute-distance]}
-   
+
   ;;  "find-pair" ;; NEEDS MULTIPLE OUTPUTS
-   
+
    "fizz-buzz"
    {:input->type {'input1 {:type 'int?}}
     :ret-type    {:type 'string?}
@@ -330,8 +381,7 @@
                   {:gene :lit, :val 0, :type {:type 'int?}}
                   {:gene :lit, :val 3, :type {:type 'int?}}
                   {:gene :lit, :val 5, :type {:type 'int?}}]
-    :loss-fns    [lev/distance]
-    }
+    :loss-fns    [lev/distance]}
 
    "fuel-cost"
    {:input->type {'input1 {:type :vector :child {:type 'int?}}}
@@ -381,7 +431,11 @@
   [{:keys [data-dir problem n-train n-test] :as opts}]
   (let [problem-info (get (problems {}) (name problem))
         reshape #(reshape-case % problem-info)
-        {:keys [train test]} (psb2/fetch-examples (str data-dir) (str problem) n-train n-test)]
+        ;; start-time (System/currentTimeMillis)
+        {:keys [train test]} (psb2/fetch-examples (str data-dir) (str problem) n-train n-test)
+        ;; end-time (System/currentTimeMillis)
+        ]
+    ;; (println "Reading data took" (/ (- end-time start-time) 1000.0) "seconds.")
     {:train (map reshape train)
      :test  (map reshape test)}))
 
