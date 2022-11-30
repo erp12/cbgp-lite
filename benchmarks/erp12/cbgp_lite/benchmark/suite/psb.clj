@@ -322,7 +322,7 @@
     :extra-genes [{:gene :lit, :val 0.0, :type {:type 'double?}}
                   {:gene :lit, :val 1.0, :type {:type 'double?}}
                   {:gene :lit, :val 2.0, :type {:type 'double?}}]
-    :loss-fns    [bu/absolute-distance]}
+    :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}
 
    "bowling"
    {:input->type {'input1 {:type 'string?}}
@@ -367,7 +367,7 @@
     :other-types [{:type 'boolean?}]
     :extra-genes [{:gene :lit, :val 0.0, :type {:type 'double?}}
                   {:gene :lit, :val 1.0, :type {:type 'double?}}]
-    :loss-fns    [bu/absolute-distance]}
+    :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}
 
   ;;  "find-pair" ;; NEEDS MULTIPLE OUTPUTS
 
@@ -457,12 +457,54 @@
                   {:gene :lit, :val 10, :type {:type 'int?}}
                   {:gene :lit-generator, :fn (bu/int-generator 10), :type {:type 'int?}}]
     :loss-fns    [bu/absolute-distance]}
-   
+
   ;;  "mastermind" ;; NEEDS MULTIPLE OUTPUTS
-  ;;  "middle-character"
-  ;;  "paired-digits"
-  ;;  "shopping-list"
-  ;;  "snow-day"
+
+   "middle-character"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val "", :type {:type 'string?}}
+                  {:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}
+                  {:gene :lit, :val 2, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
+
+   "paired-digits"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (fn [] (rand-nth "0123456789")), :type {:type 'char?}}
+                  {:gene :lit-generator, :fn (fn [] (rand-int 10)), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}
+
+   "shopping-list"
+   {:input->type {'input1 {:type :vector :child {:type 'double?}}
+                  'input2 {:type :vector :child {:type 'double?}}}
+    :ret-type    {:type 'double?}
+    :other-types [{:type 'boolean?} {:type 'int?}]
+    :extra-genes [{:gene :lit, :val 0.0, :type {:type 'double?}}
+                  {:gene :lit, :val 100.0, :type {:type 'double?}}
+                  {:gene :lit-generator, :fn (fn [] (* (rand) 100)), :type {:type 'double}}]
+    :loss-fns    [#(bu/round 2 (bu/absolute-distance %1 %2))]}
+
+   "snow-day"
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}
+                  'input2 {:type :vector :child {:type 'double?}}
+                  'input3 {:type :vector :child {:type 'double?}}
+                  'input4 {:type :vector :child {:type 'double?}}}
+    :ret-type    {:type 'double?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}
+                  {:gene :lit, :val -1, :type {:type 'int?}}
+                  {:gene :lit, :val 0.0, :type {:type 'double?}}
+                  {:gene :lit, :val 1.0, :type {:type 'double?}}
+                  {:gene :lit, :val -1.0, :type {:type 'double?}}]
+    :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}
+   
   ;;  "solve-boolean"
   ;;  "spin-words"
   ;;  "square-digits"
