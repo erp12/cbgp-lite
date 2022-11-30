@@ -305,7 +305,7 @@
    'int-add             (binary-transform {:type 'int?})
    'int-sub             (binary-transform {:type 'int?})
    'int-mult            (binary-transform {:type 'int?})
-   'int-div             (simple-fn-schema [{:type 'int?} {:type 'int?}] {:type 'double})
+   'int-div             (simple-fn-schema [{:type 'int?} {:type 'int?}] {:type 'double?})
    'int-mod             (binary-transform {:type 'int?})
    'int-inc             (unary-transform {:type 'int?})
    'int-dec             (unary-transform {:type 'int?})
