@@ -15,18 +15,9 @@
                ;:spit    (assoc (log-app/spit-appender {:fname "./errors.log"}) :min-level :debug)
                }})
 
-(defn make-breed
-  [{:keys [umad-rate] :as opts}]
-  (let [select (tb/make-lexicase-selection opts)
-        mutate (tb/make-size-neutral-umad {:rate           umad-rate
-                                           :genetic-source (:genetic-source opts)})]
-    (fn [generation]
-      (let [to-mutate (->> generation select :genome)]
-        (mutate to-mutate)))))
-
 (def default-config
-  {:n-train              100
-   :n-test               300
+  {:n-train              200
+   :n-test               2000
    :population-size      1000
    :max-generations      300
    :umad-rate            0.1
@@ -34,6 +25,19 @@
    :max-genome-size      250
    :penalty              1e5
    :simplification-steps 2000})
+
+(defn make-breed
+  [opts]
+  (let [select (tb/make-lexicase-selection opts)
+        mutate (tb/make-size-neutral-umad (assoc opts :rate (:umad-rate opts)))]
+    (fn breed [state]
+      (-> state
+          ;; Take 1 individual per error vector.
+          (->> :grouped vals (map rand-nth))
+          ;; Select a parent and mutate to child
+          (select state)
+          :genome
+          mutate))))
 
 (defn run
   [opts]
@@ -45,54 +49,43 @@
                  task/enhance-task
                  (assoc :evaluate-fn i/evaluate-full-behavior))
         opts (merge config task)
-        individual-factory (i/make-individual-factory (-> opts
-                                                          (assoc :cases (:train task))
-                                                          (dissoc :train :test)))
-        {:keys [best result]} (ga/run {;; The number of genomes to include in each generation.
-                                       :population-size    (:population-size config)
-                                       ;; Function for generating random genomes.
-                                       :genome-factory     #(pl/random-plushy-genome opts)
-                                       ;; An initialization function for each generation.
-                                       ;; Optionally, will select a subset of training cases to use as the downsample.
-                                       :pre-generation     (let [{:keys [downsample-rate train]} opts]
-                                                             (fn [{:keys [step]}]
-                                                               (log/info "Starting step" step)
-                                                               {:cases    (if downsample-rate
-                                                                            (random-sample downsample-rate train)
-                                                                            train)
-                                                                :start-ts (System/currentTimeMillis)}))
-                                       ;; Function for converting genomes into compiled Clojure functions
-                                       ;; and associated metadata for tracking progress (number of evaluations).
-                                       :individual-factory individual-factory
-                                       ;; Debug
-                                       :post-generation    (fn [{:keys [step start-ts population]}]
-                                                             ;; Force evaluation now to get accurate timings.
-                                                             (doall population)
-                                                             (log/info "Finished step" step {:duration-ms (- (System/currentTimeMillis) start-ts)}))
-                                       ;; A function for breeding child genomes from a population of individuals.
-                                       :breed              (make-breed opts)
-                                       ;; A comparator function between individuals for selecting the best
-                                       ;; seen individual in the run so far.
-                                       :individual-cmp     (comparator #(< (:total-error %1) (:total-error %2)))
-                                       ;; A predicate function for determining when evolution should stop.
-                                       :stop-fn            (let [{:keys [max-generations cases]} opts]
-                                                             (fn [{:keys [step best new-best?]}]
-                                                               (log/info "Report"
-                                                                         {:step       step
-                                                                          :best-error (:total-error best)
-                                                                          :best-code  (:code best)})
-                                                               (cond
-                                                                 (= step max-generations) :max-generation-reached
-                                                                 ;; If the "best" individual has solved the subset of cases
-                                                                 ;; Test if on the full training set.
-                                                                 (zero? (:total-error best))
-                                                                 (if (and new-best? (zero? (:total-error (individual-factory (:genome best) {:cases cases}))))
-                                                                   :solution-found
-                                                                   ;; If an individual solves a batch but not all training cases,
-                                                                   ;; no individual can become the new best and the run will fail.
-                                                                   ;; @todo Fix this in ga-clj somehow?
-                                                                   (log/info "Best individual solved a batch but not all training cases.")))))
-                                       :mapper             pmap
+        ;; @todo Refactor "individual-factory" to "genome->individual"
+        individual-factory (i/make-evaluator (-> opts
+                                                 (assoc :cases (:train task))
+                                                 (dissoc :train :test)))
+        {:keys [best result]} (ga/run {:population-size (:population-size config)
+                                       :genome-factory  #(pl/random-plushy-genome opts)
+                                       :pre-eval        (let [{:keys [downsample-rate train]} opts]
+                                                          (fn [{:keys [step]}]
+                                                            (log/info "Starting step" step)
+                                                            {:cases      (if downsample-rate
+                                                                           (random-sample downsample-rate train)
+                                                                           train)
+                                                             :step-start (System/currentTimeMillis)}))
+                                       :evaluator      individual-factory
+                                       :post-eval       (fn [{:keys [individuals]}]
+                                                          {:grouped (group-by :errors individuals)})
+                                       :breed           (make-breed opts)
+                                       :individual-cmp  (comparator #(< (:total-error %1) (:total-error %2)))
+                                       :stop-fn         (let [{:keys [max-generations cases]} opts]
+                                                          (fn [{:keys [step step-start best new-best?]}]
+                                                            (log/info "Report"
+                                                                      {:step       step
+                                                                       :duration   (- (System/currentTimeMillis) step-start)
+                                                                       :best-error (:total-error best)
+                                                                       :best-code  (:code best)})
+                                                            (cond
+                                                              (= step max-generations) :max-generation-reached
+                                                              ;; If the "best" individual has solved the subset of cases
+                                                              ;; Test if on the full training set.
+                                                              (zero? (:total-error best))
+                                                              (if (and new-best? (zero? (:total-error (individual-factory (:genome best) {:cases cases}))))
+                                                                :solution-found
+                                                                ;; If an individual solves a batch but not all training cases,
+                                                                ;; no individual can become the new best and the run will fail.
+                                                                ;; @todo Fix this in ga-clj somehow?
+                                                                (log/info "Best individual solved a batch but not all training cases.")))))
+                                       :mapper          pmap
                                        })
         ;; Simplify the best individual seen during evolution.
         best (i/simplify {:individual           best
