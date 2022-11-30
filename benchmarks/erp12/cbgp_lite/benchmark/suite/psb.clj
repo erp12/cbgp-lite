@@ -311,8 +311,8 @@
                   {:gene :lit, :val 0, :type {:type 'int?}}
                   {:gene :lit, :val 1, :type {:type 'int?}}
                   {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
-    :loss-fns    [bu/absolute-distance]}   
-   
+    :loss-fns    [bu/absolute-distance]}
+
    "bouncing-balls"
    {:input->type {'input1 {:type 'double?}
                   'input2 {:type 'double?}
@@ -393,16 +393,71 @@
                   {:gene :lit, :val 2, :type {:type 'int?}}
                   {:gene :lit, :val 3, :type {:type 'int?}}]
     :loss-fns    [bu/absolute-distance]
-    ;; :solution    [{:gene :local :idx 0}
-    ;;               {:gene :var :name 'int-add}
-    ;;               #_{:gene :var :name 'reduce}]
-    }
+    :solution    (list {:gene :local :idx 0}
 
+                  ;; Anonymous function
+                       {:gene :fn :arg-types [{:type 'int?}]}
+                       {:gene :lit :val 2 :type {:type 'int?}}
+                       {:gene :lit :val 3 :type {:type 'int?}}
+                       {:gene :local :idx 1}
+                       {:gene :var :name 'int-div}
+                       {:gene :apply}
+                       {:gene :var :name 'int}
+                       {:gene :apply}
+                       {:gene :var :name 'int-sub}
+                       {:gene :apply}
+                       {:gene :close}
 
-  ;;  "gcd"
-  ;;  "indices-of-substring"
-  ;;  "leaders"
-  ;;  "luhn"
+                  ;; Map fn over input vector
+                       {:gene :var :name 'mapv}
+                       {:gene :apply}
+
+                  ;; Sum the vector
+                       {:gene :var :name 'int-add}
+                       {:gene :var :name 'reduce}
+                       {:gene :apply})}
+
+   "gcd"
+   {:input->type {'input1 {:type 'int?}
+                  'input2 {:type 'int?}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 10), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}
+
+   "indices-of-substring"
+   {:input->type {'input1 {:type 'string?}
+                  'input2 {:type 'string?}}
+    :ret-type    {:type :vector :child {:type 'int?}}
+    :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
+                  {:gene :lit, :val "", :type {:type 'string?}}
+                  {:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
+
+   "leaders"
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type :vector :child {:type 'int?}}
+    :other-types [{:type 'int?} {:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
+                  ;; This is a random vector generator
+                  {:gene :lit-generator,
+                   :fn (fn [] (vec (repeatedly (rand-int 21) #(rand-int 1001))))
+                   :type {:type :vector :child {:type 'int?}}}]
+    :loss-fns    [bu/vector-of-numbers-loss]}
+
+   "luhn"
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 2, :type {:type 'int?}}
+                  {:gene :lit, :val 9, :type {:type 'int?}}
+                  {:gene :lit, :val 10, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 10), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}
+   
   ;;  "mastermind" ;; NEEDS MULTIPLE OUTPUTS
   ;;  "middle-character"
   ;;  "paired-digits"
@@ -456,7 +511,7 @@
             duration (/ (- (System/currentTimeMillis) start-time) 1000.0)]
         (cond
           (> (:total-error evaluation) 0)
-          (throw (ex-info (str problem-name " solution has non-zero error.") {:eval evaluation}))
+          (throw (ex-info (str problem-name " solution has non-zero error." evaluation) {:eval evaluation}))
 
           (some? (:exception evaluation))
           (throw (ex-info (str problem-name " solution threw an error.") {:eval evaluation} (:exception evaluation)))
@@ -467,7 +522,7 @@
 
 (comment
 
-  (validate-solutions {:data-dir "data/psb/" :num-cases 10})
+  (validate-solutions {:data-dir "data/psb/" :num-cases 50})
 
 
   

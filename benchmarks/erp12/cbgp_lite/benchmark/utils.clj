@@ -40,3 +40,13 @@
   (if (or (nil? actual) (nil? expected))
     nil
     (Math/abs (- actual expected))))
+
+(defn vector-of-numbers-loss
+  [actual expected]
+  (if (or (nil? actual) (nil? expected))
+    nil
+    (+' (apply +' (map (fn [cor res]
+                         (absolute-distance cor res))
+                       expected
+                       actual))
+        (*' 1000 (abs (- (count expected) (count actual)))))))
