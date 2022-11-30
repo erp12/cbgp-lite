@@ -245,7 +245,7 @@
    "string-lengths-backwards"
    {:input->type {'input1 {:type :vector :child {:type 'string?}}}
     :ret-type    {:type 'string?}
-    :other-types [{:type 'string?} {:type 'int?} {:type 'boolean?} {:type :vector :child {:type 'string?}}]
+    :other-types [{:type 'int?} {:type 'boolean?}]
     :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
     :loss-fns    [lev/distance]}
 
