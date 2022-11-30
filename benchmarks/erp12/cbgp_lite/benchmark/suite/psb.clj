@@ -253,47 +253,47 @@
    ; "super-anagrams"
 
    "syllables"
-   {:input->type    {'input1 {:type 'string?}}
-    :ret-type       {:type 'string?}
-    :other-types    [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
 
-    :extra-genes    [{:gene :lit, :val "The number of syllables is ", :type {:type 'string?}}
-                     {:gene :lit, :val \a, :type {:type 'char?}}
-                     {:gene :lit, :val \e, :type {:type 'char?}}
-                     {:gene :lit, :val \i, :type {:type 'char?}}
-                     {:gene :lit, :val \o, :type {:type 'char?}}
-                     {:gene :lit, :val \u, :type {:type 'char?}}
-                     {:gene :lit, :val \y, :type {:type 'char?}}
-                     {:gene :lit, :val "aeiouy", :type {:type 'string?}}
-                     {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
-    :loss-fns       [lev/distance
-                     (let [parse #(try (Integer/parseInt (last (str/split % #"\s+")))
-                                       (catch Exception e nil))]
-                       #(if-let [num (parse %1)]
-                          (bu/absolute-distance num (parse %2))
-                          penalty))]}
+    :extra-genes [{:gene :lit, :val "The number of syllables is ", :type {:type 'string?}}
+                  {:gene :lit, :val \a, :type {:type 'char?}}
+                  {:gene :lit, :val \e, :type {:type 'char?}}
+                  {:gene :lit, :val \i, :type {:type 'char?}}
+                  {:gene :lit, :val \o, :type {:type 'char?}}
+                  {:gene :lit, :val \u, :type {:type 'char?}}
+                  {:gene :lit, :val \y, :type {:type 'char?}}
+                  {:gene :lit, :val "aeiouy", :type {:type 'string?}}
+                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
+    :loss-fns    [lev/distance
+                  (let [parse #(try (Integer/parseInt (last (str/split % #"\s+")))
+                                    (catch Exception e nil))]
+                    #(if-let [num (parse %1)]
+                       (bu/absolute-distance num (parse %2))
+                       penalty))]}
 
    "vector-average"
-   {:input->type    {'input1 {:type :vector :child {:type 'double?}}}
-    :ret-type       {:type 'double?}
-    :other-types    [{:type 'int?}]
-    :loss-fns       [#(bu/round 4 (bu/absolute-distance %1 %2))]}
+   {:input->type {'input1 {:type :vector :child {:type 'double?}}}
+    :ret-type    {:type 'double?}
+    :other-types [{:type 'int?}]
+    :loss-fns    [#(bu/round 4 (bu/absolute-distance %1 %2))]}
 
    "vectors-summed"
-   {:input->type    {'input1 {:type :vector :child {:type 'int?}}
-                     'input2 {:type :vector :child {:type 'int?}}}
-    :ret-type       {:type :vector :child {:type 'int?}}
-    :other-types    [{:type 'int?}]
-    :loss-fns       [(fn [y-hat y]
-                       (reduce + (map #(or (bu/absolute-distance %1 %2) penalty)
-                                      y-hat y)))
-                     (fn [y-hat y]
-                       (* 1000 (bu/absolute-distance (count y-hat) (count y))))]
-    :solution       (list {:gene :local :idx 0}
-                          {:gene :local :idx 1}
-                          {:gene :var :name 'int-add}
-                          {:gene :var :name 'mapv2}
-                          {:gene :apply})}
+   {:input->type {'input1 {:type :vector :child {:type 'int?}}
+                  'input2 {:type :vector :child {:type 'int?}}}
+    :ret-type    {:type :vector :child {:type 'int?}}
+    :other-types [{:type 'int?}]
+    :loss-fns    [(fn [y-hat y]
+                    (reduce + (map #(or (bu/absolute-distance %1 %2) penalty)
+                                   y-hat y)))
+                  (fn [y-hat y]
+                    (* 1000 (bu/absolute-distance (count y-hat) (count y))))]
+    :solution    (list {:gene :local :idx 0}
+                       {:gene :local :idx 1}
+                       {:gene :var :name 'int-add}
+                       {:gene :var :name 'mapv2}
+                       {:gene :apply})}
 
    ; "wallis-pi"
    ; "word-stats"
@@ -325,13 +325,13 @@
   (let [suite (problems {:penalty 1000})]
     (doseq [[problem-name task] (filter (fn [[_ task]] (contains? task :solution)) suite)]
       (println "Starting" problem-name)
-      (let [factory (i/make-individual-factory (-> task
-                                                   task/enhance-task
-                                                   (assoc :evaluate-fn i/evaluate-full-behavior
-                                                          :cases (:test (read-cases {:data-dir (name data-dir)
-                                                                                     :problem  problem-name
-                                                                                     :n-test   num-cases
-                                                                                     :n-train  0})))))
+      (let [factory (i/make-evaluator (-> task
+                                          task/enhance-task
+                                          (assoc :evaluate-fn i/evaluate-full-behavior
+                                                 :cases (:test (read-cases {:data-dir (name data-dir)
+                                                                            :problem  problem-name
+                                                                            :n-test   num-cases
+                                                                            :n-train  0})))))
             start-time (System/currentTimeMillis)
             evaluation (factory (:solution task) nil)
             duration (/ (- (System/currentTimeMillis) start-time) 1000)]
@@ -350,4 +350,4 @@
 
   (validate-solutions {:data-dir "data/psb/" :num-cases 10})
 
-  )
+)

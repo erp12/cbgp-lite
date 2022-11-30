@@ -117,7 +117,7 @@
        :cases-used  (count cases)
        :exception   (:output (first (filter #(instance? Exception (:output %)) behavior)))})))
 
-(defn make-individual-factory
+(defn make-evaluator
   [{:keys [evaluate-fn cases arg-symbols] :as opts}]
   (fn [gn context]
     ;(log/debug "Genome" gn)
