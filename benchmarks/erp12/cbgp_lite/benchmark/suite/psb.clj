@@ -351,9 +351,11 @@
     :extra-genes [{:gene :lit, :val \-, :type {:type 'char?}}
                   {:gene :lit, :val \space, :type {:type 'char?}}
                   {:gene :lit-generator, :fn bu/rand-char, :type {:type 'int?}}
-                  {:gene :lit-generator, :fn (fn [] (apply str
-                                                           (repeatedly (rand-int 21)
-                                                                       bu/rand-char))), :type {:type 'int?}}]
+                  {:gene :lit-generator,
+                   :fn (fn [] (apply str
+                                     (repeatedly (rand-int 21)
+                                                 bu/rand-char))),
+                   :type {:type 'int?}}]
     :loss-fns    [lev/distance]}
 
 
@@ -491,10 +493,10 @@
     :loss-fns    [#(bu/round 2 (bu/absolute-distance %1 %2))]}
 
    "snow-day"
-   {:input->type {'input1 {:type :vector :child {:type 'int?}}
-                  'input2 {:type :vector :child {:type 'double?}}
-                  'input3 {:type :vector :child {:type 'double?}}
-                  'input4 {:type :vector :child {:type 'double?}}}
+   {:input->type {'input1 {:type 'int?}
+                  'input2 {:type 'double?}
+                  'input3 {:type 'double?}
+                  'input4 {:type 'double?}}
     :ret-type    {:type 'double?}
     :other-types [{:type 'boolean?}]
     :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
@@ -504,11 +506,55 @@
                   {:gene :lit, :val 1.0, :type {:type 'double?}}
                   {:gene :lit, :val -1.0, :type {:type 'double?}}]
     :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}
+
+   "solve-boolean"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'boolean?}
+    :other-types [{:type 'int?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val true, :type {:type 'boolean?}}
+                  {:gene :lit, :val false, :type {:type 'boolean?}}
+                  {:gene :lit, :val \t, :type {:type 'char?}}
+                  {:gene :lit, :val \f, :type {:type 'char?}}
+                  {:gene :lit, :val \|, :type {:type 'char?}}
+                  {:gene :lit, :val \&, :type {:type 'char?}}]
+    :loss-fns    [#(if (= %1 %2) 0 1)]}
+
+   "spin-words"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'char?} {:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 4, :type {:type 'int?}}
+                  {:gene :lit, :val 5, :type {:type 'int?}}
+                  {:gene :lit, :val \space, :type {:type 'char?}}
+                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}
+                  {:gene :lit-generator,
+                   :fn (fn [] (apply str
+                                     (repeatedly (rand-int 21)
+                                                 bu/rand-char))),
+                   :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
+
+   "square-digits"
+   {:input->type {'input1 {:type 'int?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'char?} {:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val "", :type {:type 'string?}}
+                  {:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}
+                  {:gene :lit, :val 2, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
+
+   "substitution-cipher"
+   {:input->type {'input1 {:type 'string?}
+                  'input2 {:type 'string?}
+                  'input3 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'char?} {:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val "", :type {:type 'string?}}
+                  {:gene :lit, :val 0, :type {:type 'int?}}]
+    :loss-fns    [lev/distance]}
    
-  ;;  "solve-boolean"
-  ;;  "spin-words"
-  ;;  "square-digits"
-  ;;  "substitution-cipher"
   ;;  "twitter"
   ;;  "vector-distance"
    })
