@@ -80,7 +80,7 @@
     :extra-genes [{:gene :lit, :val \!, :type {:type 'char?}}]
     :loss-fns    [lev/distance]}
 
-   ;"even-squares"
+   ;"even-squares" ;; TMH TODO
 
    "for-loop-index"
    {:input->type {'input1 {:type 'int?}
@@ -173,7 +173,7 @@
                           {:gene :var :name 'str}
                           {:gene :apply})}
 
-   ; "pig-latin"
+   ; "pig-latin" ;; TMH TODO
 
    "replace-space-with-newline"
    {:input->type {'input1 {:type 'string?}}
@@ -208,7 +208,7 @@
                        {:gene :var :name 'do2}
                        {:gene :apply})}
 
-   ; "scrabble-score"
+   ; "scrabble-score" ;; TMH TODO
 
    "small-or-large"
    {:input->type {'input1 {:type 'int?}}
@@ -239,7 +239,7 @@
                   {:gene :apply}
                   {:gene :apply}]}
 
-   ; "string-differences"
+   ; "string-differences" ;; TMH TODO
 
    "string-lengths-backwards"
    {:input->type {'input1 {:type :vector :child {:type 'string?}}}
@@ -248,8 +248,8 @@
     :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
     :loss-fns    [lev/distance]}
 
-   ; "sum-of-squares"
-   ; "super-anagrams"
+   ; "sum-of-squares" ;; TMH TODO
+   ; "super-anagrams" ;; TMH TODO
 
    "syllables"
    {:input->type    {'input1 {:type 'string?}}
@@ -296,7 +296,7 @@
 
    ; "wallis-pi"
    ; "word-stats"
-   ; "x-word-lines"
+   ; "x-word-lines" ;; TMH TODO
 
    ;;;;;;;;;;;;;;;;;;;
    ;; PSB2 Problems ;;
@@ -554,10 +554,27 @@
     :extra-genes [{:gene :lit, :val "", :type {:type 'string?}}
                   {:gene :lit, :val 0, :type {:type 'int?}}]
     :loss-fns    [lev/distance]}
-   
-  ;;  "twitter"
-  ;;  "vector-distance"
-   })
+
+   "twitter"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'char?} {:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 140, :type {:type 'int?}}
+                  {:gene :lit, :val "Too many characters", :type {:type 'string?}}
+                  {:gene :lit, :val "You didn't type anything", :type {:type 'string?}}
+                  {:gene :lit, :val "Your tweet has ", :type {:type 'string?}}
+                  {:gene :lit, :val " characters", :type {:type 'string?}}]
+    :loss-fns    [lev/distance]}
+
+   "vector-distance"
+   {:input->type {'input1 {:type :vector :child {:type 'double?}}
+                  'input2 {:type :vector :child {:type 'double?}}}
+    :ret-type    {:type 'double?}
+    :other-types [{:type 'boolean?} {:type 'int?}]
+    :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'double?}}}
+                  {:gene :lit, :val 0, :type {:type 'int}}]
+    :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}})
 
 (defn reshape-case
   [case {:keys [out-key stdout-key] :or {out-key :output1}}]
