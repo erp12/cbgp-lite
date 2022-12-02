@@ -67,19 +67,19 @@
             :total-error 5
             :exception   nil}))))
 
-(deftest individual-factory-test
-  (let [factory (i/make-individual-factory (-> {:input->type {'input1 {:type 'double?}
-                                                              'input2 {:type 'int?}}
-                                                :ret-type    {:type 'double?}
-                                                :loss-fns    [absolute-dist]
-                                                :penalty     1000
-                                                :evaluate-fn i/evaluate-full-behavior}
-                                               (u/enhance :arg-symbols task/arg-symbols
-                                                          :type-env task/type-environment)))]
-    (is (= (dissoc (factory (list {:gene :lit
-                                   :val 1.0
-                                   :type {:type 'double?}})
-                            {:cases [{:inputs [1.5 2] :output 3.5}]})
+(deftest make-evaluator-test
+  (let [evaluator (i/make-evaluator (-> {:input->type {'input1 {:type 'double?}
+                                                       'input2 {:type 'int?}}
+                                         :ret-type    {:type 'double?}
+                                         :loss-fns    [absolute-dist]
+                                         :penalty     1000
+                                         :evaluate-fn i/evaluate-full-behavior}
+                                        (u/enhance :arg-symbols task/arg-symbols
+                                                   :type-env task/type-environment)))]
+    (is (= (dissoc (evaluator (list {:gene :lit
+                                     :val  1.0
+                                     :type {:type 'double?}})
+                              {:cases [{:inputs [1.5 2] :output 3.5}]})
                    :func)
            {:behavior    '({:output 1.0 :std-out ""})
             :code        1.0
@@ -112,15 +112,15 @@
                          :individual {:genome      [10 10 10 10]
                                       :total-error (+ 30 4)})))))
   (testing "number-io"
-    (let [factory (i/make-individual-factory (-> {:input->type {'input1 {:type 'double?}
-                                                                'input2 {:type 'int?}}
-                                                  :ret-type    {:type 'double?}
-                                                  :vars        #{'double 'double-add}
-                                                  :loss-fns    [absolute-dist]
-                                                  :penalty     1000
-                                                  :evaluate-fn i/evaluate-full-behavior}
-                                                 (u/enhance :arg-symbols task/arg-symbols
-                                                            :type-env task/type-environment)))
+    (let [factory (i/make-evaluator (-> {:input->type {'input1 {:type 'double?}
+                                                       'input2 {:type 'int?}}
+                                         :ret-type    {:type 'double?}
+                                         :vars        #{'double 'double-add}
+                                         :loss-fns    [absolute-dist]
+                                         :penalty     1000
+                                         :evaluate-fn i/evaluate-full-behavior}
+                                        (u/enhance :arg-symbols task/arg-symbols
+                                                   :type-env task/type-environment)))
           cases [{:inputs [1.5 2] :output 3.5}
                  {:inputs [0.0 0] :output 0.0}
                  {:inputs [-1.0 1] :output 0.0}]]

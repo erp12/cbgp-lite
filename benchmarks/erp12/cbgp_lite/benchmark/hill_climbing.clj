@@ -37,9 +37,9 @@
                  task/enhance-task
                  (assoc :evaluate-fn i/evaluate-full-behavior))
         opts (merge config task)
-        individual-factory (i/make-individual-factory (-> opts
-                                                          (assoc :cases (:train task))
-                                                          (dissoc :train :test)))
+        individual-factory (i/make-evaluator (-> opts
+                                                 (assoc :cases (:train task))
+                                                 (dissoc :train :test)))
         {:keys [individual result]} (hc/run {;; Function for generating random genomes.
                                              :genome-factory       #(pl/random-plushy-genome opts)
                                              ;; Function for converting genomes into compiled Clojure functions
