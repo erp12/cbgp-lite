@@ -208,7 +208,42 @@
                        {:gene :var :name 'do2}
                        {:gene :apply})}
 
-   ; "scrabble-score" ;; TMH TODO
+   "scrabble-score"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?} {:type 'char} {:type :vector :child {:type 'int?}}]
+    :extra-genes [{:gene :lit,
+                   :val (let [scrabble-map {\a 1
+                                            \b 3
+                                            \c 3
+                                            \d 2
+                                            \e 1
+                                            \f 4
+                                            \g 2
+                                            \h 4
+                                            \i 1
+                                            \j 8
+                                            \k 5
+                                            \l 1
+                                            \m 3
+                                            \n 1
+                                            \o 1
+                                            \p 3
+                                            \q 10
+                                            \r 1
+                                            \s 1
+                                            \t 1
+                                            \u 1
+                                            \v 4
+                                            \w 4
+                                            \x 8
+                                            \y 4
+                                            \z 10}
+                              visible-chars (map char (range 0 127))]
+                          (vec (for [c visible-chars]
+                                 (get scrabble-map (first (str/lower-case c)) 0))))
+                   :type {:type :vector :child {:type 'int?}}}]
+    :loss-fns    [bu/absolute-distance]}
 
    "small-or-large"
    {:input->type {'input1 {:type 'int?}}
@@ -282,7 +317,9 @@
    {:input->type {'input1 {:type :vector :child {:type 'int?}}
                   'input2 {:type :vector :child {:type 'int?}}}
     :ret-type    {:type :vector :child {:type 'int?}}
-    :other-types [{:type 'int?}]
+    :other-types [{:type 'int?}] 
+    :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
+                  {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
     :loss-fns    [(fn [y-hat y]
                     (reduce + (map #(or (bu/absolute-distance %1 %2) penalty)
                                    y-hat y)))
@@ -296,7 +333,38 @@
 
    ; "wallis-pi"
    ; "word-stats"
-   ; "x-word-lines" ;; TMH TODO
+
+   "x-word-lines"
+   {:input->type {'input1 {:type 'string?}
+                  'input2 {:type 'int?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val \newline, :type {:type 'char?}}
+                  {:gene :lit, :val \space, :type {:type 'char?}}] 
+    :loss-fns    [; First error is Levenshtein distance of printed strings
+                  lev/distance
+
+                  ; Second error is integer distance from the correct number of newlines
+                  (fn [correct-output result]
+                    (abs (- (count (filter #(= % \newline) correct-output))
+                            (count (filter #(= % \newline) result)))))
+
+                  ; Third error is summed error of integer distances over the lines of the correct number of words per line
+                  (fn [correct-output result]
+                    (let [result-split-lines (str/split-lines result)
+                          words-per-line (if (empty? result-split-lines)
+                                           0
+                                           (count (str/split (first result-split-lines)
+                                                             #"\s+")))]
+                      (+ (apply + (map #(abs (- words-per-line
+                                                (count (str/split (str/trim %) #"\s+"))))
+                                       (butlast result-split-lines)))
+                         (abs (- (count (str/split (str/trim (let [last-line (last (str/split-lines correct-output))]
+                                                               (if last-line last-line "")))
+                                                   #"\s+"))
+                                 (count (str/split (str/trim (let [last-line (last result-split-lines)]
+                                                               (if last-line last-line "")))
+                                                   #"\s+")))))))]}
 
    ;;;;;;;;;;;;;;;;;;;
    ;; PSB2 Problems ;;
@@ -629,5 +697,22 @@
 
   (validate-solutions {:data-dir "data/psb/" :num-cases 50})
 
+  (read-cases {:data-dir "data/psb/"
+               :problem  "scrabble-score"
+               :n-test   10
+               :n-train  0})
+  ;; => {:train (),
+  ;;     :test
+  ;;     ({:inputs ["\n]BqAgxUre"], :output 27}
+  ;;      {:inputs ["ScG(5lh.%)tpK r9}"], :output 21}
+  ;;      {:inputs ["ul0vZvy\"'5;)6Q1"], :output 34}
+  ;;      {:inputs ["}6_"], :output 0}
+  ;;      {:inputs ["\tY\nh"], :output 8}
+  ;;      {:inputs ["D|NJ=n"], :output 12}
+  ;;      {:inputs ["@\n8}iDx(Q_uE.{"], :output 23}
+  ;;      {:inputs ["`R"], :output 1}
+  ;;      {:inputs ["i=yeVk\t`Jnw(;"], :output 28}
+  ;;      {:inputs ["{n2\t{\n@4W[\"]V4"], :output 9})}
 
-)
+
+  )
