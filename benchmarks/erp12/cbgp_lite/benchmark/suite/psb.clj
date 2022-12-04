@@ -283,9 +283,25 @@
     :extra-genes [{:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
     :loss-fns    [lev/distance]}
 
-   ; "sum-of-squares" ;; TMH TODO
-   ; "super-anagrams" ;; TMH TODO
+   "sum-of-squares"
+   {:input->type {'input1 {:type 'int?}}
+    :ret-type    {:type 'int?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                  {:gene :lit, :val 1, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}]
+    :loss-fns    [bu/absolute-distance]}
 
+   "super-anagrams"
+   {:input->type {'input1 {:type 'string?}
+                  'input2 {:type 'string?}}
+    :ret-type    {:type 'boolean?}
+    :other-types [{:type 'int?} {:type 'char?}]
+    :extra-genes [{:gene :lit-generator, :fn (fn [] (rand-nth (list true false))), :type {:type 'boolean?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}
+                  {:gene :lit-generator, :fn (fn [] (rand-nth (concat [\newline \tab] (map char (range 32 127))))), :type {:type 'string?}}]
+    :loss-fns    [#(if (= %1 %2) 0 1)]}
+   
    "syllables"
    {:input->type {'input1 {:type 'string?}}
     :ret-type    {:type 'string?}
@@ -317,7 +333,7 @@
    {:input->type {'input1 {:type :vector :child {:type 'int?}}
                   'input2 {:type :vector :child {:type 'int?}}}
     :ret-type    {:type :vector :child {:type 'int?}}
-    :other-types [{:type 'int?}] 
+    :other-types [{:type 'int?}]
     :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
                   {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
     :loss-fns    [(fn [y-hat y]
@@ -340,7 +356,7 @@
     :ret-type    {:type 'string?}
     :other-types [{:type 'boolean?} {:type 'char?}]
     :extra-genes [{:gene :lit, :val \newline, :type {:type 'char?}}
-                  {:gene :lit, :val \space, :type {:type 'char?}}] 
+                  {:gene :lit, :val \space, :type {:type 'char?}}]
     :loss-fns    [; First error is Levenshtein distance of printed strings
                   lev/distance
 
@@ -659,11 +675,8 @@
   [{:keys [data-dir problem n-train n-test] :as opts}]
   (let [problem-info (get (problems {}) (name problem))
         reshape #(reshape-case % problem-info)
-        ;; start-time (System/currentTimeMillis)
         {:keys [train test]} (psb2/fetch-examples (str data-dir) (str problem) n-train n-test)
-        ;; end-time (System/currentTimeMillis)
         ]
-    ;; (println "Reading data took" (/ (- end-time start-time) 1000.0) "seconds.")
     {:train (map reshape train)
      :test  (map reshape test)}))
 
