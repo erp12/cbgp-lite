@@ -80,7 +80,50 @@
     :extra-genes [{:gene :lit, :val \!, :type {:type 'char?}}]
     :loss-fns    [lev/distance]}
 
-   ;"even-squares" ;; TMH TODO
+   "even-squares"
+   {:input->type {'input1 {:type 'int?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'boolean?}]
+    :extra-genes []
+    :loss-fns    [; Error 1: Levenshtein distance of printed strings
+                  lev/distance
+
+                  ; Error 2: Difference in number of lines with integer-parseable strings. Also, each line without an integer-parseable string contributes 1 error
+                  (fn [result correct-string]
+                    (let [correct-integers (if (= correct-string "")
+                                             []
+                                             (map parse-long (str/split-lines correct-string)))
+                          correct-number-lines (count correct-integers)
+                          result-lines (if (= result "")
+                                         []
+                                         (str/split-lines result))
+                          int-parse-strings (filter #(re-matches #"-?\d+" %) result-lines)
+                          lines-with-integer-parseable-strings (count int-parse-strings)
+                          lines-without-integer-parseable-strings (- (count result-lines) lines-with-integer-parseable-strings)]
+                      (+ (abs (- correct-number-lines lines-with-integer-parseable-strings))
+                         lines-without-integer-parseable-strings)))
+
+                  ; Error 3: For each line in the result with a parseable integer, find the integer error compared to correct integer. Sum these.
+                  (fn [result correct-string]
+                    (let [correct-integers (if (= correct-string "")
+                                             []
+                                             (map parse-long (str/split-lines correct-string)))
+                          result-lines (if (= result "")
+                                         []
+                                         (str/split-lines result))
+                          int-parse-strings (filter #(re-matches #"-?\d+" %) result-lines)
+                          correct-result-int-pairs (map vector
+                                                        correct-integers
+                                                        (concat (map (fn [int-str]
+                                                                       (try (Integer/parseInt int-str)
+                                                                            (catch Exception _ :no-result)))
+                                                                     int-parse-strings)
+                                                                (repeat :no-result)))]
+                      (apply +' (map (fn [[cor-int res-int]]
+                                       (if (not (number? res-int))
+                                         100 ; penalty for not enough lines with parseable integers
+                                         (abs (- cor-int res-int))))
+                                     correct-result-int-pairs))))]}
 
    "for-loop-index"
    {:input->type {'input1 {:type 'int?}
@@ -173,8 +216,26 @@
                           {:gene :var :name 'str}
                           {:gene :apply})}
 
-   ; "pig-latin" ;; TMH TODO
-
+   "pig-latin"
+   {:input->type {'input1 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val \a, :type {:type 'char?}}
+                  {:gene :lit, :val \e, :type {:type 'char?}}
+                  {:gene :lit, :val \i, :type {:type 'char?}}
+                  {:gene :lit, :val \o, :type {:type 'char?}}
+                  {:gene :lit, :val \u, :type {:type 'char?}}
+                  {:gene :lit, :val \space, :type {:type 'char?}}
+                  {:gene :lit, :val "ay", :type {:type 'string?}}
+                  {:gene :lit, :val "aeiou", :type {:type 'string?}}
+                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char}}
+                  {:gene :lit-generator,
+                   :fn (fn [] (apply str
+                                     (repeatedly (rand-int 21)
+                                                 bu/rand-char))),
+                   :type {:type 'string?}}]
+    :loss-fns    [lev/distance]}
+   
    "replace-space-with-newline"
    {:input->type {'input1 {:type 'string?}}
     :ret-type    {:type 'int?}
@@ -274,7 +335,21 @@
                   {:gene :apply}
                   {:gene :apply}]}
 
-   ; "string-differences" ;; TMH TODO
+   "string-differences"
+   {:input->type {'input1 {:type 'string?}
+                  'input2 {:type 'string?}}
+    :ret-type    {:type 'string?}
+    :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+    :extra-genes [{:gene :lit, :val \space, :type {:type 'char?}}
+                  {:gene :lit, :val \newline, :type {:type 'char?}}
+                  {:gene :lit-generator, :fn (bu/int-generator 10), :type {:type 'int?}}]
+    :loss-fns    [; 1. Levenshtein distance of printed strings
+                  lev/distance
+
+                  ; 2. Difference in number of lines using the correct format
+                  (fn [result correct-output]
+                    (abs (- (count (re-seq #"(?m)^\d+ \S \S$" correct-output))
+                            (count (re-seq #"(?m)^\d+ \S \S$" result)))))]}
 
    "string-lengths-backwards"
    {:input->type {'input1 {:type :vector :child {:type 'string?}}}
@@ -299,9 +374,9 @@
     :other-types [{:type 'int?} {:type 'char?}]
     :extra-genes [{:gene :lit-generator, :fn (fn [] (rand-nth (list true false))), :type {:type 'boolean?}}
                   {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}
-                  {:gene :lit-generator, :fn (fn [] (rand-nth (concat [\newline \tab] (map char (range 32 127))))), :type {:type 'string?}}]
+                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
     :loss-fns    [#(if (= %1 %2) 0 1)]}
-   
+
    "syllables"
    {:input->type {'input1 {:type 'string?}}
     :ret-type    {:type 'string?}
@@ -361,12 +436,12 @@
                   lev/distance
 
                   ; Second error is integer distance from the correct number of newlines
-                  (fn [correct-output result]
+                  (fn [result correct-output]
                     (abs (- (count (filter #(= % \newline) correct-output))
                             (count (filter #(= % \newline) result)))))
 
                   ; Third error is summed error of integer distances over the lines of the correct number of words per line
-                  (fn [correct-output result]
+                  (fn [result correct-output]
                     (let [result-split-lines (str/split-lines result)
                           words-per-line (if (empty? result-split-lines)
                                            0
@@ -439,7 +514,7 @@
                    :fn (fn [] (apply str
                                      (repeatedly (rand-int 21)
                                                  bu/rand-char))),
-                   :type {:type 'int?}}]
+                   :type {:type 'string?}}]
     :loss-fns    [lev/distance]}
 
 
@@ -520,7 +595,7 @@
                   {:gene :lit, :val "", :type {:type 'string?}}
                   {:gene :lit, :val 0, :type {:type 'int?}}
                   {:gene :lit, :val 1, :type {:type 'int?}}]
-    :loss-fns    [lev/distance]}
+    :loss-fns    [lev/distance]} ;; Note: this error function of lev/distance is correct for Indices of Substring
 
    "leaders"
    {:input->type {'input1 {:type :vector :child {:type 'int?}}}
@@ -615,7 +690,7 @@
                    :fn (fn [] (apply str
                                      (repeatedly (rand-int 21)
                                                  bu/rand-char))),
-                   :type {:type 'int?}}]
+                   :type {:type 'string?}}]
     :loss-fns    [lev/distance]}
 
    "square-digits"
@@ -728,4 +803,14 @@
   ;;      {:inputs ["{n2\t{\n@4W[\"]V4"], :output 9})}
 
 
+  (let [correct-string ""]
+    (map parse-long (str/split-lines correct-string)))
+
+  (str/split-lines "")
+  ;; => [""]
+
+  (str/split-lines "\n")
+  ;; => []
+
+  
   )
