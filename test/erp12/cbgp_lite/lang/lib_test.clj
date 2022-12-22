@@ -37,11 +37,11 @@
 (deftest substring?-test
   (is (l/substring? "abc" "b")))
 
+(deftest filter-str-test
+  (is (= "ac" (l/filter-str #(not= % \b) "abc"))))
+
 (deftest contains-char?-test
   (is (l/contains-char? "abc" \b)))
-
-(deftest index-of-char-test
-  (is (= 1 (l/index-of-char "abc" \b))))
 
 (deftest occurrences-of-char-test
   (is (= 1 (l/occurrences-of-char "abc" \b))))
