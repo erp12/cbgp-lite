@@ -7,39 +7,34 @@
     [taoensso.timbre :as log]))
 
 
-;(def types-seen (atom {}))
+(def collect-types? (atom false))
+(def types-seen (atom {}))
 
-;;; @todo Move to schema-inference
-;(defn tap-nodes
-;  [f tree]
-;  (w/walk (partial tap-nodes f) identity (f tree)))
-;
-;;; @todo Move to schema-inference
-;(defn s-vars
-;  [schema]
-;  (let [x (transient #{})]
-;    (tap-nodes
-;      (fn [node]
-;        (when (= (:type node) :s-var)
-;          (conj! x (:sym node)))
-;        node)
-;      schema)
-;    (persistent! x)))
-;
-;(defn canonical-type
-;  [type]
-;  (let [subs (into {} (map-indexed (fn [i s] [s (symbol (str "S" i))])
-;                                   (sort (s-vars type))))]
-;    (walk/postwalk-replace subs type)))
+;; @todo Move to schema-inference
+(defn tap-nodes
+  [f tree]
+  (w/walk (partial tap-nodes f) identity (f tree)))
+
+;; @todo Move to schema-inference
+(defn s-vars
+  [schema]
+  (let [x (transient #{})]
+    (tap-nodes
+      (fn [node]
+        (when (= (:type node) :s-var)
+          (conj! x (:sym node)))
+        node)
+      schema)
+    (persistent! x)))
+
+(defn canonical-type
+  [type]
+  (let [subs (into {} (map-indexed (fn [i s] [s (symbol (str "S" i))])
+                                   (sort (s-vars type))))]
+    (w/postwalk-replace subs type)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State Manipulation
-
-;(defn box-ast
-;  "Wrap the AST in a map with a field for the inferred type."
-;  [ast env]
-;  {::ast  ast
-;   ::type (si/infer-schema ast env)})
 
 (def empty-state
   {:asts   (list)
@@ -49,10 +44,10 @@
 (defn push-ast
   "Push the `ast` to the AST stack in the `state`."
   [ast state]
-  ;; @todo Remove me, I am slow!
-  ;(swap! types-seen
-  ;       (fn [m t] (assoc m t (inc (get m t 0))))
-  ;       (canonical-type (::type ast)))
+  (when @collect-types?
+    (swap! types-seen
+           (fn [m t] (assoc m t (inc (get m t 0))))
+           (canonical-type (::type ast))))
   (update state :asts #(conj % ast)))
 
 (defn nth-local
