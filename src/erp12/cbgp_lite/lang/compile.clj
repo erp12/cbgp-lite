@@ -1,8 +1,11 @@
 (ns erp12.cbgp-lite.lang.compile
-  (:require [clojure.walk :as w]
-            [clojure.walk]
-            [erp12.cbgp-lite.lang.lib :as lib]
-            [erp12.cbgp-lite.lang.schema :as schema]))
+  (:require
+    [clojure.string :as str]
+    [clojure.walk :as w]
+    [erp12.cbgp-lite.lang.lib :as lib]
+    [erp12.cbgp-lite.lang.schema :as schema]
+    [taoensso.timbre :as log]))
+
 
 ;(def types-seen (atom {}))
 
@@ -310,6 +313,10 @@
                      ::type (::type body)}
                     (update new-state :push rest)))))))
 
+(defn- state->log
+  [state]
+  (str "\n" (str/join "\n" (map #(apply pr-str %) state))))
+
 (defn push->ast
   [{:keys [push locals ret-type type-env dealiases]
     :or   {dealiases lib/dealiases}}]
@@ -318,23 +325,16 @@
                  :push (reverse (into '() push))
                  :locals locals)]
     (if (empty? (:push state))
-      (let [;; For Debugging
-            ;_ (do (println)
-            ;      (println "Final")
-            ;      (doseq [x state] (apply println x)))
+      (let [_ (log/trace "Final:" (state->log state))
             ast (-> ret-type
                     schema/instantiate
                     (pop-unifiable-ast state {:allow-macros false})
                     :ast
                     (->> (w/postwalk-replace dealiases)))]
-        ;(println "\nEMIT:" ast)
+        (log/trace "EMIT:" ast)
         ast)
       (let [{:keys [push-unit state]} (pop-push-unit state)]
-        ;; Start Debug
-        ;(println)
-        ;(println "Current:" push-unit)
-        ;(doseq [x state] (apply println x))
-        ;; End Debug
+        (log/trace "Current:" push-unit (state->log state))
         (recur (compile-step {:push-unit push-unit
                               :type-env  type-env
                               :state     state}))))))
