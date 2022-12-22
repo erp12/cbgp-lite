@@ -1,5 +1,5 @@
 (ns erp12.cbgp-lite.lang.lib
-  (:refer-clojure :exclude [and or])
+  (:refer-clojure :exclude [and or vector-of])
   (:require [clojure.core :as core]
             [clojure.string :as str]
             [erp12.cbgp-lite.lang.schema :as schema]))
