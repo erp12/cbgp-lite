@@ -147,14 +147,11 @@
 
 (defn simplify
   [{:keys [individual simplification-steps individual-factory context]}]
-  (log/info "PRE-SIMPLIFICATION" individual)
-  (let [simplified (reduce (fn [{:keys [genome total-error] :as best} _]
-                             (let [new-gn (vec (random-sample (rand) genome))
-                                   new-indiv (assoc (individual-factory new-gn context) :genome new-gn)]
-                               (if (<= (:total-error new-indiv) total-error)
-                                 new-indiv
-                                 best)))
-                           individual
-                           (range simplification-steps))]
-    (log/info "POST-SIMPLIFICATION" simplified)
-    simplified))
+  (reduce (fn [{:keys [genome total-error] :as best} _]
+            (let [new-gn (vec (random-sample (rand) genome))
+                  new-indiv (assoc (individual-factory new-gn context) :genome new-gn)]
+              (if (<= (:total-error new-indiv) total-error)
+                new-indiv
+                best)))
+          individual
+          (range simplification-steps)))

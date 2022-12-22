@@ -1,6 +1,6 @@
 {:path    ["src"]
  :deps    {org.clojure/core.match           {:mvn/version "1.0.0"}
-           com.taoensso/timbre              {:mvn/version "5.1.2"}
+           com.taoensso/timbre              {:mvn/version "6.0.4"}
            io.github.erp12/schema-inference {:git/sha "1faafd005f6862b75c0e15f7254ebfcf6c97af4b"}
            io.github.erp12/ga-clj           {:git/sha "763c0b5e9febfb9e8e5d79ac3e3afb7104d10b36"}
            clj-fuzzy/clj-fuzzy              {:mvn/version "0.4.1"}}
