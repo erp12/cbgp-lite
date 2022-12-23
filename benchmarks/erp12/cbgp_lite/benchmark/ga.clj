@@ -1,5 +1,8 @@
 (ns erp12.cbgp-lite.benchmark.ga
-  (:require [erp12.cbgp-lite.benchmark.utils :as bu]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
+            [erp12.cbgp-lite.benchmark.utils :as bu]
+            [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.lang.compile]
             [erp12.cbgp-lite.search.individual :as i]
             [erp12.cbgp-lite.search.pluhsy :as pl]
@@ -40,9 +43,16 @@
           mutate))))
 
 (defn run
-  [opts]
-  ;(doseq [[k v] opts]
-  ;  (println k ":" (class k) " -> " v ":" (class v)))
+  [{:keys [type-counts-file] :as opts}]
+  (log/info "Options:"
+            (->> opts
+                 (map (fn [[k v]] (str (pr-str k) "\t" (pr-str v))))
+                 (str/join "\n")
+                 (str "\n")))
+  (when type-counts-file
+    (log/warn "Type counting enabled. This is slow!")
+    (reset! c/collect-types? true)
+    (reset! c/types-seen {}))
   (let [config (merge default-config opts)
         task (-> config
                  bu/read-problem
@@ -62,7 +72,7 @@
                                                                            (random-sample downsample-rate train)
                                                                            train)
                                                              :step-start (System/currentTimeMillis)}))
-                                       :evaluator      individual-factory
+                                       :evaluator       individual-factory
                                        :post-eval       (fn [{:keys [individuals]}]
                                                           {:grouped (group-by :errors individuals)})
                                        :breed           (make-breed opts)
@@ -87,20 +97,22 @@
                                                                 (log/info "Best individual solved a batch but not all training cases.")))))
                                        :mapper          pmap
                                        })
+        _ (log/info "PRE-SIMPLIFICATION" best)
         ;; Simplify the best individual seen during evolution.
         best (i/simplify {:individual           best
                           :simplification-steps (:simplification-steps config)
                           :individual-factory   individual-factory})
+        _ (log/info "POST-SIMPLIFICATION" best)
         ;; Evaluate the final program on the unseen test cases.
         {:keys [solution?]} (i/evaluate-full-behavior {:func     (:func best)
                                                        :cases    (:test task)
                                                        :loss-fns (:loss-fns task)
                                                        :penalty  (:penalty default-config)})]
-    (log/info "BEST INDIVIDUAL" best)
     (log/info "BEST CODE" (let [code (:code best)]
                             (if (coll? code)
                               (reverse (into '() code))
                               code)))
+
     (if (= :solution-found result)
       (do
         (log/info "SOLUTION FOUND")
@@ -108,4 +120,13 @@
           (log/info "SOLUTION GENERALIZED")
           (log/info "SOLUTION FAILED TO GENERALIZE")))
       (log/info "SOLUTION NOT FOUND"))
+
+    (when type-counts-file
+      (log/info "Writing type frequencies to" type-counts-file)
+      (with-open [w (io/writer type-counts-file :append true)]
+        (.write w "[")
+        (doseq [[typ freq] @c/types-seen]
+          (.write w (prn-str {:type typ :freq freq})))
+        (.write w "]")))
+
     (:func best)))
