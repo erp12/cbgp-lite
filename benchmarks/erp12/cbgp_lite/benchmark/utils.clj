@@ -24,6 +24,13 @@
   []
   (rand-nth (concat [\newline \tab] (map char (range 32 127)))))
 
+(defn string-generator
+  "Returns a generator of random strings of given max-length"
+  [max-length]
+  #(apply str
+          (repeatedly (rand-int max-length)
+                      rand-char)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loss Function Utils
 

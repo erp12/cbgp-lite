@@ -230,9 +230,7 @@
                   {:gene :lit, :val "aeiou", :type {:type 'string?}}
                   {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char}}
                   {:gene :lit-generator,
-                   :fn (fn [] (apply str
-                                     (repeatedly (rand-int 21)
-                                                 bu/rand-char))),
+                   :fn (bu/string-generator 21),
                    :type {:type 'string?}}]
     :loss-fns    [lev/distance]}
    
@@ -511,9 +509,7 @@
                   {:gene :lit, :val \space, :type {:type 'char?}}
                   {:gene :lit-generator, :fn bu/rand-char, :type {:type 'int?}}
                   {:gene :lit-generator,
-                   :fn (fn [] (apply str
-                                     (repeatedly (rand-int 21)
-                                                 bu/rand-char))),
+                   :fn (bu/string-generator 21),
                    :type {:type 'string?}}]
     :loss-fns    [lev/distance]}
 
@@ -687,9 +683,7 @@
                   {:gene :lit, :val \space, :type {:type 'char?}}
                   {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}
                   {:gene :lit-generator,
-                   :fn (fn [] (apply str
-                                     (repeatedly (rand-int 21)
-                                                 bu/rand-char))),
+                   :fn (bu/string-generator 21),
                    :type {:type 'string?}}]
     :loss-fns    [lev/distance]}
 
@@ -772,7 +766,7 @@
             duration (/ (- (System/currentTimeMillis) start-time) 1000.0)]
         (cond
           (> (:total-error evaluation) 0)
-          (throw (ex-info (str problem-name " solution has non-zero error." evaluation) {:eval evaluation}))
+          (throw (ex-info (str problem-name " solution has non-zero error.") {:eval evaluation}))
 
           (some? (:exception evaluation))
           (throw (ex-info (str problem-name " solution threw an error.") {:eval evaluation} (:exception evaluation)))
@@ -784,33 +778,5 @@
 (comment
 
   (validate-solutions {:data-dir "data/psb/" :num-cases 50})
-
-  (read-cases {:data-dir "data/psb/"
-               :problem  "scrabble-score"
-               :n-test   10
-               :n-train  0})
-  ;; => {:train (),
-  ;;     :test
-  ;;     ({:inputs ["\n]BqAgxUre"], :output 27}
-  ;;      {:inputs ["ScG(5lh.%)tpK r9}"], :output 21}
-  ;;      {:inputs ["ul0vZvy\"'5;)6Q1"], :output 34}
-  ;;      {:inputs ["}6_"], :output 0}
-  ;;      {:inputs ["\tY\nh"], :output 8}
-  ;;      {:inputs ["D|NJ=n"], :output 12}
-  ;;      {:inputs ["@\n8}iDx(Q_uE.{"], :output 23}
-  ;;      {:inputs ["`R"], :output 1}
-  ;;      {:inputs ["i=yeVk\t`Jnw(;"], :output 28}
-  ;;      {:inputs ["{n2\t{\n@4W[\"]V4"], :output 9})}
-
-
-  (let [correct-string ""]
-    (map parse-long (str/split-lines correct-string)))
-
-  (str/split-lines "")
-  ;; => [""]
-
-  (str/split-lines "\n")
-  ;; => []
-
   
   )
