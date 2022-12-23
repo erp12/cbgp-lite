@@ -1,9 +1,7 @@
 import argparse
 import os
 from datetime import datetime
-from functools import partial
 import subprocess
-from multiprocessing import Pool
 
 
 def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
@@ -48,7 +46,7 @@ def cli_opts() -> argparse.ArgumentParser:
         help="The directory to read (and in some cases, download) problem data files to.",
     )
     parser.add_argument(
-        "--num-runs", type=int, help="The number of runs of the problem to start."
+        "--run-number", type=int, help="The number of this run."
     )
     parser.add_argument(
         "--out", help="The path to put the log files of the run captured from stdout."
@@ -63,12 +61,6 @@ def cli_opts() -> argparse.ArgumentParser:
         default="/usr/local/bin/clojure",
     )
     parser.add_argument("--cbgp", help="The path to cbgp-lite.", default=".")
-    parser.add_argument(
-        "--parallelism",
-        type=int,
-        default=1,
-        help="The number of runs to perform concurrently. If runs are multi-threaded, recommend this be 1.",
-    )
     return parser
 
 
@@ -86,9 +78,7 @@ if __name__ == "__main__":
     if not os.path.isdir(args.out):
         os.makedirs(args.out)
 
-    with Pool(args.parallelism) as p:
-        for r in p.imap_unordered(partial(start_run, args), range(args.num_runs)):
-            print(r)
+    start_run(args, args.run_number)
 
 """
 Example:
@@ -97,8 +87,7 @@ python3 scripts/local_runner.py \
     --search "ga" \
     --problem "vectors-summed" \
     --data-dir "./data/psb/" \
-    --num-runs 2 \
+    --run-number 42 \
     --out "./data/logs/test/" \
-    --log-types \
-    --parallelism 1
+    --log-types
 """
