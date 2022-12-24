@@ -17,13 +17,13 @@ def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
             f"cd {opts.cbgp}",
             f"mkdir -p {log_dir}",
             (
-                f"{opts.clj} -X:benchmarks {main_ns}/run "
-                f":suite-ns {suite_ns} "
-                f":data-dir '\"{opts.data_dir}\"' "
-                f":problem '\"{opts.problem}\"' "
-                f":type-counts-file '\"{types_file}\"'" if opts.log_types else ""
+                f"{opts.clj} -X:benchmarks {main_ns}/run " +
+                f":suite-ns {suite_ns} " +
+                f":data-dir '\"{opts.data_dir}\"' " +
+                f":problem '\"{opts.problem}\"' " +
+                (f":type-counts-file '\"{types_file}\"'" if opts.log_types else "") +
+                f"2>&1 | tee {log_file}"
             ),
-            f"2>&1 | tee {log_file}",
             f'echo "Finished Run {run_id}"',
         ]
     )
