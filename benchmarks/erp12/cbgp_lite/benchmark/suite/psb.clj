@@ -121,7 +121,7 @@
                                                                 (repeat :no-result)))]
                       (apply +' (map (fn [[cor-int res-int]]
                                        (if (not (number? res-int))
-                                         100 ; penalty for not enough lines with parseable integers
+                                         100                ; penalty for not enough lines with parseable integers
                                          (abs (- cor-int res-int))))
                                      correct-result-int-pairs))))]}
 
@@ -148,7 +148,7 @@
                   {:gene :lit, :val "C", :type {:type 'string?}}
                   {:gene :lit, :val "D", :type {:type 'string?}}
                   {:gene :lit, :val "F", :type {:type 'string?}}
-                  {:gene :lit-generator, :fn #(rand-int 101), :type {:type 'string?}}]
+                  {:gene :lit-generator, :fn #(rand-int 101), :type {:type 'int?}}]
     :loss-fns    [lev/distance
                   ;; If correct format, distance from correct letter grade char.
                   (let [extract-letter #(second (re-find #"^Student has a (.) grade.$" %))]
@@ -180,7 +180,7 @@
                   'input2 {:type :vector :child {:type 'int?}}}
     :ret-type    {:type 'boolean?}
     :other-types [{:type 'int?}]
-    :extra-genes [{:gene :lit-generator, :fn bu/rand-bool, :type {:type 'int?}}]
+    :extra-genes [{:gene :lit-generator, :fn bu/rand-bool, :type {:type 'boolean?}}]
     :loss-fns    [#(if (= %1 %2) 0 1)]
     :solution    (list {:gene :local :idx 0}
                        {:gene :local :idx 1}
@@ -200,8 +200,8 @@
    {:input->type    {'input1 {:type 'double?}
                      'input2 {:type 'int?}}
     :ret-type       {:type 'string?}
-    :lit-generators [(bu/int-generator 100)
-                     #(- (rand 201.0) 100.0)]
+    :extra-genes    [{:gene :lit-generator :fn (bu/int-generator 100) :type {:type 'int?}}
+                     {:gene :lit-generator :fn #(- (rand 201.0) 100.0) :type {:type 'double?}}]
     :loss-fns       [#(try
                         (bu/round 4 (Math/abs (- (Double/parseDouble %1) %2)))
                         (catch Exception e penalty))
@@ -230,10 +230,10 @@
                   {:gene :lit, :val "aeiou", :type {:type 'string?}}
                   {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char}}
                   {:gene :lit-generator,
-                   :fn (bu/string-generator 21),
+                   :fn   (bu/string-generator 21),
                    :type {:type 'string?}}]
     :loss-fns    [lev/distance]}
-   
+
    "replace-space-with-newline"
    {:input->type {'input1 {:type 'string?}}
     :ret-type    {:type 'int?}
@@ -270,37 +270,37 @@
    "scrabble-score"
    {:input->type {'input1 {:type 'string?}}
     :ret-type    {:type 'int?}
-    :other-types [{:type 'boolean?} {:type 'char} {:type :vector :child {:type 'int?}}]
+    :other-types [{:type 'boolean?} {:type 'char?} {:type :vector :child {:type 'int?}}]
     :extra-genes [{:gene :lit,
-                   :val (let [scrabble-map {\a 1
-                                            \b 3
-                                            \c 3
-                                            \d 2
-                                            \e 1
-                                            \f 4
-                                            \g 2
-                                            \h 4
-                                            \i 1
-                                            \j 8
-                                            \k 5
-                                            \l 1
-                                            \m 3
-                                            \n 1
-                                            \o 1
-                                            \p 3
-                                            \q 10
-                                            \r 1
-                                            \s 1
-                                            \t 1
-                                            \u 1
-                                            \v 4
-                                            \w 4
-                                            \x 8
-                                            \y 4
-                                            \z 10}
-                              visible-chars (map char (range 0 127))]
-                          (vec (for [c visible-chars]
-                                 (get scrabble-map (first (str/lower-case c)) 0))))
+                   :val  (let [scrabble-map {\a 1
+                                             \b 3
+                                             \c 3
+                                             \d 2
+                                             \e 1
+                                             \f 4
+                                             \g 2
+                                             \h 4
+                                             \i 1
+                                             \j 8
+                                             \k 5
+                                             \l 1
+                                             \m 3
+                                             \n 1
+                                             \o 1
+                                             \p 3
+                                             \q 10
+                                             \r 1
+                                             \s 1
+                                             \t 1
+                                             \u 1
+                                             \v 4
+                                             \w 4
+                                             \x 8
+                                             \y 4
+                                             \z 10}
+                               visible-chars (map char (range 0 127))]
+                           (vec (for [c visible-chars]
+                                  (get scrabble-map (first (str/lower-case c)) 0))))
                    :type {:type :vector :child {:type 'int?}}}]
     :loss-fns    [bu/absolute-distance]}
 
@@ -370,7 +370,7 @@
                   'input2 {:type 'string?}}
     :ret-type    {:type 'boolean?}
     :other-types [{:type 'int?} {:type 'char?}]
-    :extra-genes [{:gene :lit-generator, :fn (fn [] (rand-nth (list true false))), :type {:type 'boolean?}}
+    :extra-genes [{:gene :lit-generator, :fn bu/rand-bool, :type {:type 'boolean?}}
                   {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}
                   {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
     :loss-fns    [#(if (= %1 %2) 0 1)]}
@@ -507,15 +507,15 @@
     :other-types [{:type 'int?} {:type 'boolean?} {:type 'char?}]
     :extra-genes [{:gene :lit, :val \-, :type {:type 'char?}}
                   {:gene :lit, :val \space, :type {:type 'char?}}
-                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'int?}}
+                  {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}
                   {:gene :lit-generator,
-                   :fn (bu/string-generator 21),
+                   :fn   (bu/string-generator 21),
                    :type {:type 'string?}}]
     :loss-fns    [lev/distance]}
 
 
-  ;;  "coin-sums" ;; NEEDS MULTIPLE OUTPUTS
-  ;;  "cut-vector" ;; NEEDS MULTIPLE OUTPUTS 
+   ;;  "coin-sums" ;; NEEDS MULTIPLE OUTPUTS
+   ;;  "cut-vector" ;; NEEDS MULTIPLE OUTPUTS
 
    "dice-game"
    {:input->type {'input1 {:type 'int?}
@@ -526,7 +526,7 @@
                   {:gene :lit, :val 1.0, :type {:type 'double?}}]
     :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}
 
-  ;;  "find-pair" ;; NEEDS MULTIPLE OUTPUTS
+   ;;  "find-pair" ;; NEEDS MULTIPLE OUTPUTS
 
    "fizz-buzz"
    {:input->type {'input1 {:type 'int?}}
@@ -552,7 +552,7 @@
     :loss-fns    [bu/absolute-distance]
     :solution    (list {:gene :local :idx 0}
 
-                  ;; Anonymous function
+                       ;; Anonymous function
                        {:gene :fn :arg-types [{:type 'int?}]}
                        {:gene :lit :val 2 :type {:type 'int?}}
                        {:gene :lit :val 3 :type {:type 'int?}}
@@ -565,11 +565,11 @@
                        {:gene :apply}
                        {:gene :close}
 
-                  ;; Map fn over input vector
+                       ;; Map fn over input vector
                        {:gene :var :name 'mapv}
                        {:gene :apply}
 
-                  ;; Sum the vector
+                       ;; Sum the vector
                        {:gene :var :name 'int-add}
                        {:gene :var :name 'reduce}
                        {:gene :apply})}
@@ -591,7 +591,8 @@
                   {:gene :lit, :val "", :type {:type 'string?}}
                   {:gene :lit, :val 0, :type {:type 'int?}}
                   {:gene :lit, :val 1, :type {:type 'int?}}]
-    :loss-fns    [lev/distance]} ;; Note: this error function of lev/distance is correct for Indices of Substring
+    ;; Note: this error function of lev/distance is correct for Indices of Substring
+    :loss-fns    [lev/distance]}
 
    "leaders"
    {:input->type {'input1 {:type :vector :child {:type 'int?}}}
@@ -600,7 +601,7 @@
     :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
                   ;; This is a random vector generator
                   {:gene :lit-generator,
-                   :fn (fn [] (vec (repeatedly (rand-int 21) #(rand-int 1001))))
+                   :fn   (fn [] (vec (repeatedly (rand-int 21) #(rand-int 1001))))
                    :type {:type :vector :child {:type 'int?}}}]
     :loss-fns    [bu/vector-of-numbers-loss]}
 
@@ -615,7 +616,7 @@
                   {:gene :lit-generator, :fn (bu/int-generator 10), :type {:type 'int?}}]
     :loss-fns    [bu/absolute-distance]}
 
-  ;;  "mastermind" ;; NEEDS MULTIPLE OUTPUTS
+   ;;  "mastermind" ;; NEEDS MULTIPLE OUTPUTS
 
    "middle-character"
    {:input->type {'input1 {:type 'string?}}
@@ -644,7 +645,7 @@
     :other-types [{:type 'boolean?} {:type 'int?}]
     :extra-genes [{:gene :lit, :val 0.0, :type {:type 'double?}}
                   {:gene :lit, :val 100.0, :type {:type 'double?}}
-                  {:gene :lit-generator, :fn (fn [] (* (rand) 100)), :type {:type 'double}}]
+                  {:gene :lit-generator, :fn (fn [] (* (rand) 100)), :type {:type 'double?}}]
     :loss-fns    [#(bu/round 2 (bu/absolute-distance %1 %2))]}
 
    "snow-day"
@@ -683,7 +684,7 @@
                   {:gene :lit, :val \space, :type {:type 'char?}}
                   {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}
                   {:gene :lit-generator,
-                   :fn (bu/string-generator 21),
+                   :fn   (bu/string-generator 21),
                    :type {:type 'string?}}]
     :loss-fns    [lev/distance]}
 
@@ -726,7 +727,7 @@
     :ret-type    {:type 'double?}
     :other-types [{:type 'boolean?} {:type 'int?}]
     :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'double?}}}
-                  {:gene :lit, :val 0, :type {:type 'int}}]
+                  {:gene :lit, :val 0, :type {:type 'int?}}]
     :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}})
 
 (defn reshape-case
@@ -778,5 +779,5 @@
 (comment
 
   (validate-solutions {:data-dir "data/psb/" :num-cases 50})
-  
+
   )
