@@ -120,21 +120,21 @@
 (defn make-evaluator
   [{:keys [evaluate-fn cases arg-symbols] :as opts}]
   (fn [gn context]
-    ;(log/debug "Genome" gn)
+    (log/debug "Evaluating genome" gn)
     (let [cases (or (:cases context) cases)
-          ;_ (log/debug "Evaluating on" (count cases) "cases")
+          _ (log/debug "Evaluating on" (count cases) "cases")
           ;; Get Push code from the genome.
           push (pl/plushy->push gn)
-          ;_ (log/debug "Push" push)
+          _ (log/debug "Push" push)
           ;; Compile the Push into a Clojure form that accepts and returns the
           ;; correct types.
           ast (::c/ast (c/push->ast (assoc opts
                                       :push push
                                       :locals arg-symbols)))
-          ;_ (log/debug "AST" ast)
+          _ (log/debug "AST" ast)
           form (when ast
                  (f/ast->form ast))
-          ;_ (log/debug "Form" form)
+          _ (log/debug "Form" form)
           func (when form
                  (f/form->fn (vec arg-symbols) form))
           evaluation (evaluate-fn (merge {:func func :cases cases} opts))]
