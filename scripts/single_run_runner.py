@@ -21,7 +21,7 @@ def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
                 f":suite-ns {suite_ns} " +
                 f":data-dir '\"{opts.data_dir}\"' " +
                 f":problem '\"{opts.problem}\"' " +
-                (f":type-counts-file '\"{types_file}\"'" if opts.log_types else "") +
+                (f":type-counts-file '\"{types_file}\"' " if opts.log_types else "") +
                 f"2>&1 | tee {log_file}"
             ),
             f'echo "Finished Run {run_id}"',
