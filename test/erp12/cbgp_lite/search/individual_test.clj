@@ -102,7 +102,7 @@
 
 (deftest simplify-test
   (let [opts {:simplification-steps 100
-              :individual-factory   (fn [gn _]
+              :evaluator            (fn [gn _]
                                       ;; Look for the smallest genome that adds to 10.
                                       {:total-error (+ (Math/abs (- 10 (apply + gn)))
                                                        (count gn)
@@ -112,15 +112,15 @@
                          :individual {:genome      [10 10 10 10]
                                       :total-error (+ 30 4)})))))
   (testing "number-io"
-    (let [factory (i/make-evaluator (-> {:input->type {'input1 {:type 'double?}
-                                                       'input2 {:type 'int?}}
-                                         :ret-type    {:type 'double?}
-                                         :vars        #{'double 'double-add}
-                                         :loss-fns    [absolute-dist]
-                                         :penalty     1000
-                                         :evaluate-fn i/evaluate-full-behavior}
-                                        (u/enhance :arg-symbols task/arg-symbols
-                                                   :type-env task/type-environment)))
+    (let [evaluator (i/make-evaluator (-> {:input->type {'input1 {:type 'double?}
+                                                         'input2 {:type 'int?}}
+                                           :ret-type    {:type 'double?}
+                                           :vars        #{'double 'double-add}
+                                           :loss-fns    [absolute-dist]
+                                           :penalty     1000
+                                           :evaluate-fn i/evaluate-full-behavior}
+                                          (u/enhance :arg-symbols task/arg-symbols
+                                                     :type-env task/type-environment)))
           cases [{:inputs [1.5 2] :output 3.5}
                  {:inputs [0.0 0] :output 0.0}
                  {:inputs [-1.0 1] :output 0.0}]]
@@ -130,10 +130,10 @@
                             {:gene :apply}
                             {:gene :var :name 'double-add}
                             {:gene :apply})]
-               (-> {:individual           (assoc (factory gn {:cases cases}) :genome gn)
+               (-> {:individual           (assoc (evaluator gn {:cases cases}) :genome gn)
                     :context              {:cases cases}
                     :simplification-steps 3
-                    :individual-factory   factory}
+                    :evaluator            evaluator}
                    i/simplify
                    (dissoc :func)))
              {:behavior    '({:output 3.5 :std-out ""}

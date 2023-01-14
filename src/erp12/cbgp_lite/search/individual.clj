@@ -98,6 +98,7 @@
        :total-error (reduce + errors)
        :cases-used  0})
     (let [behavior (map #(invoke-func func (:inputs %)) cases)
+          _ (log/debug "Behavior" behavior)
           ;; Compute the error on each case.
           errors (->> cases
                       (mapcat (fn [b case]
@@ -109,6 +110,7 @@
                       ;; When there is no std-out error, filter out the nils.
                       (filter some?)
                       vec)
+          _ (log/debug "Errors" errors)
           total-error (apply + errors)]
       {:behavior    behavior
        :errors      errors
@@ -137,6 +139,7 @@
           _ (log/debug "Form" form)
           func (when form
                  (f/form->fn (vec arg-symbols) form))
+          _ (log/debug "Function compiled" func)
           evaluation (evaluate-fn (merge {:func func :cases cases} opts))]
       (when-let [ex (:exception evaluation)]
         (log-program-execution-errors {:code form :ex ex}))
@@ -146,10 +149,10 @@
              evaluation))))
 
 (defn simplify
-  [{:keys [individual simplification-steps individual-factory context]}]
+  [{:keys [individual simplification-steps evaluator context]}]
   (reduce (fn [{:keys [genome total-error] :as best} _]
             (let [new-gn (vec (random-sample (rand) genome))
-                  new-indiv (assoc (individual-factory new-gn context) :genome new-gn)]
+                  new-indiv (assoc (evaluator new-gn context) :genome new-gn)]
               (if (<= (:total-error new-indiv) total-error)
                 new-indiv
                 best)))

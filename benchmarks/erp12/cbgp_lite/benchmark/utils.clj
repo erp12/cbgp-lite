@@ -1,4 +1,5 @@
-(ns erp12.cbgp-lite.benchmark.utils)
+(ns erp12.cbgp-lite.benchmark.utils
+  (:require [erp12.ga-clj.toolbox :as tb]))
 
 (defn read-problem
   [{:keys [suite-ns problem] :as config}]
@@ -8,6 +9,102 @@
         problem-info (get suite-problems (name problem))
         read-cases (ns-resolve suite-ns 'read-cases)]
     (merge config (read-cases config) problem-info)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Population Statistics
+
+(defn aggregate-stats
+  [stats coll]
+  (->> coll
+       (reduce (fn [stats' el]
+                 ;; Accumulate 1 more element in the stats.
+                 (map (fn [[k acc]] [k ((get stats k) acc el)]) stats'))
+               ;; Initialize stats.
+               (map (fn [[k f]] [k (f)]) stats))
+       ;; Finalize stats.
+       (map (fn [[k acc]] [k ((get stats k identity) acc)]))
+       (into {})))
+
+(defn behavioral-diversity-stat
+  ;; Init
+  ([] #{})
+  ;; Finalize
+  ([behaviors]
+   (count behaviors))
+  ;; Reduce
+  ([behaviors {:keys [behavior]}]
+   (conj behaviors behavior)))
+
+(defn num-throwing-stat
+  ;; Init
+  ([] 0)
+  ;; Finalize
+  ([n] n)
+  ;; Reduce
+  ([n {:keys [exception]}]
+   (+ n (if exception 1 0))))
+
+(defn num-no-ast-stat
+  ([] 0)
+  ([n] n)
+  ([n {:keys [code]}]
+   (+ n (if code 0 1))))
+
+(defn make-distribution-stat
+  [by]
+  (fn
+    ;; Initialize
+    ([] {})
+    ;; Finalize
+    ([x->freq]
+     (let [cfh (->> x->freq
+                    (sort-by key)
+                    (reductions (fn [[_ acc] [x freq]]
+                                  [x (+ acc freq)])
+                                [nil 0]))
+           total-freq (second (last cfh))
+           quart (int (/ (inc total-freq) 4))]
+       {:mean (float (/ (reduce + (map (fn [[x freq]] (* x freq)) x->freq))
+                        total-freq))
+        :min  (reduce min (keys x->freq))
+        :25%  (some (fn [[x c-freq]] (when (> c-freq quart) x)) cfh)
+        :50%  (some (fn [[x c-freq]] (when (> c-freq (* quart 2)) x)) cfh)
+        :75%  (some (fn [[x c-freq]] (when (> c-freq (* quart 3)) x)) cfh)
+        :max  (reduce max (keys x->freq))}))
+    ;; Reduce
+    ([acc el]
+     (update acc (by el) (fn [i] (inc (or i 0)))))))
+
+(def total-error-stat
+  (make-distribution-stat :total-error))
+
+(def genome-size-stat
+  (make-distribution-stat #(count (:genome %))))
+
+(def code-size-stat
+  (make-distribution-stat #(tb/tree-size (:code %))))
+
+(def code-depth-stat
+  (make-distribution-stat #(tb/tree-depth (:code %))))
+
+(defn make-num-penalty-stat
+  [penalty]
+  (make-distribution-stat (fn [{:keys [errors]}] (count (filter #(= % penalty) errors)))))
+
+(defn exception-messages-stat
+  ;; Init
+  ([] #{})
+  ;; Finalize
+  ([exs] exs)
+  ;; Reduce
+  ([exs {:keys [exception]}]
+   (if exception
+     (conj exs (str (.getName (class exception))
+                    ": "
+                    (ex-message exception)))
+     exs)))
+
+;; @todo (defn selections-per-parent)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ERC Generators
