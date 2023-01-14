@@ -59,10 +59,9 @@
                  task/enhance-task
                  (assoc :evaluate-fn i/evaluate-full-behavior))
         opts (merge config task)
-        ;; @todo Refactor "individual-factory" to "genome->individual"
-        individual-factory (i/make-evaluator (-> opts
-                                                 (assoc :cases (:train task))
-                                                 (dissoc :train :test)))
+        evaluator (i/make-evaluator (-> opts
+                                        (assoc :cases (:train task))
+                                        (dissoc :train :test)))
         {:keys [best result]} (ga/run {:population-size (:population-size config)
                                        :genome-factory  #(pl/random-plushy-genome opts)
                                        :pre-eval        (let [{:keys [downsample-rate train]} opts]
@@ -72,8 +71,20 @@
                                                                            (random-sample downsample-rate train)
                                                                            train)
                                                              :step-start (System/currentTimeMillis)}))
-                                       :evaluator       individual-factory
+                                       :evaluator       evaluator
                                        :post-eval       (fn [{:keys [individuals]}]
+                                                          (doseq [[stat-name stat-val]
+                                                                  (bu/aggregate-stats {:diversity     bu/behavioral-diversity-stat
+                                                                                       :num-throwing  bu/num-throwing-stat
+                                                                                       :num-no-ast    bu/num-no-ast-stat
+                                                                                       :total-error   bu/total-error-stat
+                                                                                       :genome-size   bu/genome-size-stat
+                                                                                       :code-size     bu/code-size-stat
+                                                                                       :code-depth    bu/code-depth-stat
+                                                                                       :num-penalties (bu/make-num-penalty-stat (:penalty opts))
+                                                                                       :exceptions    bu/exception-messages-stat}
+                                                                                      individuals)]
+                                                            (log/info stat-name stat-val))
                                                           {:grouped (group-by :errors individuals)})
                                        :breed           (make-breed opts)
                                        :individual-cmp  (comparator #(< (:total-error %1) (:total-error %2)))
@@ -89,7 +100,7 @@
                                                               ;; If the "best" individual has solved the subset of cases
                                                               ;; Test if on the full training set.
                                                               (zero? (:total-error best))
-                                                              (if (and new-best? (zero? (:total-error (individual-factory (:genome best) {:cases cases}))))
+                                                              (if (and new-best? (zero? (:total-error (evaluator (:genome best) {:cases cases}))))
                                                                 :solution-found
                                                                 ;; If an individual solves a batch but not all training cases,
                                                                 ;; no individual can become the new best and the run will fail.
@@ -101,7 +112,7 @@
         ;; Simplify the best individual seen during evolution.
         best (i/simplify {:individual           best
                           :simplification-steps (:simplification-steps config)
-                          :individual-factory   individual-factory})
+                          :evaluator            evaluator})
         _ (log/info "POST-SIMPLIFICATION" best)
         ;; Evaluate the final program on the unseen test cases.
         {:keys [solution?]} (i/evaluate-full-behavior {:func     (:func best)
@@ -130,3 +141,12 @@
         (.write w "]")))
 
     (:func best)))
+
+
+(comment
+
+  (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
+        :data-dir "data/psb/"
+        :problem  "number-io"})
+
+  )
