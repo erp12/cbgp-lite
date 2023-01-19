@@ -1,11 +1,9 @@
 (ns erp12.cbgp-lite.lang.compile
-  (:require
-    [clojure.string :as str]
-    [clojure.walk :as w]
-    [erp12.cbgp-lite.lang.lib :as lib]
-    [erp12.cbgp-lite.lang.schema :as schema]
-    [taoensso.timbre :as log]))
-
+  (:require [clojure.string :as str]
+            [clojure.walk :as w]
+            [erp12.cbgp-lite.lang.lib :as lib]
+            [erp12.cbgp-lite.lang.schema :as schema]
+            [taoensso.timbre :as log]))
 
 (def collect-types? (atom false))
 (def types-seen (atom {}))

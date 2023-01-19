@@ -2,8 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.test :refer :all]
             [clojure.walk :as w]
+            [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.lang.form :as f]
             [erp12.cbgp-lite.lang.lib :as lib]
             [meander.epsilon :as m])
   (:import (java.io StringWriter)))
@@ -29,14 +29,6 @@
                      {:op :var :name 'foo})))
   (is (matches? {:a ?x :b ?x}
                 {:a 1 :b 1 :c "extra"})))
-
-;(deftest box-ast-test
-;  (is (= (c/box-ast {:op :const :val 1} lib/type-env)
-;         {::c/ast  {:op :const :val 1}
-;          ::c/type {:type 'int?}}))
-;  (is (= (c/box-ast {:op :const :val [1 2 3]} lib/type-env)
-;         {::c/ast  {:op :const :val [1 2 3]}
-;          ::c/type {:type :vector :child {:type 'int?}}})))
 
 (deftest nth-local-test
   (is (= (c/nth-local 100 {:locals ['x 'y 'z]}) 'y))
@@ -360,7 +352,7 @@
                                                          'in1 {:type 'int?})
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'int?}))
-        form (f/ast->form ast)
+        form (a/ast->form ast)
         _ (is (= form '(+ in1 100)))
         func (eval `(fn [~'in1] ~form))]
     (is (= 100 (func 0)))
@@ -382,7 +374,7 @@
                                                          'in1 {:type 'int?})
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'string?}))
-        form (f/ast->form ast)
+        form (a/ast->form ast)
         _ (is (= form '(if (< in1 1000) "small" "large")))
         func (eval `(fn [~'in1] ~form))]
     (is (= (func 0) "small"))
@@ -406,7 +398,7 @@
                                                          'in1 {:type 'int?})
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'int?}))
-        form (f/ast->form ast)
+        form (a/ast->form ast)
         _ (is (matches? (let [?v (* in1 in1)]
                           (+ ?v ?v))
                         form))
@@ -429,7 +421,7 @@
                                             :type-env  lib/type-env
                                             :dealiases lib/dealiases})
         _ (is (= type {:type :vector :child {:type 'int?}}))
-        form (f/ast->form ast)
+        form (a/ast->form ast)
         _ (is (matches? (mapv (fn [?a] (inc ?a)) [1 2 3])
                         form))
         func (eval `(fn [] ~form))]
@@ -460,7 +452,7 @@
                                                                                        :child {:type :s-var :sym 'a}}}}}
                                             :dealiases {}})
         _ (is (= type {:type :vector :child {:type 'double?}}))
-        form (f/ast->form ast)
+        form (a/ast->form ast)
         _ (is (= form '(repeatedly 5 (fn [] (rand)))))
         func (eval `(fn [] ~form))]
     (doseq [x (func)]
@@ -479,7 +471,7 @@
                                             :type-env  lib/type-env
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'int?}))
-        form (f/ast->form ast)
+        form (a/ast->form ast)
         _ (is (= form '(do (println "Hello world!") 0)))
         func (eval `(fn [] ~form))]
     (let [s (new StringWriter)]
@@ -515,7 +507,7 @@
                                                          'in1 {:type 'string?})
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'int?}))
-        form (f/ast->form ast)
+        form (a/ast->form ast)
         _ (is (matches? (let [?v (erp12.cbgp-lite.lang.lib/replace-char in1 \space \newline)]
                           (do (println ?v)
                               (count (erp12.cbgp-lite.lang.lib/remove-char ?v \newline))))
