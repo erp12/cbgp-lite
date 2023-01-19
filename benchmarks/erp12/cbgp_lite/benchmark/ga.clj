@@ -73,6 +73,7 @@
                                                           (doseq [[stat-name stat-val]
                                                                   (sort-by key
                                                                            (bu/aggregate-stats {:code-depth            bu/code-depth-stat
+                                                                                                :code-depth-over-size  bu/code-depth-over-size-stat
                                                                                                 :code-size             bu/code-size-stat
                                                                                                 :exceptions            bu/exception-messages-stat
                                                                                                 :genome-size           bu/genome-size-stat
@@ -147,6 +148,6 @@
 
   (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
         :data-dir "data/psb/"
-        :problem  "number-io"})
+        :problem  "fuel-cost"})
 
   )

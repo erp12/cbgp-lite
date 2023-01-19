@@ -93,6 +93,10 @@
 (def code-depth-stat
   (make-distribution-stat #(tb/tree-depth (:code %))))
 
+(def code-depth-over-size-stat
+  (make-distribution-stat #(/ (tb/tree-depth (:code %))
+                              (tb/tree-size (:code %)))))
+
 (defn make-num-penalty-stat
   [penalty]
   (make-distribution-stat (fn [{:keys [errors]}] (count (filter #(= % penalty) errors)))))
