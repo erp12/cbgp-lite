@@ -3,7 +3,6 @@
             [clojure.string :as str]
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.lang.compile]
             [erp12.cbgp-lite.search.individual :as i]
             [erp12.cbgp-lite.search.pluhsy :as pl]
             [erp12.cbgp-lite.task :as task]
@@ -14,9 +13,7 @@
 
 (log/merge-config!
   {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
-   :appenders {:println (assoc (log-app/println-appender) :min-level :info)
-               ;:spit    (assoc (log-app/spit-appender {:fname "./errors.log"}) :min-level :debug)
-               }})
+   :appenders {:println (assoc (log-app/println-appender) :min-level :info)}})
 
 (def default-config
   {:n-train              200
@@ -66,7 +63,7 @@
                                        :genome-factory  #(pl/random-plushy-genome opts)
                                        :pre-eval        (let [{:keys [downsample-rate train]} opts]
                                                           (fn [{:keys [step]}]
-                                                            (log/info "Starting step" step)
+                                                            (log/info "STARTING" step)
                                                             {:cases      (if downsample-rate
                                                                            (random-sample downsample-rate train)
                                                                            train)
@@ -74,23 +71,26 @@
                                        :evaluator       evaluator
                                        :post-eval       (fn [{:keys [individuals]}]
                                                           (doseq [[stat-name stat-val]
-                                                                  (bu/aggregate-stats {:diversity     bu/behavioral-diversity-stat
-                                                                                       :num-throwing  bu/num-throwing-stat
-                                                                                       :num-no-ast    bu/num-no-ast-stat
-                                                                                       :total-error   bu/total-error-stat
-                                                                                       :genome-size   bu/genome-size-stat
-                                                                                       :code-size     bu/code-size-stat
-                                                                                       :code-depth    bu/code-depth-stat
-                                                                                       :num-penalties (bu/make-num-penalty-stat (:penalty opts))
-                                                                                       :exceptions    bu/exception-messages-stat}
-                                                                                      individuals)]
+                                                                  (sort-by key
+                                                                           (bu/aggregate-stats {:code-depth            bu/code-depth-stat
+                                                                                                :code-size             bu/code-size-stat
+                                                                                                :exceptions            bu/exception-messages-stat
+                                                                                                :genome-size           bu/genome-size-stat
+                                                                                                :lowest-error-per-case bu/lowest-error-per-case
+                                                                                                :num-no-ast            bu/num-no-ast-stat
+                                                                                                :num-penalties         (bu/make-num-penalty-stat (:penalty opts))
+                                                                                                :num-throwing          bu/num-throwing-stat
+                                                                                                :total-error           bu/total-error-stat
+                                                                                                :unique-behaviors      bu/unique-behaviors-stat}
+                                                                                               individuals))]
                                                             (log/info stat-name stat-val))
                                                           {:grouped (group-by :errors individuals)})
                                        :breed           (make-breed opts)
                                        :individual-cmp  (comparator #(< (:total-error %1) (:total-error %2)))
                                        :stop-fn         (let [{:keys [max-generations cases]} opts]
                                                           (fn [{:keys [step step-start best new-best?]}]
-                                                            (log/info "Report"
+                                                            (log/info :best-individual-errors (:errors best))
+                                                            (log/info "REPORT"
                                                                       {:step       step
                                                                        :duration   (- (System/currentTimeMillis) step-start)
                                                                        :best-error (:total-error best)

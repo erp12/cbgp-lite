@@ -43,10 +43,21 @@
   [s]
   (apply str (butlast s)))
 
+(def ^:private regex-char-esc-smap
+  (let [esc-chars "()*&^%$#!"]
+    (zipmap esc-chars
+            (map #(str "\\" %) esc-chars))))
+
+(defn- str-to-pattern
+  [string]
+  (->> string
+       (replace regex-char-esc-smap)
+       str/join
+       re-pattern))
+
 (defn split-str
   [s split-on]
-  ;; @todo Should this escape regex symbols?
-  (str/split s (re-pattern split-on)))
+  (str/split s (re-pattern (str-to-pattern split-on))))
 
 (defn split-str-on-char
   [s c]
@@ -314,6 +325,7 @@
    'int-sub             (binary-transform INT)
    'int-mult            (binary-transform INT)
    'int-div             (simple-fn [INT INT] DOUBLE)
+   'int-quot            (binary-transform INT)
    'int-mod             (binary-transform INT)
    'int-inc             (unary-transform INT)
    'int-dec             (unary-transform INT)
@@ -325,6 +337,7 @@
    'double-sub          (binary-transform DOUBLE)
    'double-mult         (binary-transform DOUBLE)
    'double-div          (binary-transform DOUBLE)
+   'double-quot         (binary-transform DOUBLE)
    'double-mod          (binary-transform DOUBLE)
    'double-inc          (unary-transform DOUBLE)
    'double-dec          (unary-transform DOUBLE)
@@ -498,6 +511,7 @@
     double-mod    erp12.cbgp-lite.lang.lib/safe-mod
     double-mult   *
     double-sub    -
+    double-quot   quot
     fold          reduce
     index-of-char clojure.string/index-of
     index-of-str  clojure.string/index-of
@@ -512,6 +526,7 @@
     int-mod       erp12.cbgp-lite.lang.lib/safe-mod
     int-mult      *
     int-sub       -
+    int-quot      quot
     last-str      last
     length        count
     map-str       mapv
