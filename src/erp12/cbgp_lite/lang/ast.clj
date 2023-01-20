@@ -1,4 +1,4 @@
-(ns erp12.cbgp-lite.lang.form
+(ns erp12.cbgp-lite.lang.ast
   (:import (clojure.lang Compiler$CompilerException)))
 
 (defmulti ast->form (fn [{:keys [op]}] op))
@@ -36,6 +36,8 @@
           (vec (mapcat ast->form bindings))
           (ast->form body))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn form->fn
   "Given a vector of argument symbols and a Clojure form (`body`)
   create a function (similar to `fn`)."
@@ -47,3 +49,39 @@
                       {:args args
                        :body body}
                       e)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmulti ast-size (fn [{:keys [op]}] op))
+
+(defmethod ast-size :const [_] 1)
+(defmethod ast-size :var [_] 1)
+(defmethod ast-size :local [_] 1)
+
+(defmethod ast-size :invoke
+  [{:keys [fn args]}]
+  (reduce (clojure.core/fn [i arg] (+ i (ast-size arg)))
+          (ast-size fn)
+          args))
+
+(defmethod ast-size :fn
+  [{:keys [methods]}]
+  (->> methods
+       (map ast-size)
+       (reduce +)
+       inc))
+
+(defmethod ast-size :fn-method
+  [{:keys [params body]}]
+  (+ (count params)
+     (ast-size body)))
+
+(defmethod ast-size :let
+  [{:keys [bindings body]}]
+  (reduce (fn [i binding] (+ i (ast-size binding)))
+          (inc (ast-size body))
+          bindings))
+
+(defmethod ast-size :binding
+  [{:keys [init]}]
+  (if (nil? init) 0 (ast-size init)))

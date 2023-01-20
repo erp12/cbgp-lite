@@ -1,7 +1,7 @@
 (ns erp12.cbgp-lite.search.individual
   (:require [clj-fuzzy.levenshtein :as lev]
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.lang.form :as f]
+            [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.search.pluhsy :as pl]
             [taoensso.timbre :as log])
   (:import (java.io StringWriter)))
@@ -73,7 +73,8 @@
               prog-output (invoke-func func inputs)
               errors (errors-for-case {:case        case
                                        :prog-output prog-output
-                                       :penalty     1       ;; Any positive number will short-circuit evaluation.
+                                       ;; Any positive number will short-circuit evaluation.
+                                       :penalty     1
                                        :loss-fns    loss-fns})]
           (if (some pos? errors)
             (if-let [ex (when (instance? Exception (:output prog-output))
@@ -95,7 +96,7 @@
       {:func        nil
        :behavior    nil
        :errors      errors
-       :total-error (reduce + errors)
+       :total-error (reduce +' errors)
        :cases-used  0})
     (let [behavior (map #(invoke-func func (:inputs %)) cases)
           _ (log/debug "Behavior" behavior)
@@ -111,7 +112,7 @@
                       (filter some?)
                       vec)
           _ (log/debug "Errors" errors)
-          total-error (apply + errors)]
+          total-error (reduce +' errors)]
       {:behavior    behavior
        :errors      errors
        :total-error total-error
@@ -135,10 +136,10 @@
                                       :locals arg-symbols)))
           _ (log/debug "AST" ast)
           form (when ast
-                 (f/ast->form ast))
+                 (a/ast->form ast))
           _ (log/debug "Form" form)
           func (when form
-                 (f/form->fn (vec arg-symbols) form))
+                 (a/form->fn (vec arg-symbols) form))
           _ (log/debug "Function compiled" func)
           evaluation (evaluate-fn (merge {:func func :cases cases} opts))]
       (when-let [ex (:exception evaluation)]

@@ -25,7 +25,7 @@
        (map (fn [[k acc]] [k ((get stats k identity) acc)]))
        (into {})))
 
-(defn behavioral-diversity-stat
+(defn unique-behaviors-stat
   ;; Init
   ([] #{})
   ;; Finalize
@@ -49,6 +49,12 @@
   ([n] n)
   ([n {:keys [code]}]
    (+ n (if code 0 1))))
+
+(defn lowest-error-per-case
+  ([] (repeat Long/MAX_VALUE))
+  ([min-errors] min-errors)
+  ([min-errors {:keys [errors]}]
+   (mapv min min-errors errors)))
 
 (defn make-distribution-stat
   [by]
@@ -86,6 +92,10 @@
 
 (def code-depth-stat
   (make-distribution-stat #(tb/tree-depth (:code %))))
+
+(def code-depth-over-size-stat
+  (make-distribution-stat #(/ (tb/tree-depth (:code %))
+                              (tb/tree-size (:code %)))))
 
 (defn make-num-penalty-stat
   [penalty]
