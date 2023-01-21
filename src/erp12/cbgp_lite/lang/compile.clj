@@ -1,6 +1,7 @@
 (ns erp12.cbgp-lite.lang.compile
   (:require [clojure.string :as str]
             [clojure.walk :as w]
+            [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.lang.schema :as schema]
             [taoensso.timbre :as log]))
@@ -30,6 +31,46 @@
   (let [subs (into {} (map-indexed (fn [i s] [s (symbol (str "S" i))])
                                    (sort (s-vars type))))]
     (w/postwalk-replace subs type)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Stack AST sizes
+
+(def sketches (atom {}))
+
+(defn record-asts!
+  [state]
+  (let [sketch (->> state
+                    :asts
+                    (map (fn [{::keys [ast type]}]
+                           {:root (:op ast)
+                            :size (a/ast-size ast)
+                            :type type})))]
+    (swap! sketches
+           #(assoc % (->> state
+                          :asts
+                          (map (fn [{::keys [ast type]}]
+                                 {:root (:op ast)
+                                  :size (a/ast-size ast)
+                                  :type type})))
+                     (inc (or (get % sketch) 0))))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Applications
+
+(def apply-events
+  (atom {:success 0
+         :no-fn   0
+         :no-arg  0}))
+
+(defn apply-success! []
+  (swap! apply-events update :success inc))
+
+(defn apply-no-fn! []
+  (swap! apply-events update :no-fn inc))
+
+(defn apply-no-arg! []
+  (swap! apply-events update :no-arg inc))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State Manipulation
@@ -189,7 +230,8 @@
   ;; If one or more arguments have :s-var types, incrementally bind them.
   (let [{boxed-ast :ast state-fn-popped :state} (pop-function-ast state)]
     (if (= :none boxed-ast)
-      state
+      (do (apply-no-fn!)
+          state)
       (let [{::keys [ast type]} boxed-ast]
         (loop [remaining-arg-types (schema/fn-arg-schemas type)
                bindings {}
@@ -198,11 +240,12 @@
           (if (empty? remaining-arg-types)
             ;; Push an AST which calls the function to the arguments and
             ;; box the AST with the return type of the function.
-            (push-ast {::ast  {:op   :invoke
-                               :fn   ast
-                               :args (mapv ::ast args)}
-                       ::type (schema/instantiate (schema/substitute bindings (schema/fn-ret-schema type)))}
-                      new-state)
+            (do (apply-success!)
+                (push-ast {::ast  {:op   :invoke
+                                   :fn   ast
+                                   :args (mapv ::ast args)}
+                           ::type (schema/instantiate (schema/substitute bindings (schema/fn-ret-schema type)))}
+                          new-state))
             (let [arg-type (first remaining-arg-types)
                   ;; If arg-type is a t-var that we have seen before,
                   ;; bind it to the actual same type as before.
@@ -223,7 +266,8 @@
                                   (schema/generalize type-env (schema/substitute new-bindings (::type arg)))}
                                  new-bindings)]
               (if (= :none arg)
-                state
+                (do (apply-no-arg!)
+                    state)
                 (recur (rest remaining-arg-types)
                        ;; If arg-type is has unbound t-vars that were bound during unification,
                        ;; add them to the set of bindings.
