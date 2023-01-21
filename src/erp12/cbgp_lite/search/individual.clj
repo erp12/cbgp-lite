@@ -1,7 +1,7 @@
 (ns erp12.cbgp-lite.search.individual
   (:require [clj-fuzzy.levenshtein :as lev]
-            [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.lang.ast :as a]
+            [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.search.pluhsy :as pl]
             [taoensso.timbre :as log])
   (:import (java.io StringWriter)))
@@ -23,16 +23,6 @@
     (with-out-and-stdout (apply func args))
     (catch Exception e
       {:output e :std-out nil})))
-
-(defn log-program-execution-errors
-  "Debug log any errors thrown during program evaluation to help with
-  debugging the library of functions and their type annotations."
-  [{:keys [code output]}]
-  (when (instance? Exception output)
-    (log/debug {:ex   (class output)
-                :msg  (.getMessage output)
-                :code code})
-    true))
 
 (defn errors-for-case
   "Compute errors on a single case given a program's output.
@@ -141,9 +131,12 @@
           func (when form
                  (a/form->fn (vec arg-symbols) form))
           _ (log/debug "Function compiled" func)
-          evaluation (evaluate-fn (merge {:func func :cases cases} opts))]
-      (when-let [ex (:exception evaluation)]
-        (log-program-execution-errors {:code form :ex ex}))
+          evaluation (try
+                       (evaluate-fn (merge {:func func :cases cases} opts))
+                       (catch Exception e
+                         (throw (ex-info "Failed to evaluate Clojure form."
+                                         {:code form}
+                                         e))))]
       (merge {:push push
               :code form
               :func func}
