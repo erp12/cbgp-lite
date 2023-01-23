@@ -126,8 +126,7 @@
                                       :locals arg-symbols
                                       ;; @todo Experimental - record final stack AST sizes and types.
                                       ;; Disabled to reduce concurrent compilation coordination.
-                                      :record-sketch? false
-                                      )))
+                                      :record-sketch? false)))
           _ (log/debug "AST" ast)
           form (when ast
                  (a/ast->form ast))
