@@ -2,25 +2,13 @@
   (:require [clojure.test :refer [deftest is testing]]
             [erp12.cbgp-lite.search.individual :as i]
             [erp12.cbgp-lite.task :as task]
-            [erp12.cbgp-lite.utils :as u]
-            [taoensso.timbre :as log]
-            [taoensso.timbre.appenders.core :as log-app]))
-
-(log/merge-config!
-  {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
-   :appenders {:println (assoc (log-app/println-appender) :min-level :debug)
-               ;:spit    (assoc (log-app/spit-appender {:fname "./errors.log"}) :min-level :debug)
-               }})
+            [erp12.cbgp-lite.utils :as u]))
 
 (defn absolute-dist [a b] (Math/abs (- a b)))
 
 (deftest with-out-and-stdout-test
   (is (= {:output 2 :std-out "Hi\n"}
          (i/with-out-and-stdout (do (println "Hi") (inc 1))))))
-
-(deftest log-program-execution-errors-test
-  (is (i/log-program-execution-errors {:code   '(/ 1 0)
-                                       :output (ArithmeticException. "Divide by zero")})))
 
 (deftest compute-errors-on-case-test
   (is (= [2 1]

@@ -5,6 +5,7 @@
             [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.lang.lib :as lib]
+            [hawk.core]
             [meander.epsilon :as m])
   (:import (java.io StringWriter)))
 
@@ -147,13 +148,13 @@
 
 (deftest compile-step-test
   (testing "compile lit"
-    (is (= (c/compile-step {:push-unit {:gene :lit :val 1 :type {:type 'int?}}
-                            :state     c/empty-state
-                            :type-env  {}})
-           {:asts   (list {::c/ast  {:op :const :val 1}
-                           ::c/type {:type 'int?}})
-            :push   []
-            :locals []})))
+    (is (partial= {:asts   (list {::c/ast  {:op :const :val 1}
+                                  ::c/type {:type 'int?}})
+                   :push   []
+                   :locals []}
+                  (c/compile-step {:push-unit {:gene :lit :val 1 :type {:type 'int?}}
+                                   :state     c/empty-state
+                                   :type-env  {}}))))
   (testing "compile var"
     (is (matches? {:asts   ({::c/ast  {:op :var :var '=}
                              ::c/type {:type   :=>
@@ -171,52 +172,51 @@
            (c/compile-step {:push-unit {:gene :local :idx 3}
                             :state     c/empty-state
                             :type-env  lib/type-env})))
-    (is (= {:asts   (list {::c/ast  {:op :local :name 'x}
-                           ::c/type {:type 'int?}})
-            :push   []
-            :locals ['x]}
-           (c/compile-step {:push-unit {:gene :local :idx 3}
-                            :state     (assoc c/empty-state :locals ['x])
-                            :type-env  {'x {:type 'int?}}}))))
+    (is (partial= {:asts   (list {::c/ast  {:op :local :name 'x}
+                                  ::c/type {:type 'int?}})
+                   :push   []
+                   :locals ['x]}
+                  (c/compile-step {:push-unit {:gene :local :idx 3}
+                                   :state     (assoc c/empty-state :locals ['x])
+                                   :type-env  {'x {:type 'int?}}}))))
   (testing "compile apply"
-    (is (= (c/compile-step {:push-unit {:gene :apply}
-                            :state     (assoc c/empty-state
-                                         :asts (list {::c/ast  {:op :const :val 2}
-                                                      ::c/type {:type 'int?}}
-                                                     {::c/ast  {:op :var :var 'int-sub}
-                                                      ::c/type (lib/type-env 'int-sub)}
-                                                     {::c/ast  {:op :const :val 1}
-                                                      ::c/type {:type 'int?}}))
-                            :type-env  lib/type-env})
-
-           {:asts   (list {::c/ast  {:op   :invoke
-                                     :fn   {:op :var :var 'int-sub}
-                                     :args [{:op :const :val 2}
-                                            {:op :const :val 1}]}
-                           ::c/type {:type 'int?}})
-            :push   []
-            :locals []}))
-    (is (= (c/compile-step {:push-unit {:gene :apply}
-                            :state     (assoc c/empty-state
-                                         :asts (list {::c/ast  {:op :const :val 1}
-                                                      ::c/type {:type 'int?}}
-                                                     {::c/ast  {:op :const :val -1}
-                                                      ::c/type {:type 'int?}}
-                                                     {::c/ast  {:op :var :var 'if}
-                                                      ::c/type (lib/type-env 'if)}
-                                                     {::c/ast  {:op :local :name 'x}
-                                                      ::c/type {:type 'boolean?}})
-                                         :locals ['x])
-                            :type-env  (assoc lib/type-env
-                                         'x {:type 'boolean?})})
-           {:asts   (list {::c/ast  {:op   :invoke
-                                     :fn   {:op :var :var 'if}
-                                     :args [{:op :local :name 'x}
-                                            {:op :const :val 1}
-                                            {:op :const :val -1}]}
-                           ::c/type {:type 'int?}})
-            :push   []
-            :locals ['x]}))
+    (is (partial= {:asts   (list {::c/ast  {:op   :invoke
+                                            :fn   {:op :var :var 'int-sub}
+                                            :args [{:op :const :val 2}
+                                                   {:op :const :val 1}]}
+                                  ::c/type {:type 'int?}})
+                   :push   []
+                   :locals []}
+                  (c/compile-step {:push-unit {:gene :apply}
+                                   :state     (assoc c/empty-state
+                                                :asts (list {::c/ast  {:op :const :val 2}
+                                                             ::c/type {:type 'int?}}
+                                                            {::c/ast  {:op :var :var 'int-sub}
+                                                             ::c/type (lib/type-env 'int-sub)}
+                                                            {::c/ast  {:op :const :val 1}
+                                                             ::c/type {:type 'int?}}))
+                                   :type-env  lib/type-env})))
+    (is (partial= {:asts   (list {::c/ast  {:op   :invoke
+                                            :fn   {:op :var :var 'if}
+                                            :args [{:op :local :name 'x}
+                                                   {:op :const :val 1}
+                                                   {:op :const :val -1}]}
+                                  ::c/type {:type 'int?}})
+                   :push   []
+                   :locals ['x]}
+                  (c/compile-step {:push-unit {:gene :apply}
+                                   :state     (assoc c/empty-state
+                                                :asts (list {::c/ast  {:op :const :val 1}
+                                                             ::c/type {:type 'int?}}
+                                                            {::c/ast  {:op :const :val -1}
+                                                             ::c/type {:type 'int?}}
+                                                            {::c/ast  {:op :var :var 'if}
+                                                             ::c/type (lib/type-env 'if)}
+                                                            {::c/ast  {:op :local :name 'x}
+                                                             ::c/type {:type 'boolean?}})
+                                                :locals ['x])
+                                   :type-env  (assoc lib/type-env
+                                                'x {:type 'boolean?})})))
     ;; @todo Test when args are missing
     )
   (testing "compile fn"
@@ -237,21 +237,21 @@
                                                 :push [[{:gene :local :idx 1}]])
                                    :type-env  {}})))
     (testing "nullary fn"
-      (is (= (c/compile-step {:push-unit {:gene :fn}
-                              :state     (assoc c/empty-state
-                                           :asts (list {::c/ast  {:op :var :var 'x}
-                                                        ::c/type {:type 'string?}})
-                                           :push [])
-                              :type-env  {'x {:type 'string?}}})
-             {:asts   (list {::c/ast  {:op      :fn
-                                       :methods [{:op     :fn-method
-                                                  :params []
-                                                  :body   {:op :var :var 'x}}]}
-                             ::c/type {:type   :=>
-                                       :input  {:type :cat :children []}
-                                       :output {:type 'string?}}})
-              :push   []
-              :locals []}))))
+      (is (partial= {:asts   (list {::c/ast  {:op      :fn
+                                              :methods [{:op     :fn-method
+                                                         :params []
+                                                         :body   {:op :var :var 'x}}]}
+                                    ::c/type {:type   :=>
+                                              :input  {:type :cat :children []}
+                                              :output {:type 'string?}}})
+                     :push   []
+                     :locals []}
+                    (c/compile-step {:push-unit {:gene :fn}
+                                     :state     (assoc c/empty-state
+                                                  :asts (list {::c/ast  {:op :var :var 'x}
+                                                               ::c/type {:type 'string?}})
+                                                  :push [])
+                                     :type-env  {'x {:type 'string?}}})))))
   (testing "compile let"
     (is (matches? {:asts   ({::c/ast  {:op       :let
                                        :bindings [{:op   :binding
