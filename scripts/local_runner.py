@@ -17,7 +17,8 @@ def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
         f":suite-ns {suite_ns}",
         f":data-dir '\"{opts.data_dir}\"'",
         f":problem '\"{opts.problem}\"'",
-        f":type-counts-file '\"{types_file}\"'" if opts.log_types else ""
+        f":state-output-fn {opts.ast_strategy}" if opts.ast_strategy is not None else "",
+        f":type-counts-file '\"{types_file}\"'" if opts.log_types else "",
     ])
     return "; ".join(
         [
@@ -52,6 +53,11 @@ def cli_opts() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--out", help="The path to put the log files of the run captured from stdout."
+    )
+    parser.add_argument(
+        "--ast-strategy",
+        default=None,
+        help="The method of selecting and AST post-compilation.",
     )
     parser.add_argument(
         "--log-types", help="If set, an EDN file of type counts will be added to the log file dir.",
@@ -97,8 +103,9 @@ python3 scripts/local_runner.py \
     --search "ga" \
     --problem "vectors-summed" \
     --data-dir "./data/psb/" \
-    --num-runs 2 \
+    --num-runs 1 \
     --out "./data/logs/test/" \
+    --ast-strategy :biggest-out \
     --log-types \
     --parallelism 1
 """
