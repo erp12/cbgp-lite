@@ -183,6 +183,10 @@
   [n d]
   (if (zero? d) 0 (mod n d)))
 
+(defn safe-quot
+  [n d]
+  (if (zero? d) 0 (quot n d)))
+
 (defn sin
   [x]
   (Math/sin x))
@@ -325,7 +329,7 @@
    'int-sub             (binary-transform INT)
    'int-mult            (binary-transform INT)
    'int-div             (simple-fn [INT INT] DOUBLE)
-   'int-quot            (binary-transform INT)
+   ;'int-quot            (binary-transform INT)
    'int-mod             (binary-transform INT)
    'int-inc             (unary-transform INT)
    'int-dec             (unary-transform INT)
@@ -337,7 +341,7 @@
    'double-sub          (binary-transform DOUBLE)
    'double-mult         (binary-transform DOUBLE)
    'double-div          (binary-transform DOUBLE)
-   'double-quot         (binary-transform DOUBLE)
+   ;'double-quot         (binary-transform DOUBLE)
    'double-mod          (binary-transform DOUBLE)
    'double-inc          (unary-transform DOUBLE)
    'double-dec          (unary-transform DOUBLE)
