@@ -10,20 +10,23 @@ def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
     main_ns = "erp12.cbgp-lite.benchmark." + opts.search
     suite_ns = "erp12.cbgp-lite.benchmark.suite.psb"
     types_file = os.path.join(log_dir, f"run{run_id}_types.edn")
+
+    clj_cmd = " ".join([
+        f"{opts.clj} -X:benchmarks {main_ns}/run",
+        f":suite-ns {suite_ns}",
+        f":data-dir '\"{opts.data_dir}\"'",
+        f":problem '\"{opts.problem}\"'",
+        f":state-output-fn {opts.ast_strategy}" if opts.ast_strategy is not None else "",
+        f":type-counts-file '\"{types_file}\"'" if opts.log_types else "",
+    ])
+
     return "; ".join(
         [
             f'echo "Starting run {run_id}"',
             "export PATH=$PATH:/usr/java/latest/bin",
             f"cd {opts.cbgp}",
             f"mkdir -p {log_dir}",
-            (
-                f"{opts.clj} -X:benchmarks {main_ns}/run " +
-                f":suite-ns {suite_ns} " +
-                f":data-dir '\"{opts.data_dir}\"' " +
-                f":problem '\"{opts.problem}\"' " +
-                (f":type-counts-file '\"{types_file}\"' " if opts.log_types else "") +
-                f"2>&1 | tee {log_file}"
-            ),
+            f"{clj_cmd} 2>&1 | tee {log_file}",
             f'echo "Finished Run {run_id}"',
         ]
     )
@@ -50,6 +53,11 @@ def cli_opts() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--out", help="The path to put the log files of the run captured from stdout."
+    )
+    parser.add_argument(
+        "--ast-strategy",
+        default=None,
+        help="The method of selecting and AST post-compilation.",
     )
     parser.add_argument(
         "--log-types", help="If set, an EDN file of type counts will be added to the log file dir.",
@@ -83,11 +91,12 @@ if __name__ == "__main__":
 """
 Example:
 
-python3 scripts/local_runner.py \
+python3 scripts/single_run_runner.py \
     --search "ga" \
     --problem "vectors-summed" \
     --data-dir "./data/psb/" \
     --run-number 42 \
     --out "./data/logs/test/" \
+    --ast-strategy :biggest-out \
     --log-types
 """
