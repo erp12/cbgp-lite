@@ -76,28 +76,12 @@
 ;; State Manipulation
 
 (def empty-state
-  {:asts   (list)
-   :push   []
-   :locals []})
-
-(defn push-ast
-  "Push the `ast` to the AST stack in the `state`."
-  [ast state]
-  (when @collect-types?
-    (swap! types-seen
-           (fn [m t] (assoc m t (inc (get m t 0))))
-           (canonical-type (::type ast))))
-  (update state :asts #(conj % ast)))
-
-(defn nth-local
-  "Get the nth variable from the state using modulo to ensure `n` always selects a
-  variable unless no variables are bound in the state. If there are no variables,
-  returns nil."
-  [n state]
-  (let [locals (get state :locals)]
-    (if (empty? locals)
-      nil
-      (nth locals (mod n (count locals))))))
+  {:asts        (list)
+   :push        []
+   :locals      []
+   ;; @todo Experimental
+   :biggest-out :none
+   :newest-out  :none})
 
 (defn macro?
   [{:keys [op] :as ast}]
@@ -109,6 +93,41 @@
     (if sym
       (contains? lib/macros sym)
       false)))
+
+(defn unifiable?
+  [unify-with typ]
+  (not (schema/mgu-failure? (schema/mgu unify-with typ))))
+
+(defn push-ast
+  "Push the `ast` to the AST stack in the `state`."
+  [ast {:keys [biggest-out newest-out ret-type] :as state}]
+  (when @collect-types?
+    (swap! types-seen
+           (fn [m t] (assoc m t (inc (get m t 0))))
+           (canonical-type (::type ast))))
+  (let [output-able? (and (unifiable? ret-type (::type ast))
+                          (not (macro? (::ast ast))))
+        newest-out-ast (if output-able? ast newest-out)
+        biggest-out-ast (if (and output-able?
+                                 (or (= biggest-out :none)
+                                     (> (a/ast-size (::ast ast))
+                                        (a/ast-size (::ast biggest-out)))))
+                          ast
+                          biggest-out)]
+    (assoc state
+      :asts (conj (:asts state) ast)
+      :biggest-out biggest-out-ast
+      :newest-out newest-out-ast)))
+
+(defn nth-local
+  "Get the nth variable from the state using modulo to ensure `n` always selects a
+  variable unless no variables are bound in the state. If there are no variables,
+  returns nil."
+  [n state]
+  (let [locals (get state :locals)]
+    (if (empty? locals)
+      nil
+      (nth locals (mod n (count locals))))))
 
 (defn pop-ast
   "Get the top AST from the ast stack of `state`.
@@ -350,29 +369,37 @@
                      ::type (::type body)}
                     (update new-state :push rest)))))))
 
+(defn default-state-output-fn
+  [{:keys [ret-type] :as state}]
+  (-> ret-type
+      schema/instantiate
+      (pop-unifiable-ast state {:allow-macros false})
+      :ast))
+
 (defn- state->log
   [state]
   (str "\n" (str/join "\n" (map #(apply pr-str %) state))))
 
 (defn push->ast
-  [{:keys [push locals ret-type type-env dealiases]
-    :or   {dealiases lib/dealiases}}]
-  (loop [state (assoc empty-state
-                 ;; Ensure a list
-                 :push (reverse (into '() push))
-                 :locals locals)]
-    (if (empty? (:push state))
-      (let [_ (log/trace "Final:" (state->log state))
-            ast (-> ret-type
-                    schema/instantiate
-                    (pop-unifiable-ast state {:allow-macros false})
-                    :ast
-                    (->> (w/postwalk-replace dealiases)))]
-        (log/trace "EMIT:" ast)
-        ast)
-      (let [{:keys [push-unit state]} (pop-push-unit state)]
-        (log/trace "Current:" push-unit (state->log state))
-        (recur (compile-step {:push-unit push-unit
-                              :type-env  type-env
-                              :state     state}))))))
-
+  [{:keys [push locals ret-type type-env dealiases state-output-fn record-sketch?]
+    :or   {dealiases       lib/dealiases
+           record-sketch?  false}}]
+  (let [state-output-fn (or state-output-fn default-state-output-fn)]
+    (loop [state (assoc empty-state
+                   ;; Ensure a list
+                   :push (reverse (into '() push))
+                   :locals locals
+                   :ret-type ret-type)]
+      (if (empty? (:push state))
+        (let [_ (log/trace "Final:" (state->log state))
+              ;; @todo Experimental - record final stack AST sizes and types.
+              _ (when record-sketch?
+                  (record-asts! state))
+              ast (w/postwalk-replace dealiases (state-output-fn state))]
+          (log/trace "EMIT:" ast)
+          ast)
+        (let [{:keys [push-unit state]} (pop-push-unit state)]
+          (log/trace "Current:" push-unit (state->log state))
+          (recur (compile-step {:push-unit push-unit
+                                :type-env  type-env
+                                :state     state})))))))

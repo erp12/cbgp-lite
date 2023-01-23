@@ -24,7 +24,14 @@
    :min-genome-size      50
    :max-genome-size      250
    :penalty              1e5
-   :simplification-steps 2000})
+   :simplification-steps 2000
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   ;; Experimental
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   ;; Supported -  nil, :biggest-out, :newest-out, or a function from state to unboxed AST.
+   ;; `nil` will search the stack for the top AST of a valid type.
+   :state-output-fn      nil
+   })
 
 (defn make-breed
   [opts]
@@ -148,8 +155,9 @@
 
 (comment
 
-  (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
-        :data-dir "data/psb/"
-        :problem  "fuel-cost"})
+  (run {:suite-ns        'erp12.cbgp-lite.benchmark.suite.psb
+        :data-dir        "data/psb/"
+        :problem         "replace-space-with-newline"
+        :state-output-fn :biggest-out})
 
   )
