@@ -18,11 +18,30 @@
   (->> coll
        (reduce (fn [stats' el]
                  ;; Accumulate 1 more element in the stats.
-                 (map (fn [[k acc]] [k ((get stats k) acc el)]) stats'))
+                 (map (fn [[k acc]]
+                        (let [stat-fn (get stats k)
+                              ;; @todo Cleanup try-catch after stats code becomes more stable.
+                              acc' (try
+                                     (stat-fn acc el)
+                                     (catch Exception e
+                                       (throw (ex-info "Failed to reduce stat for element."
+                                                       {:stat k :element el}
+                                                       e))))]
+                          [k acc']))
+                      stats'))
                ;; Initialize stats.
                (map (fn [[k f]] [k (f)]) stats))
        ;; Finalize stats.
-       (map (fn [[k acc]] [k ((get stats k identity) acc)]))
+       (map (fn [[k acc]]
+              (let [stat-fn (get stats k)
+                    ;; @todo Cleanup try-catch after stats code becomes more stable.
+                    stat (try
+                           (stat-fn acc)
+                           (catch Exception e
+                             (throw (ex-info "Failed to finalize stat."
+                                             {:stat k :accumulated acc}
+                                             e))))]
+                [k stat])))
        (into {})))
 
 (defn unique-behaviors-stat
