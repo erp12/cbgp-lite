@@ -7,6 +7,7 @@ import subprocess
 def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
     log_dir = os.path.join(opts.out, opts.problem)
     log_file = os.path.join(log_dir, f"run{run_id}.txt")
+    clj_cmd_line_args = opts.clj_cmd_line_args
     main_ns = "erp12.cbgp-lite.benchmark." + opts.search
     suite_ns = "erp12.cbgp-lite.benchmark.suite.psb"
     types_file = os.path.join(log_dir, f"run{run_id}_types.edn")
@@ -21,8 +22,9 @@ def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
                 f":suite-ns {suite_ns} " +
                 f":data-dir '\"{opts.data_dir}\"' " +
                 f":problem '\"{opts.problem}\"' " +
-                (f":type-counts-file '\"{types_file}\"' " if opts.log_types else "") +
-                f"2>&1 | tee {log_file}"
+                (f":type-counts-file '\"{types_file}\"' " if opts.log_types else " ") +
+                clj_cmd_line_args +
+                f" 2>&1 | tee {log_file}"
             ),
             f'echo "Finished Run {run_id}"',
         ]
@@ -64,6 +66,8 @@ def cli_opts() -> argparse.ArgumentParser:
         default="/usr/local/bin/clojure",
     )
     parser.add_argument("--cbgp", help="The path to cbgp-lite.", default=".")
+    parser.add_argument("--clj-cmd-line-args", help="Command line arguments to pass along to Clojure.",
+        default="")
     return parser
 
 
