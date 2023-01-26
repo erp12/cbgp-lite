@@ -329,7 +329,7 @@
    'int-sub             (binary-transform INT)
    'int-mult            (binary-transform INT)
    'int-div             (simple-fn [INT INT] DOUBLE)
-   ;'int-quot            (binary-transform INT)
+   'int-quot            (binary-transform INT)
    'int-mod             (binary-transform INT)
    'int-inc             (unary-transform INT)
    'int-dec             (unary-transform INT)
@@ -341,7 +341,7 @@
    'double-sub          (binary-transform DOUBLE)
    'double-mult         (binary-transform DOUBLE)
    'double-div          (binary-transform DOUBLE)
-   ;'double-quot         (binary-transform DOUBLE)
+   'double-quot         (binary-transform DOUBLE)
    'double-mod          (binary-transform DOUBLE)
    'double-inc          (unary-transform DOUBLE)
    'double-dec          (unary-transform DOUBLE)
@@ -515,7 +515,7 @@
     double-mod    erp12.cbgp-lite.lang.lib/safe-mod
     double-mult   *
     double-sub    -
-    double-quot   quot
+    double-quot   erp12.cbgp-lite.lang.lib/safe-quot
     fold          reduce
     index-of-char clojure.string/index-of
     index-of-str  clojure.string/index-of
@@ -530,7 +530,7 @@
     int-mod       erp12.cbgp-lite.lang.lib/safe-mod
     int-mult      *
     int-sub       -
-    int-quot      quot
+    int-quot      erp12.cbgp-lite.lang.lib/safe-quot
     last-str      last
     length        count
     map-str       mapv
