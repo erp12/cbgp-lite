@@ -28,7 +28,7 @@
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Experimental
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   ;; Supported -  nil, :biggest-out, :newest-out, or a function from state to unboxed AST.
+   ;; Supported -  nil, :biggest, :newest, or a function from state to unboxed AST.
    ;; `nil` will search the stack for the top AST of a valid type.
    :state-output-fn      nil
    })
@@ -157,7 +157,6 @@
 
   (run {:suite-ns        'erp12.cbgp-lite.benchmark.suite.psb
         :data-dir        "data/psb/"
-        :problem         "replace-space-with-newline"
-        :state-output-fn :biggest-out})
+        :problem         "vectors-summed"})
 
   )
