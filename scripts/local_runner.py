@@ -6,20 +6,21 @@ import subprocess
 from multiprocessing import Pool
 
 
+SUITE_NS = "erp12.cbgp-lite.benchmark.suite.psb"
+
+
 def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
     log_dir = os.path.join(opts.out, opts.start_time, opts.problem)
     log_file = os.path.join(log_dir, f"run{run_id}.txt")
     main_ns = "erp12.cbgp-lite.benchmark." + opts.search
-    suite_ns = "erp12.cbgp-lite.benchmark.suite.psb"
     types_file = os.path.join(log_dir, f"run{run_id}_types.edn")
     clj_cmd = " ".join([
         f"{opts.clj} -X:benchmarks {main_ns}/run",
-        f":suite-ns {suite_ns}",
+        f":suite-ns {SUITE_NS}",
         f":data-dir '\"{opts.data_dir}\"'",
         f":problem '\"{opts.problem}\"'",
-        f":state-output-fn {opts.ast_strategy}" if opts.ast_strategy is not None else "",
         f":type-counts-file '\"{types_file}\"'" if opts.log_types else "",
-    ])
+    ] + opts.opts)
     return "; ".join(
         [
             f'echo "Starting run {run_id}"',
@@ -49,15 +50,20 @@ def cli_opts() -> argparse.ArgumentParser:
         help="The directory to read (and in some cases, download) problem data files to.",
     )
     parser.add_argument(
-        "--num-runs", type=int, help="The number of runs of the problem to start."
+        "--run-number",
+        type=int,
+        default=None,
+        help="""An identifier for the single run. If None (the default) run numbers will be automatically generated.
+         NOTE: `--num-runs` must be 1 if a `--run-number` is supplied. """
+    )
+    parser.add_argument(
+        "--num-runs",
+        type=int,
+        default=1,
+        help="The number of runs of the problem to start. Default is 1."
     )
     parser.add_argument(
         "--out", help="The path to put the log files of the run captured from stdout."
-    )
-    parser.add_argument(
-        "--ast-strategy",
-        default=None,
-        help="The method of selecting and AST post-compilation.",
     )
     parser.add_argument(
         "--log-types", help="If set, an EDN file of type counts will be added to the log file dir.",
@@ -73,8 +79,9 @@ def cli_opts() -> argparse.ArgumentParser:
         "--parallelism",
         type=int,
         default=1,
-        help="The number of runs to perform concurrently. If runs are multi-threaded, recommend this be 1.",
+        help="The number of runs to perform concurrently. If runs are multi-threaded, recommend this be 1. Default is 1.",
     )
+    parser.add_argument("--opts", nargs="*")
     return parser
 
 
@@ -92,20 +99,40 @@ if __name__ == "__main__":
     if not os.path.isdir(args.out):
         os.makedirs(args.out)
 
-    with Pool(args.parallelism) as p:
-        for r in p.imap_unordered(partial(start_run, args), range(args.num_runs)):
-            print(r)
+    if args.run_number is not None:
+        assert args.num_runs == 1, "`--run-id` can only be set if `--num-runs` is 1."
+        start_run(args, args.run_number)
+    else:
+        with Pool(args.parallelism) as p:
+            for r in p.imap_unordered(partial(start_run, args), range(args.num_runs)):
+                print(r)
 
 """
 Example:
 
+# Batch of runs
 python3 scripts/local_runner.py \
     --search "ga" \
     --problem "vectors-summed" \
     --data-dir "./data/psb/" \
-    --num-runs 1 \
-    --out "./data/logs/test/" \
-    --ast-strategy :biggest-out \
+    --num-runs 3 \
+    --out "./data/logs/" \
     --log-types \
-    --parallelism 1
+    --opts \
+    :state-output-fn :biggest \
+    :population-size 10 \
+    :max-generations 10
+    
+# Single run
+python3 scripts/local_runner.py \
+    --search "ga" \
+    --problem "vectors-summed" \
+    --data-dir "./data/psb/" \
+    --run-number 1000 \
+    --out "./data/logs/" \
+    --log-types \
+    --opts \
+    :state-output-fn :biggest \
+    :population-size 10 \
+    :max-generations 10
 """
