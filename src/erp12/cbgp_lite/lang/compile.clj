@@ -76,12 +76,12 @@
 ;; State Manipulation
 
 (def empty-state
-  {:asts        (list)
-   :push        []
-   :locals      []
+  {:asts    (list)
+   :push    []
+   :locals  []
    ;; @todo Experimental
-   :biggest-out :none
-   :newest-out  :none})
+   :biggest :none
+   :newest  :none})
 
 (defn macro?
   [{:keys [op] :as ast}]
@@ -100,24 +100,24 @@
 
 (defn push-ast
   "Push the `ast` to the AST stack in the `state`."
-  [ast {:keys [biggest-out newest-out ret-type] :as state}]
+  [ast {:keys [biggest newest ret-type] :as state}]
   (when @collect-types?
     (swap! types-seen
            (fn [m t] (assoc m t (inc (get m t 0))))
            (canonical-type (::type ast))))
   (let [output-able? (and (unifiable? ret-type (::type ast))
                           (not (macro? (::ast ast))))
-        newest-out-ast (if output-able? ast newest-out)
+        newest-out-ast (if output-able? ast newest)
         biggest-out-ast (if (and output-able?
-                                 (or (= biggest-out :none)
+                                 (or (= biggest :none)
                                      (> (a/ast-size (::ast ast))
-                                        (a/ast-size (::ast biggest-out)))))
+                                        (a/ast-size (::ast biggest)))))
                           ast
-                          biggest-out)]
+                          biggest)]
     (assoc state
       :asts (conj (:asts state) ast)
-      :biggest-out biggest-out-ast
-      :newest-out newest-out-ast)))
+      :biggest biggest-out-ast
+      :newest newest-out-ast)))
 
 (defn nth-local
   "Get the nth variable from the state using modulo to ensure `n` always selects a
@@ -382,8 +382,8 @@
 
 (defn push->ast
   [{:keys [push locals ret-type type-env dealiases state-output-fn record-sketch?]
-    :or   {dealiases       lib/dealiases
-           record-sketch?  false}}]
+    :or   {dealiases      lib/dealiases
+           record-sketch? false}}]
   (let [state-output-fn (or state-output-fn default-state-output-fn)]
     (loop [state (assoc empty-state
                    ;; Ensure a list
