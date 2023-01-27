@@ -250,7 +250,7 @@
   (let [{boxed-ast :ast state-fn-popped :state} (pop-function-ast state)]
     (if (= :none boxed-ast)
       (do (apply-no-fn!)
-          state)
+          (assoc state :noop? true))
       (let [{::keys [ast type]} boxed-ast]
         (loop [remaining-arg-types (schema/fn-arg-schemas type)
                bindings {}
@@ -286,7 +286,8 @@
                                  new-bindings)]
               (if (= :none arg)
                 (do (apply-no-arg!)
-                    state)
+                    ;(assoc state :noop? true)
+                    state-fn-popped)
                 (recur (rest remaining-arg-types)
                        ;; If arg-type is has unbound t-vars that were bound during unification,
                        ;; add them to the set of bindings.
@@ -403,3 +404,48 @@
           (recur (compile-step {:push-unit push-unit
                                 :type-env  type-env
                                 :state     state})))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Experimental - Apply until noop
+
+(defn grow
+  [state type-env]
+  (loop [state state]
+    (if (empty? (:push state))
+      state
+      (let [{:keys [push-unit state]} (pop-push-unit state)]
+        (log/trace "Current:" push-unit (state->log state))
+        (recur (compile-step {:push-unit push-unit
+                              :type-env  type-env
+                              :state     state}))))))
+
+(defn shrink
+  [state type-env]
+  (loop [state state]
+    (if (:noop? state)
+      state
+      (let [push-unit {:gene :apply}]
+        (log/trace "Current:" push-unit (state->log state))
+        (recur (compile-step {:push-unit push-unit
+                              :type-env  type-env
+                              :state     state}))))))
+
+(defn push->ast2
+  [{:keys [push locals ret-type type-env dealiases state-output-fn record-sketch?]
+    :or   {dealiases      lib/dealiases
+           record-sketch? false}}]
+  (let [state-output-fn (or state-output-fn default-state-output-fn)
+        state (assoc empty-state
+                ;; Ensure a list
+                :push (reverse (into '() push))
+                :locals locals
+                :ret-type ret-type)
+        _ (log/trace "Starting stack growth.")
+        state (grow state type-env)
+        _ (log/trace "Starting stack shrinking.")
+        state (shrink state type-env)
+        _ (when record-sketch?
+            (record-asts! state))
+        ast (w/postwalk-replace dealiases (state-output-fn state))]
+    (log/trace "EMIT:" ast)
+    ast))

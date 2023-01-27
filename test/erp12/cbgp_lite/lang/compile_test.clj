@@ -6,8 +6,15 @@
             [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.lang.lib :as lib]
             [hawk.core]
-            [meander.epsilon :as m])
+            [meander.epsilon :as m]
+            [taoensso.timbre :as log]
+            [taoensso.timbre.appenders.core :as log-app])
   (:import (java.io StringWriter)))
+
+(log/merge-config!
+  {:min-level :trace
+   :output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
+   :appenders {:println (assoc (log-app/println-appender) :min-level :trace)}})
 
 (defmacro matches?
   [template value]
@@ -517,3 +524,25 @@
       (binding [*out* s]
         (is (= (func "a b c") 3))
         (is (= (str s) "a\nb\nc\n"))))))
+
+
+(deftest apply-until-noop-test
+  ;; If input < 1000, return "small" else "large".
+  (let [{::c/keys [ast type]} (c/push->ast2 {:push      [{:gene :lit :val "large" :type {:type 'string?}}
+                                                         {:gene :lit :val "small" :type {:type 'string?}}
+                                                         {:gene :var :name 'if}
+                                                         {:gene :lit :val 1000 :type {:type 'int?}}
+                                                         {:gene :local :idx 0}
+                                                         {:gene :var :name 'int-lt}]
+                                             :locals    ['in1]
+                                             :ret-type  {:type 'string?}
+                                             :type-env  (assoc lib/type-env
+                                                          'in1 {:type 'int?})
+                                             :dealiases lib/dealiases})
+        _ (is (= type {:type 'string?}))
+        form (a/ast->form ast)
+        _ (is (= form '(if (< in1 1000) "small" "large")))
+        func (eval `(fn [~'in1] ~form))]
+    (is (= (func 0) "small"))
+    (is (= (func 1000) "large"))
+    (is (= (func 2000) "large"))))

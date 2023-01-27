@@ -155,8 +155,19 @@
 
 (comment
 
-  (run {:suite-ns        'erp12.cbgp-lite.benchmark.suite.psb
-        :data-dir        "data/psb/"
-        :problem         "vectors-summed"})
+  ;; PushGP: 50%
+  (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
+        :data-dir "data/psb/"
+        :problem  "fuel-cost"})
+
+  ;; PushGP: 60%
+  (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
+        :data-dir "data/psb/"
+        :problem  "substitution-cipher"})
+
+  ;; PushGP: 57%
+  (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.psb
+        :data-dir "data/psb/"
+        :problem  "middle-character"})
 
   )

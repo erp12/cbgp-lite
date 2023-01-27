@@ -121,12 +121,13 @@
           _ (log/debug "Push" push)
           ;; Compile the Push into a Clojure form that accepts and returns the
           ;; correct types.
-          ast (::c/ast (c/push->ast (assoc opts
-                                      :push push
-                                      :locals arg-symbols
-                                      ;; @todo Experimental - record final stack AST sizes and types.
-                                      ;; Disabled to reduce concurrent compilation coordination.
-                                      :record-sketch? false)))
+          ;; @todo Experimental - Apply until noop
+          ast (::c/ast (c/push->ast2 (assoc opts
+                                       :push push
+                                       :locals arg-symbols
+                                       ;; @todo Experimental - record final stack AST sizes and types.
+                                       ;; Disabled to reduce concurrent compilation coordination.
+                                       :record-sketch? false)))
           _ (log/debug "AST" ast)
           form (when ast
                  (a/ast->form ast))

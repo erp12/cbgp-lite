@@ -26,14 +26,22 @@
 
 (def default-gene-distribution
   ;; @todo Calibrate by analyzing real code.
-  {:var           0.2
+  ;{:var           0.2
+  ; :local         0.2
+  ; :lit           0.2
+  ; :lit-generator 0.1
+  ; :apply         0.2
+  ; :fn            0.025
+  ; :let           0.025
+  ; :close         0.05}
+  ;; @todo Experimental - Apply until noop
+  {:var           0.25
    :local         0.2
-   :lit           0.2
+   :lit           0.25
    :lit-generator 0.1
-   :apply         0.2
-   :fn            0.025
-   :let           0.025
-   :close         0.05})
+   :fn            0.05
+   :let           0.05
+   :close         0.1})
 
 (defn default-genetic-source
   [{:keys [types vars extra-genes]}]
@@ -48,7 +56,8 @@
                                     {:gene :fn :arg-types [arg1 arg2]})
                                   ;; Always used genes
                                   [{:gene :local}
-                                   {:gene :apply}
+                                   ;; @todo Experimental - Apply until noop
+                                   ;{:gene :apply}
                                    {:gene :let}
                                    {:gene :fn}
                                    {:gene :close}])
