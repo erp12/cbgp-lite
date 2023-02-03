@@ -20,7 +20,7 @@ def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
         f":data-dir '\"{opts.data_dir}\"'",
         f":problem '\"{opts.problem}\"'",
         f":type-counts-file '\"{types_file}\"'" if opts.log_types else "",
-    ] + opts.opts)
+    ] + (opts.opts if opts.opts is not None else []))
     return "; ".join(
         [
             f'echo "Starting run {run_id}"',
