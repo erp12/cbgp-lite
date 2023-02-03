@@ -44,7 +44,10 @@
                            (loss-fn program-output correct-output))))]
     (update-vals
      {"sum-2-vals"
-      {:input->type {'input1 {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}
+      {:description "Given a map from strings to ints and two strings that are
+                     keys of the map, look up the values associated with those keys
+                     in the map and return their sum."
+       :input->type {'input1 {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}
                      'input2 {:type 'string?}
                      'input3 {:type 'string?}}
        :ret-type    {:type 'int?}
