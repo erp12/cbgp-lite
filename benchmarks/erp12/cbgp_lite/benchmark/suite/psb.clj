@@ -793,4 +793,41 @@
 
   (validate-solutions {:data-dir "data/psb/" :num-cases 50})
 
+  (read-cases {:data-dir "data/psb/"
+               :problem "substitution-cipher"
+               :n-train 10
+               :n-test 0})
+  ;; => {:train
+  ;;     ({:inputs ["" "" ""], :output ""}
+  ;;      {:inputs ["a" "a" "a"], :output "a"}
+  ;;      {:inputs ["j" "h" "j"], :output "h"}
+  ;;      {:inputs ["a" "z" "a"], :output "z"}
+  ;;      {:inputs ["e" "l" "eeeeeeeeee"], :output "llllllllll"}
+  ;;      {:inputs ["h" "d" "hhhhhhhhhhhhhhhhhhhh"], :output "dddddddddddddddddddd"}
+  ;;      {:inputs ["o" "z" "oooooooooooooooooooooooooo"], :output "zzzzzzzzzzzzzzzzzzzzzzzzzz"}
+  ;;      {:inputs ["abcdefghijklmnopqrstuvwxyz" "zyxwvutsrqponmlkjihgfedcba" "bvafvuqgjkkbeccipwdfqttgzl"],
+  ;;       :output "yezuefjtqppyvxxrkdwujggtao"}
+  ;;      {:inputs ["abcdefghijklmnopqrstuvwxyz" "cdqutzayxshgfenjowrkvmpbil" "thequickbrownfxjmpsvlazydg"],
+  ;;       :output "kytovxqhdwnpezbsfjrmgcliua"}
+  ;;      {:inputs ["otghvwmkclidzryxsfqeapnjbu" "alpebhxmnrcyiosvtgzjwuqdfk" "aaabbbccc"], :output "wwwfffnnn"}),
+  ;;     :test ()}
+
+  (read-cases {:data-dir "data/psb/"
+               :problem "gcd"
+               :n-train 10
+               :n-test 0})
+  ;; => {:train
+  ;;     ({:inputs [1 1], :output 1}
+  ;;      {:inputs [4 400000], :output 4}
+  ;;      {:inputs [54 24], :output 6}
+  ;;      {:inputs [4200 3528], :output 168}
+  ;;      {:inputs [820000 63550], :output 2050}
+  ;;      {:inputs [123456 654321], :output 3}
+  ;;      {:inputs [524221 135232], :output 1}
+  ;;      {:inputs [586650 803185], :output 5}
+  ;;      {:inputs [347099 142029], :output 1}
+  ;;      {:inputs [902215 966305], :output 5}),
+  ;;     :test ()}
+
+
   )
