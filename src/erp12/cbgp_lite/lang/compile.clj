@@ -248,6 +248,7 @@
   ;; If found, proceed to search for ASTs for each argument to the function.
   ;; If one or more arguments have :s-var types, incrementally bind them.
   (let [{boxed-ast :ast state-fn-popped :state} (pop-function-ast state)]
+    (log/trace "Applying function:" boxed-ast)
     (if (= :none boxed-ast)
       (do (apply-no-fn!)
           state)
@@ -266,9 +267,11 @@
                            ::type (schema/instantiate (schema/substitute bindings (schema/fn-ret-schema type)))}
                           new-state))
             (let [arg-type (first remaining-arg-types)
+                  _ (log/trace "Searching for arg of type:" arg-type)
                   ;; If arg-type is a t-var that we have seen before,
                   ;; bind it to the actual same type as before.
                   arg-type (schema/substitute bindings arg-type)
+                  _ (log/trace "In-context arg type:" arg-type)
                   is-s-var (= (:type arg-type) :s-var)
                   ;; If arg-type is still a t-var, pop an ast of any type.
                   ;; Otherwise, pop the AST of the expected type.
@@ -276,6 +279,7 @@
                   (if is-s-var
                     (pop-ast new-state)
                     (pop-unifiable-ast arg-type new-state))
+                  _ (log/trace "Found arg:" arg)
                   ;; If arg-type's type is an unbound s-var, bind the
                   ;; s-var to the type of the popped AST.
                   new-bindings (if (and is-s-var (not= arg :none))
@@ -284,6 +288,7 @@
                                   ;; The type of the var made as concrete as possible.
                                   (schema/generalize type-env (schema/substitute new-bindings (::type arg)))}
                                  new-bindings)]
+              (log/trace "New bindings:" new-bindings)
               (if (= :none arg)
                 (do (apply-no-arg!)
                     state)
