@@ -9,12 +9,8 @@
 (deftest removev-test
   (is (= [:a :b] (l/removev #{:_} [:a :_ :b]))))
 
-(deftest string-concat-test
-  (is (= "abcdef" (l/string-concat "abc" "def"))))
-
-(deftest append-str-test
-  (is (= "abc" (l/append-str "ab" "c")))
-  (is (= "abc" (l/append-str "ab" \c))))
+(deftest concat-str-test
+  (is (= "abcdef" (l/concat-str "abc" "def"))))
 
 (deftest take-str-test
   (is (= "ab" (l/take-str 2 "abcd"))))
@@ -28,23 +24,17 @@
 (deftest split-str-test
   (is (= ["a" "c"] (l/split-str "abc" "b"))))
 
-(deftest split-str-on-char-test
-  (is (= ["a" "c"] (l/split-str-on-char "abc" \b))))
-
 (deftest split-str-on-ws-test
   (is (= ["abc" "def"] (l/split-str-on-ws "abc def"))))
-
-(deftest substring?-test
-  (is (l/substring? "abc" "b")))
 
 (deftest filter-str-test
   (is (= "ac" (l/filter-str #(not= % \b) "abc"))))
 
-(deftest contains-char?-test
-  (is (l/contains-char? "abc" \b)))
+(deftest char-in?-test
+  (is (l/char-in? "abc" \b)))
 
-(deftest occurrences-of-char-test
-  (is (= 1 (l/occurrences-of-char "abc" \b))))
+(deftest char-occurrences-test
+  (is (= 1 (l/char-occurrences "abc" \b))))
 
 (deftest replace-char-test
   (is (= "zzz" (l/replace-char "aaa" \a \z))))
@@ -108,7 +98,7 @@
   (is (= [] (l/safe-subvec [:a] 10 1))))
 
 (deftest safe-assoc-test
-  (is (= [:_ :b] (l/safe-assoc [:a :b] 2 :_))))
+  (is (= [:_ :b] (l/safe-assoc-nth [:a :b] 2 :_))))
 
 (deftest safe-nth-test
   (is (= :b (l/safe-nth [:a :b] 3)))

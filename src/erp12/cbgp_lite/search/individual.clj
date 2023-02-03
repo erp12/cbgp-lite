@@ -16,7 +16,7 @@
          {:output  result#
           :std-out (str s#)}))))
 
-(defn- invoke-func
+(defn invoke-func
   "Invokes the `func` on `args` and captures its stdout. Also captures exceptions."
   [func args]
   (try
