@@ -23,7 +23,7 @@
    :umad-rate            0.1
    :min-genome-size      50
    :max-genome-size      250
-   :penalty              1e5
+   :penalty              1e6
    :simplification-steps 2000
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Experimental

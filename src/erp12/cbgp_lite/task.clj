@@ -50,7 +50,6 @@
                                   [{:gene :local}
                                    {:gene :apply}
                                    {:gene :let}
-                                   {:gene :fn}
                                    {:gene :close}])
                           default-gene-distribution)))
 

@@ -242,7 +242,7 @@
                 state))))
 
 (defmethod compile-step :apply
-  [{:keys [state type-env]}]
+  [{:keys [state]}]
   ;; Function applications search for the first AST that returns a function.
   ;; If none found, return state.
   ;; If found, proceed to search for ASTs for each argument to the function.
@@ -252,50 +252,68 @@
     (if (= :none boxed-ast)
       (do (apply-no-fn!)
           state)
-      (let [{::keys [ast type]} boxed-ast]
-        (loop [remaining-arg-types (schema/fn-arg-schemas type)
+      (let [{fn-ast ::ast fn-type ::type} boxed-ast]
+        (loop [remaining-arg-types (schema/fn-arg-schemas fn-type)
                bindings {}
                args []
                new-state state-fn-popped]
           (if (empty? remaining-arg-types)
             ;; Push an AST which calls the function to the arguments and
             ;; box the AST with the return type of the function.
-            (do (apply-success!)
-                (push-ast {::ast  {:op   :invoke
-                                   :fn   ast
-                                   :args (mapv ::ast args)}
-                           ::type (schema/instantiate (schema/substitute bindings (schema/fn-ret-schema type)))}
-                          new-state))
+            (let [ret-s-var {:type :s-var :sym (gensym "s-")}
+                  subs (schema/mgu (schema/substitute bindings fn-type)
+                                   {:type   :=>
+                                    :input  {:type     :cat
+                                             :children (mapv ::type args)}
+                                    :output ret-s-var})]
+              (if (schema/mgu-failure? subs)
+                (do (apply-no-arg!)
+                    state)
+                (do (apply-success!)
+                    (push-ast {::ast  {:op   :invoke
+                                       :fn   fn-ast
+                                       :args (mapv ::ast args)}
+                               ::type (schema/substitute subs ret-s-var)}
+                              new-state))))
+            ;(do (apply-success!)
+            ;(push-ast {::ast  {:op   :invoke
+            ;                   :fn   ast
+            ;                   :args (mapv ::ast args)}
+            ;           ::type (schema/instantiate (schema/substitute bindings (schema/fn-ret-schema type)))}
+            ;          new-state))
             (let [arg-type (first remaining-arg-types)
                   _ (log/trace "Searching for arg of type:" arg-type)
                   ;; If arg-type is a t-var that we have seen before,
                   ;; bind it to the actual same type as before.
                   arg-type (schema/substitute bindings arg-type)
                   _ (log/trace "In-context arg type:" arg-type)
-                  is-s-var (= (:type arg-type) :s-var)
+                  ;is-s-var (= (:type arg-type) :s-var)
                   ;; If arg-type is still a t-var, pop an ast of any type.
                   ;; Otherwise, pop the AST of the expected type.
-                  {arg :ast state-arg-popped :state new-bindings :bindings}
-                  (if is-s-var
-                    (pop-ast new-state)
-                    (pop-unifiable-ast arg-type new-state))
+                  {arg :ast state-arg-popped :state new-subs :bindings}
+                  (pop-unifiable-ast arg-type new-state)
+                  ;(if is-s-var
+                  ;  (pop-ast new-state)
+                  ;  (pop-unifiable-ast arg-type new-state))
                   _ (log/trace "Found arg:" arg)
                   ;; If arg-type's type is an unbound s-var, bind the
                   ;; s-var to the type of the popped AST.
-                  new-bindings (if (and is-s-var (not= arg :none))
-                                 {;; The symbol of the s-var
-                                  (:sym arg-type)
-                                  ;; The type of the var made as concrete as possible.
-                                  (schema/generalize type-env (schema/substitute new-bindings (::type arg)))}
-                                 new-bindings)]
-              (log/trace "New bindings:" new-bindings)
+                  ;new-bindings (if (and is-s-var (not= arg :none))
+                  ;               {;; The symbol of the s-var
+                  ;                (:sym arg-type)
+                  ;                ;; The type of the var made as concrete as possible.
+                  ;                (schema/generalize type-env (schema/substitute new-bindings (::type arg)))}
+                  ;               new-bindings)
+                  ]
+              ;(log/trace "New bindings:" new-bindings)
               (if (= :none arg)
                 (do (apply-no-arg!)
                     state)
                 (recur (rest remaining-arg-types)
                        ;; If arg-type is has unbound t-vars that were bound during unification,
                        ;; add them to the set of bindings.
-                       (schema/compose-substitutions bindings new-bindings)
+                       (schema/compose-substitutions new-subs bindings)
+                       ;(conj subs new-subs)
                        (conj args arg)
                        state-arg-popped)))))))))
 
