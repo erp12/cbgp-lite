@@ -11,6 +11,16 @@
   [low high]
   (+ low (rand-int (inc (- high low)))))
 
+;;;;;;;;;;;;;;;
+;; Case generator functions
+
+(defn add-them-case-generator
+  []
+  (let [x (rand-int-range -1000 1000)
+        y (rand-int-range -1000 1000)]
+    {:inputs [x y]
+     :output (+ x y)}))
+
 (defn sum-2-vals-solution-fn
   [input1 input2 input3]
   (+ (get input1 input2)
@@ -59,7 +69,17 @@
                            penalty
                            (loss-fn program-output correct-output))))]
     (update-vals
-     {"sum-2-vals"
+     {"add-them"
+      {:description "simple problem to make sure this file is working"
+       :input->type {'input1 {:type 'int?}
+                     'input2 {:type 'int?}}
+       :ret-type    {:type 'int?}
+       :other-types [{:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}]
+       :case-generator add-them-case-generator
+       :loss-fns    [bu/absolute-distance]}
+      
+      "sum-2-vals"
       {:description "Given a map from strings to ints and two strings that are
                      keys of the map, look up the values associated with those keys
                      in the map and return their sum."
@@ -94,9 +114,9 @@
        (update problem-map :loss-fns #(map penalize-nil %))))))
 
 (defn read-cases
-  [{:keys [problem n-train n-test]}]
+  [{:keys [problem n-train n-test]}] [problem :case-generator]
   (let [case-generator (get-in (problems nil)
-                               [problem :case-generator])]
+                               [(name problem) :case-generator])]
     {:train (repeatedly n-train case-generator)
      :test  (repeatedly n-test case-generator)}))
 
@@ -123,6 +143,10 @@
                :n-train 4
                :n-test 2})
   
+  (read-cases {:problem "add-them" :n-train 5 :n-test 2})
+  
   (sum-2-vals-polymorphic-case-generator)
+  
+  (add-them-case-generator)
 
   )
