@@ -98,8 +98,6 @@
                                        :stop-fn         (let [{:keys [max-generations cases]} opts]
                                                           (fn [{:keys [step step-start best new-best?]}]
                                                             (log/info :best-individual-errors (:errors best))
-                                                            (let [total (reduce + (vals @c/apply-events))]
-                                                              (log/info :apply-events (update-vals @c/apply-events #(float (/ % total)))))
                                                             (log/info "REPORT"
                                                                       {:step       step
                                                                        :duration   (- (System/currentTimeMillis) step-start)

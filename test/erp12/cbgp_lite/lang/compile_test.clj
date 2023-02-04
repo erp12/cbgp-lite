@@ -232,7 +232,8 @@
                    :push   []
                    :locals []}
                   (c/compile-step {:push-unit {:gene      :fn
-                                               :arg-types [{:type 'int?}]}
+                                               :arg-types [lib/INT]
+                                               :ret-type lib/INT}
                                    :state     (assoc c/empty-state
                                                 :asts (list)
                                                 :push [[{:gene :local :idx 1}]])
@@ -247,7 +248,7 @@
                                               :output {:type 'string?}}})
                      :push   []
                      :locals []}
-                    (c/compile-step {:push-unit {:gene :fn}
+                    (c/compile-step {:push-unit {:gene :fn :ret-type lib/STRING}
                                      :state     (assoc c/empty-state
                                                   :asts (list {::c/ast  {:op :var :var 'x}
                                                                ::c/type {:type 'string?}})
@@ -303,7 +304,8 @@
   (testing "pruning unused function args"
     (is (= (c/push->ast {:push     [{:gene      :fn
                                      :arg-types [{:type 'int?}
-                                                 {:type 'string?}]}
+                                                 {:type 'string?}]
+                                     :ret-type lib/INT}
                                     [{:gene :var :name 'x}]]
                          :locals   []
                          :ret-type {:type   :=>
@@ -328,7 +330,7 @@
                                       :input  {:type :cat :children [{:type :s-var :sym ?a}]}
                                       :output {:type :s-var :sym ?a}}}}
                   (c/push->ast {:push     [{:gene :var :name 'identity}
-                                           {:gene :fn}]
+                                           {:gene :fn :ret-type (lib/fn-of [(lib/s-var 'a)] (lib/s-var 'a))}]
                                 :locals   []
                                 :ret-type {:type   :=>
                                            :input  {:type :cat :children []}
@@ -411,11 +413,10 @@
 (deftest hof-with-anonymous-fn-test
   ;; Map `inc` over the elements of a vector
   (let [{::c/keys [ast type]} (c/push->ast {:push      [{:gene :lit :val [1 2 3] :type {:type :vector :child {:type 'int?}}}
-                                                        {:gene :fn :arg-types [{:type 'int?}]}
+                                                        {:gene :fn :arg-types [lib/INT] :ret-type lib/INT}
                                                         [{:gene :local :idx 0}
                                                          {:gene :var :name 'int-inc}
                                                          {:gene :apply}]
-                                                        {:gene :var :name 'vec-mapv}
                                                         {:gene :var :name 'map-vec}
                                                         {:gene :apply}]
                                             :locals    []
@@ -433,7 +434,7 @@
   ;; Generate a vector of 5 random doubles.
   (let [{::c/keys [ast type]} (c/push->ast {:push      [{:gene :var :name 'rand}
                                                         {:gene :apply}
-                                                        {:gene :fn}
+                                                        {:gene :fn :ret-type lib/DOUBLE}
                                                         {:gene :lit :val 5 :type {:type 'int?}}
                                                         {:gene :var :name 'repeatedly}
                                                         {:gene :apply}]
