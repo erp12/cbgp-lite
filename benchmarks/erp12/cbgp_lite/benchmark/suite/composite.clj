@@ -1,10 +1,7 @@
 (ns erp12.cbgp-lite.benchmark.suite.composite
-  (:require [clj-fuzzy.levenshtein :as lev]
-            [clojure.string :as str]
+  (:require [clj-fuzzy.levenshtein :as lev] 
             [erp12.cbgp-lite.benchmark.utils :as bu]
-            [erp12.cbgp-lite.lang.lib :as lib]
-            [erp12.cbgp-lite.search.individual :as i]
-            [erp12.cbgp-lite.task :as task]))
+            [erp12.cbgp-lite.lang.lib :as lib]))
 
 (defn rand-int-range
   "Returns random int between low and high, both inclusive."
@@ -58,6 +55,16 @@
                         ]]
     (sum-2-vals-case-generator-generic (rand-nth all-generators))))
 
+(defn sum-2D-case-generator
+  []
+  (let [rows (inc (rand-int 10))
+        cols (inc (rand-int 10))
+        input-matrix (for [_ (range rows)]
+                       (repeatedly cols (bu/int-generator 1000)))
+        output (apply + (map #(apply + %) input-matrix))]
+    {:inputs input-matrix
+     :output output}))
+
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
@@ -78,7 +85,7 @@
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}]
        :case-generator add-them-case-generator
        :loss-fns    [bu/absolute-distance]}
-      
+
       "sum-2-vals"
       {:description "Given a map from strings to ints and two strings that are
                      keys of the map, look up the values associated with those keys
@@ -107,7 +114,15 @@
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}]
        :case-generator sum-2-vals-polymorphic-case-generator
        :loss-fns    [bu/absolute-distance]}
-      }
+
+      "sum-2D"
+      {:description "Given 2D vector of ints (i.e. vector of vector of ints), return sum of all ints."
+       :input->type {'input1 {:type :vector :child {:type :vector :child {:type 'int?}}}}
+       :ret-type    {:type 'int?}
+       :other-types [{:type :vector :child {:type 'int?}} {:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}]
+       :case-generator sum-2D-case-generator
+       :loss-fns    [bu/absolute-distance]}}
 
      ;; This adds nil penalties to all loss functions
      (fn [problem-map]
@@ -122,31 +137,7 @@
 
 (comment
 
-  (zipmap [1 2 3] [:A :b])
+  (sum-2D-case-generator)
 
-  {4 5 (+ 2 2) 2}
-  
-  (hash-map 2 3 2 5 2 7)
-  
-  (keys {2 5 3 6})
-  
-  (sort (list inc +))
-  
-  (compare [1 2 3] [4 5 6])
-  
-  (repeatedly 5 (partial rand-int-range 5 15))
-  
-  (sum-2-vals-case-generator)
-
-  
-  (read-cases {:problem "sum-2-vals"
-               :n-train 4
-               :n-test 2})
-  
-  (read-cases {:problem "add-them" :n-train 5 :n-test 2})
-  
-  (sum-2-vals-polymorphic-case-generator)
-  
-  (add-them-case-generator)
 
   )
