@@ -65,6 +65,14 @@
     {:inputs input-matrix
      :output output}))
 
+(defn centimeters-to-meters-case-generator
+  []
+  (let [in-cm (rand-int 10000)
+        out-m (quot in-cm 100)
+        out-cm (mod in-cm 100)]
+    {:inputs [in-cm]
+     :output (list out-m out-cm)}))
+
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
@@ -86,7 +94,7 @@
        :case-generator add-them-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "sum-2-vals"
+      "sum-2-vals" ; untested
       {:description "Given a map from strings to ints and two strings that are
                      keys of the map, look up the values associated with those keys
                      in the map and return their sum."
@@ -102,7 +110,7 @@
        :case-generator sum-2-vals-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "sum-2-vals-polymorphic"
+      "sum-2-vals-polymorphic" ; untested
       {:description "Given a map from 'a to ints and two 'a that are
                      keys of the map, look up the values associated with those keys
                      in the map and return their sum."
@@ -115,14 +123,27 @@
        :case-generator sum-2-vals-polymorphic-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "sum-2D"
+      "sum-2D" ; untested (well, sort of, but got weird results)
       {:description "Given 2D vector of ints (i.e. vector of vector of ints), return sum of all ints."
        :input->type {'input1 {:type :vector :child {:type :vector :child {:type 'int?}}}}
        :ret-type    {:type 'int?}
        :other-types [{:type :vector :child {:type 'int?}} {:type 'boolean?}]
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}]
        :case-generator sum-2D-case-generator
-       :loss-fns    [bu/absolute-distance]}}
+       :loss-fns    [bu/absolute-distance]}
+
+      "centimeters-to-meters" ; untested
+      {:description "Given a length in centimeters, return a tuple of (meters, centimeters) that corresponds to the same length."
+       :input->type {'input1 {:type 'int?}}
+       :ret-type    {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
+       :other-types [{:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val 100, :type {:type 'int?}}]
+       :case-generator centimeters-to-meters-case-generator
+       :loss-fns    [#(bu/absolute-distance (first %1) (first %2))
+                     #(bu/absolute-distance (second %1) (second %2))]}
+      
+      }
 
      ;; This adds nil penalties to all loss functions
      (fn [problem-map]
@@ -139,5 +160,7 @@
 
   (sum-2D-case-generator)
 
+  (centimeters-to-meters-case-generator)
+  
 
   )
