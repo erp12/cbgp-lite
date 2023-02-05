@@ -179,6 +179,10 @@
 (def sortv (comp vec sort))
 (def sortv-by (comp vec sort-by))
 
+(def rangev
+  ;; Cap the range to avoid memory errors.
+  (comp vec #(take 100 %) range))
+
 (defn index-of
   [coll el]
   (.indexOf coll el))
@@ -523,6 +527,9 @@
                         :s-vars ['a]
                         :body   (fn-of [(vector-of (s-var 'a)) (s-var 'a)]
                                        (vector-of (s-var 'a)))}
+   'range1             (scheme (fn-of [INT] (vector-of INT)))
+   'range2             (scheme (fn-of [INT INT] (vector-of INT)))
+   'range3             (scheme (fn-of [INT INT INT] (vector-of INT)))
    'count-vec          (scheme (fn-of [(vector-of (s-var 'a))] INT))
    'map-vec            {:type   :scheme
                         :s-vars ['a 'b]
@@ -772,6 +779,9 @@
     partial1-fn2      partial
     partial1-fn3      partial
     partial2-fn3      partial
+    range1            erp12.cbgp-lite.lang.lib/rangev
+    range2            erp12.cbgp-lite.lang.lib/rangev
+    range3            erp12.cbgp-lite.lang.lib/rangev
     reduce-vec        reduce
     reduce-map        reduce
     reduce-set        reduce
