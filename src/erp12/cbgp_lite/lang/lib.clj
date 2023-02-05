@@ -440,9 +440,8 @@
    `replace-first-char (fn-of [STRING CHAR CHAR] STRING)
    `remove-char        (fn-of [STRING CHAR] STRING)
    `set-char           (fn-of [STRING INT CHAR] STRING)
-   `str/join           {:type   :scheme
-                        :s-vars ['a]
-                        :body   (fn-of [(vector-of (s-var 'a))] STRING)}
+   `str/join           (fn-of [(vector-of STRING)] STRING)
+   'str-join-sep       (fn-of [STRING (vector-of STRING)] STRING)
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Boolean
    `and                (binary-transform BOOLEAN)
@@ -791,6 +790,7 @@
     set-conj          conj
     set-contains?     contains?
     split-str-on-char erp12.cbgp-lite.lang.lib/split-str
+    str-join-sep      clojure.string/join
     string->chars     vec
     vec->map          erp12.cbgp-lite.lang.lib/->map
     vec->set          set
