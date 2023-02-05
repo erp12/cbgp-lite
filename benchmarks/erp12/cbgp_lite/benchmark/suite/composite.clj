@@ -63,7 +63,7 @@
         input-matrix (vec (for [_ (range rows)]
                             (vec (repeatedly cols (bu/int-generator 1000)))))
         output (apply + (map #(apply + %) input-matrix))]
-    {:inputs input-matrix
+    {:inputs [input-matrix]
      :output output}))
 
 (defn centimeters-to-meters-case-generator
@@ -105,7 +105,7 @@
        :case-generator add-them-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "sum-2-vals" ; untested
+      "sum-2-vals"
       {:description "Given a map from strings to ints and two strings that are
                      keys of the map, look up the values associated with those keys
                      in the map and return their sum."
@@ -121,7 +121,7 @@
        :case-generator sum-2-vals-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "sum-2-vals-polymorphic" ; untested
+      "sum-2-vals-polymorphic"
       {:description "Given a map from 'a to ints and two 'a that are
                      keys of the map, look up the values associated with those keys
                      in the map and return their sum."
@@ -134,7 +134,7 @@
        :case-generator sum-2-vals-polymorphic-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "sum-2D" ; untested (well, sort of, but got weird results)
+      "sum-2D"
       {:description "Given 2D vector of ints (i.e. vector of vector of ints), return sum of all ints."
        :input->type {'input1 {:type :vector :child {:type :vector :child {:type 'int?}}}}
        :ret-type    {:type 'int?}
