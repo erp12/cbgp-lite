@@ -59,8 +59,8 @@
   []
   (let [rows (inc (rand-int 10))
         cols (inc (rand-int 10))
-        input-matrix (for [_ (range rows)]
-                       (repeatedly cols (bu/int-generator 1000)))
+        input-matrix (vec (for [_ (range rows)]
+                            (vec (repeatedly cols (bu/int-generator 1000)))))
         output (apply + (map #(apply + %) input-matrix))]
     {:inputs input-matrix
      :output output}))
