@@ -125,9 +125,9 @@
       {:description "Given a map from 'a to ints and two 'a that are
                      keys of the map, look up the values associated with those keys
                      in the map and return their sum."
-       :input->type {'input1 {:type :map-of, :key (lib/s-var 'a), :value {:type 'int?}}
-                     'input2 (lib/s-var 'a)
-                     'input3 (lib/s-var 'a)}
+       :input->type {'input1 {:type :map-of, :key {:type 'T}, :value {:type 'int?}}
+                     'input2 {:type 'T}
+                     'input3 {:type 'T}}
        :ret-type    {:type 'int?}
        :other-types [{:type 'boolean?} {:type 'string?} {:type 'char?} {:type 'double?}]
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}]
