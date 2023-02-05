@@ -23,12 +23,12 @@
    :umad-rate            0.1
    :min-genome-size      50
    :max-genome-size      250
-   :penalty              1e5
+   :penalty              1e6
    :simplification-steps 2000
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Experimental
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   ;; Supported -  nil, :biggest-out, :newest-out, or a function from state to unboxed AST.
+   ;; Supported -  nil, :biggest, :newest, or a function from state to unboxed AST.
    ;; `nil` will search the stack for the top AST of a valid type.
    :state-output-fn      nil
    })
@@ -98,8 +98,6 @@
                                        :stop-fn         (let [{:keys [max-generations cases]} opts]
                                                           (fn [{:keys [step step-start best new-best?]}]
                                                             (log/info :best-individual-errors (:errors best))
-                                                            (let [total (reduce + (vals @c/apply-events))]
-                                                              (log/info :apply-events (update-vals @c/apply-events #(float (/ % total)))))
                                                             (log/info "REPORT"
                                                                       {:step       step
                                                                        :duration   (- (System/currentTimeMillis) step-start)
@@ -157,7 +155,6 @@
 
   (run {:suite-ns        'erp12.cbgp-lite.benchmark.suite.psb
         :data-dir        "data/psb/"
-        :problem         "replace-space-with-newline"
-        :state-output-fn :biggest-out})
+        :problem         "vectors-summed"})
 
   )

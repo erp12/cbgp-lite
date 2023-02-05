@@ -1,20 +1,33 @@
 (ns erp12.cbgp-lite.benchmark.suite.psb
   (:require [clj-fuzzy.levenshtein :as lev]
             [clojure.string :as str]
+            [clojure.walk :as w]
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.individual :as i]
             [erp12.cbgp-lite.task :as task]
             [psb2.core :as psb2]))
 
+(defn tap-nodes
+  [f tree]
+  (w/walk (partial tap-nodes f) identity (f tree)))
+
+(defn has-nil?
+  [x]
+  (with-local-vars [result false]
+    (tap-nodes
+      (fn [node]
+        (when (nil? node)
+          (var-set result true))
+        node)
+      x)
+    @result))
+
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
                        (fn wrapped-loss [program-output correct-output]
-                         (if (or (nil? program-output)
-                                 ; is a sequence and contains nil
-                                 (and (coll? program-output)
-                                      (some nil? program-output)))
+                         (if (has-nil? program-output)
                            penalty
                            (loss-fn program-output correct-output))))]
     (update-vals
@@ -60,7 +73,7 @@
                      {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
        :loss-fns    [bu/absolute-distance]
        :solution    (list {:gene :local :idx 0}
-                          {:gene :fn :arg-types [{:type 'int?}]}
+                          {:gene :fn :arg-types [lib/INT] :ret-type lib/BOOLEAN}
                           {:gene :lit :val 2 :type {:type 'int?}}
                           {:gene :local :idx 1}
                           {:gene :var :name 'int-mod}
@@ -71,7 +84,7 @@
                           {:gene :close}
                           {:gene :var :name 'filterv}
                           {:gene :apply}
-                          {:gene :var :name 'count}
+                          {:gene :var :name 'count-vec}
                           {:gene :apply})}
 
       "digits"
@@ -213,7 +226,7 @@
                         {:gene :lit-generator :fn #(- (rand 201.0) 100.0) :type {:type 'double?}}]
        :loss-fns       [#(try
                            (bu/round 4 (Math/abs (- (Double/parseDouble %1) %2)))
-                           (catch Exception e penalty))
+                           (catch Exception _ penalty))
                         #(lev/distance (take 10 %1)
                                        (take 10 (pr-str %2)))]
        :solution       (list {:gene :local :idx 0}
@@ -333,13 +346,13 @@
        :loss-fns    [bu/absolute-distance]
        :solution    [{:gene :local :idx 0}
                      {:gene :local :idx 1}
+                     {:gene :var :name `lib/min'}
+                     {:gene :apply}
                      {:gene :local :idx 2}
+                     {:gene :var :name `lib/min'}
+                     {:gene :apply}
                      {:gene :local :idx 3}
-                     {:gene :var :name 'min-int}
-                     {:gene :var :name 'min-int}
-                     {:gene :var :name 'min-int}
-                     {:gene :apply}
-                     {:gene :apply}
+                     {:gene :var :name `lib/min'}
                      {:gene :apply}]}
 
       "string-differences"
@@ -400,7 +413,7 @@
                      {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
        :loss-fns    [lev/distance
                      (let [parse #(try (Integer/parseInt (last (str/split % #"\s+")))
-                                       (catch Exception e nil))]
+                                       (catch Exception _ nil))]
                        #(if-let [num (parse %1)]
                           (bu/absolute-distance num (parse %2))
                           penalty))]}
@@ -426,7 +439,7 @@
        :solution    (list {:gene :local :idx 0}
                           {:gene :local :idx 1}
                           {:gene :var :name 'int-add}
-                          {:gene :var :name 'mapv2}
+                          {:gene :var :name 'map2-vec}
                           {:gene :apply})}
 
    ; "wallis-pi"
@@ -586,25 +599,23 @@
        :solution    (list {:gene :local :idx 0}
 
                        ;; Anonymous function
-                          {:gene :fn :arg-types [{:type 'int?}]}
+                          {:gene :fn :arg-types [lib/INT] :ret-type lib/INT}
                           {:gene :lit :val 2 :type {:type 'int?}}
                           {:gene :lit :val 3 :type {:type 'int?}}
                           {:gene :local :idx 1}
-                          {:gene :var :name 'int-div}
-                          {:gene :apply}
-                          {:gene :var :name 'int}
+                          {:gene :var :name 'int-quot}
                           {:gene :apply}
                           {:gene :var :name 'int-sub}
                           {:gene :apply}
                           {:gene :close}
 
                        ;; Map fn over input vector
-                          {:gene :var :name 'mapv}
+                          {:gene :var :name 'map-vec}
                           {:gene :apply}
 
                        ;; Sum the vector
                           {:gene :var :name 'int-add}
-                          {:gene :var :name 'reduce}
+                          {:gene :var :name 'reduce-vec}
                           {:gene :apply})}
 
       "gcd"
@@ -779,11 +790,10 @@
       {:std-out (stdout-key case)})))
 
 (defn read-cases
-  [{:keys [data-dir problem n-train n-test] :as opts}]
+  [{:keys [data-dir problem n-train n-test]}]
   (let [problem-info (get (problems {}) (name problem))
         reshape #(reshape-case % problem-info)
-        {:keys [train test]} (psb2/fetch-examples (str data-dir) (str problem) n-train n-test)
-        ]
+        {:keys [train test]} (psb2/fetch-examples (str data-dir) (str problem) n-train n-test)]
     {:train (map reshape train)
      :test  (map reshape test)}))
 

@@ -42,15 +42,17 @@
                                   ;; Task-specific genes
                                   extra-genes
                                   ;; 1-arg functions
-                                  (map (fn [t] {:gene :fn :arg-types [t]}) types)
+                                  (for [arg types ret types]
+                                    {:gene :fn :arg-types [arg] :ret-type ret})
                                   ;; 2-arg functions
-                                  (for [arg1 types arg2 types]
-                                    {:gene :fn :arg-types [arg1 arg2]})
+                                  (for [arg1 types
+                                        arg2 types
+                                        ret types]
+                                    {:gene :fn :arg-types [arg1 arg2] :ret-type ret})
                                   ;; Always used genes
                                   [{:gene :local}
                                    {:gene :apply}
                                    {:gene :let}
-                                   {:gene :fn}
                                    {:gene :close}])
                           default-gene-distribution)))
 

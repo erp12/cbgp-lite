@@ -5,6 +5,7 @@
             [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.lang.lib :as lib]
+            [erp12.cbgp-lite.lang.schema :as schema]
             [hawk.core]
             [meander.epsilon :as m])
   (:import (java.io StringWriter)))
@@ -211,7 +212,7 @@
                                                             {::c/ast  {:op :const :val -1}
                                                              ::c/type {:type 'int?}}
                                                             {::c/ast  {:op :var :var 'if}
-                                                             ::c/type (lib/type-env 'if)}
+                                                             ::c/type (schema/instantiate (lib/type-env 'if))}
                                                             {::c/ast  {:op :local :name 'x}
                                                              ::c/type {:type 'boolean?}})
                                                 :locals ['x])
@@ -231,7 +232,8 @@
                    :push   []
                    :locals []}
                   (c/compile-step {:push-unit {:gene      :fn
-                                               :arg-types [{:type 'int?}]}
+                                               :arg-types [lib/INT]
+                                               :ret-type lib/INT}
                                    :state     (assoc c/empty-state
                                                 :asts (list)
                                                 :push [[{:gene :local :idx 1}]])
@@ -246,7 +248,7 @@
                                               :output {:type 'string?}}})
                      :push   []
                      :locals []}
-                    (c/compile-step {:push-unit {:gene :fn}
+                    (c/compile-step {:push-unit {:gene :fn :ret-type lib/STRING}
                                      :state     (assoc c/empty-state
                                                   :asts (list {::c/ast  {:op :var :var 'x}
                                                                ::c/type {:type 'string?}})
@@ -302,7 +304,8 @@
   (testing "pruning unused function args"
     (is (= (c/push->ast {:push     [{:gene      :fn
                                      :arg-types [{:type 'int?}
-                                                 {:type 'string?}]}
+                                                 {:type 'string?}]
+                                     :ret-type lib/INT}
                                     [{:gene :var :name 'x}]]
                          :locals   []
                          :ret-type {:type   :=>
@@ -327,7 +330,7 @@
                                       :input  {:type :cat :children [{:type :s-var :sym ?a}]}
                                       :output {:type :s-var :sym ?a}}}}
                   (c/push->ast {:push     [{:gene :var :name 'identity}
-                                           {:gene :fn}]
+                                           {:gene :fn :ret-type (lib/fn-of [(lib/s-var 'a)] (lib/s-var 'a))}]
                                 :locals   []
                                 :ret-type {:type   :=>
                                            :input  {:type :cat :children []}
@@ -364,7 +367,7 @@
                                                         {:gene :lit :val "small" :type {:type 'string?}}
                                                         {:gene :lit :val 1000 :type {:type 'int?}}
                                                         {:gene :local :idx 0}
-                                                        {:gene :var :name 'int-lt}
+                                                        {:gene :var :name `lib/<'}
                                                         {:gene :apply}
                                                         {:gene :var :name 'if}
                                                         {:gene :apply}]
@@ -375,7 +378,7 @@
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'string?}))
         form (a/ast->form ast)
-        _ (is (= form '(if (< in1 1000) "small" "large")))
+        _ (is (= form '(if (erp12.cbgp-lite.lang.lib/<' in1 1000) "small" "large")))
         func (eval `(fn [~'in1] ~form))]
     (is (= (func 0) "small"))
     (is (= (func 1000) "large"))
@@ -410,11 +413,11 @@
 (deftest hof-with-anonymous-fn-test
   ;; Map `inc` over the elements of a vector
   (let [{::c/keys [ast type]} (c/push->ast {:push      [{:gene :lit :val [1 2 3] :type {:type :vector :child {:type 'int?}}}
-                                                        {:gene :fn :arg-types [{:type 'int?}]}
+                                                        {:gene :fn :arg-types [lib/INT] :ret-type lib/INT}
                                                         [{:gene :local :idx 0}
                                                          {:gene :var :name 'int-inc}
                                                          {:gene :apply}]
-                                                        {:gene :var :name 'mapv}
+                                                        {:gene :var :name 'map-vec}
                                                         {:gene :apply}]
                                             :locals    []
                                             :ret-type  {:type :vector :child {:type 'int?}}
@@ -431,7 +434,7 @@
   ;; Generate a vector of 5 random doubles.
   (let [{::c/keys [ast type]} (c/push->ast {:push      [{:gene :var :name 'rand}
                                                         {:gene :apply}
-                                                        {:gene :fn}
+                                                        {:gene :fn :ret-type lib/DOUBLE}
                                                         {:gene :lit :val 5 :type {:type 'int?}}
                                                         {:gene :var :name 'repeatedly}
                                                         {:gene :apply}]
@@ -517,3 +520,22 @@
       (binding [*out* s]
         (is (= (func "a b c") 3))
         (is (= (str s) "a\nb\nc\n"))))))
+
+(deftest polymorphic-output-test
+  (let [{::c/keys [ast type]} (c/push->ast {:push      [{:gene :local :idx 0}
+                                                        {:gene :local :idx 1}
+                                                        {:gene :lit :val true :type {:type 'boolean?}}
+                                                        {:gene :var :name 'if}
+                                                        {:gene :apply}]
+                                            :locals    ['x 'y ]
+                                            :ret-type  (lib/s-var 'a)
+                                            :type-env  (assoc lib/type-env
+                                                         'x (lib/s-var 'a)
+                                                         'y (lib/s-var 'a))
+                                            :dealiases lib/dealiases})
+        _ (is (= (:type type) :s-var))
+        form (a/ast->form ast)
+        _ (is (= form '(if true y x)))
+        func (eval `(fn [~'x ~'y] ~form))]
+    (is (= (func 0 1) 1))
+    (is (= (func "this" "that") "that"))))

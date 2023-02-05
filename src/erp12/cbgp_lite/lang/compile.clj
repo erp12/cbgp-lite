@@ -54,34 +54,16 @@
                                   :type type})))
                      (inc (or (get % sketch) 0))))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Applications
-
-(def apply-events
-  (atom {:success 0
-         :no-fn   0
-         :no-arg  0}))
-
-(defn apply-success! []
-  (swap! apply-events update :success inc))
-
-(defn apply-no-fn! []
-  (swap! apply-events update :no-fn inc))
-
-(defn apply-no-arg! []
-  (swap! apply-events update :no-arg inc))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State Manipulation
 
 (def empty-state
-  {:asts        (list)
-   :push        []
-   :locals      []
+  {:asts    (list)
+   :push    []
+   :locals  []
    ;; @todo Experimental
-   :biggest-out :none
-   :newest-out  :none})
+   :biggest :none
+   :newest  :none})
 
 (defn macro?
   [{:keys [op] :as ast}]
@@ -100,24 +82,24 @@
 
 (defn push-ast
   "Push the `ast` to the AST stack in the `state`."
-  [ast {:keys [biggest-out newest-out ret-type] :as state}]
+  [ast {:keys [biggest newest ret-type] :as state}]
   (when @collect-types?
     (swap! types-seen
            (fn [m t] (assoc m t (inc (get m t 0))))
            (canonical-type (::type ast))))
   (let [output-able? (and (unifiable? ret-type (::type ast))
                           (not (macro? (::ast ast))))
-        newest-out-ast (if output-able? ast newest-out)
+        newest-out-ast (if output-able? ast newest)
         biggest-out-ast (if (and output-able?
-                                 (or (= biggest-out :none)
+                                 (or (= biggest :none)
                                      (> (a/ast-size (::ast ast))
-                                        (a/ast-size (::ast biggest-out)))))
+                                        (a/ast-size (::ast biggest)))))
                           ast
-                          biggest-out)]
+                          biggest)]
     (assoc state
       :asts (conj (:asts state) ast)
-      :biggest-out biggest-out-ast
-      :newest-out newest-out-ast)))
+      :biggest biggest-out-ast
+      :newest newest-out-ast)))
 
 (defn nth-local
   "Get the nth variable from the state using modulo to ensure `n` always selects a
@@ -242,64 +224,63 @@
                 state))))
 
 (defmethod compile-step :apply
-  [{:keys [state type-env]}]
+  [{:keys [state]}]
   ;; Function applications search for the first AST that returns a function.
   ;; If none found, return state.
   ;; If found, proceed to search for ASTs for each argument to the function.
   ;; If one or more arguments have :s-var types, incrementally bind them.
   (let [{boxed-ast :ast state-fn-popped :state} (pop-function-ast state)]
+    (log/trace "Applying function:" boxed-ast)
     (if (= :none boxed-ast)
-      (do (apply-no-fn!)
-          state)
-      (let [{::keys [ast type]} boxed-ast]
-        (loop [remaining-arg-types (schema/fn-arg-schemas type)
+      state
+      (let [{fn-ast ::ast fn-type ::type} boxed-ast]
+        (loop [remaining-arg-types (schema/fn-arg-schemas fn-type)
                bindings {}
                args []
                new-state state-fn-popped]
           (if (empty? remaining-arg-types)
             ;; Push an AST which calls the function to the arguments and
             ;; box the AST with the return type of the function.
-            (do (apply-success!)
+            (let [ret-s-var {:type :s-var :sym (gensym "s-")}
+                  subs (schema/mgu (schema/substitute bindings fn-type)
+                                   {:type   :=>
+                                    :input  {:type     :cat
+                                             :children (mapv ::type args)}
+                                    :output ret-s-var})]
+              (if (schema/mgu-failure? subs)
+                state
                 (push-ast {::ast  {:op   :invoke
-                                   :fn   ast
+                                   :fn   fn-ast
                                    :args (mapv ::ast args)}
-                           ::type (schema/instantiate (schema/substitute bindings (schema/fn-ret-schema type)))}
-                          new-state))
+                           ::type (schema/substitute subs ret-s-var)}
+                          new-state)))
             (let [arg-type (first remaining-arg-types)
+                  _ (log/trace "Searching for arg of type:" arg-type)
                   ;; If arg-type is a t-var that we have seen before,
                   ;; bind it to the actual same type as before.
                   arg-type (schema/substitute bindings arg-type)
-                  is-s-var (= (:type arg-type) :s-var)
+                  _ (log/trace "In-context arg type:" arg-type)
+                  ;is-s-var (= (:type arg-type) :s-var)
                   ;; If arg-type is still a t-var, pop an ast of any type.
                   ;; Otherwise, pop the AST of the expected type.
-                  {arg :ast state-arg-popped :state new-bindings :bindings}
-                  (if is-s-var
-                    (pop-ast new-state)
-                    (pop-unifiable-ast arg-type new-state))
-                  ;; If arg-type's type is an unbound s-var, bind the
-                  ;; s-var to the type of the popped AST.
-                  new-bindings (if (and is-s-var (not= arg :none))
-                                 {;; The symbol of the s-var
-                                  (:sym arg-type)
-                                  ;; The type of the var made as concrete as possible.
-                                  (schema/generalize type-env (schema/substitute new-bindings (::type arg)))}
-                                 new-bindings)]
+                  {arg :ast state-arg-popped :state new-subs :bindings}
+                  (pop-unifiable-ast arg-type new-state)]
+              (log/trace "Found arg:" arg)
               (if (= :none arg)
-                (do (apply-no-arg!)
-                    state)
+                state
                 (recur (rest remaining-arg-types)
                        ;; If arg-type is has unbound t-vars that were bound during unification,
                        ;; add them to the set of bindings.
-                       (schema/compose-substitutions bindings new-bindings)
+                       (schema/compose-substitutions new-subs bindings)
                        (conj args arg)
                        state-arg-popped)))))))))
 
 (defmethod compile-step :fn
   [{:keys [push-unit state type-env]}]
-  (let [arg-types (:arg-types push-unit)]
+  (let [{:keys [arg-types ret-type]} push-unit]
     (if (empty? arg-types)
       ;; Compile nullary function.
-      (let [{ast :ast new-state :state} (pop-ast state)]
+      (let [{ast :ast new-state :state} (pop-unifiable-ast ret-type state)]
         (if (= :none ast)
           state
           (push-ast {::ast  {:op      :fn
@@ -318,7 +299,7 @@
             fn-body-env (into type-env (map #(vector %1 %2) arg-vars arg-types))
             body (push->ast {:push     (first (:push state))
                              :locals   (vec (concat (:locals state) arg-vars))
-                             :ret-type {:type :s-var :sym (gensym "S")}
+                             :ret-type ret-type
                              :type-env fn-body-env})
             state-no-body-chunk (update state :push rest)
             ;; Filter out unused args
@@ -382,8 +363,8 @@
 
 (defn push->ast
   [{:keys [push locals ret-type type-env dealiases state-output-fn record-sketch?]
-    :or   {dealiases       lib/dealiases
-           record-sketch?  false}}]
+    :or   {dealiases      lib/dealiases
+           record-sketch? false}}]
   (let [state-output-fn (or state-output-fn default-state-output-fn)]
     (loop [state (assoc empty-state
                    ;; Ensure a list

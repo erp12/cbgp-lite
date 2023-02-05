@@ -1,15 +1,15 @@
 {:path     ["src"]
  :deps     {org.clojure/core.match           {:mvn/version "1.0.0"}
             com.taoensso/timbre              {:mvn/version "6.0.4"}
-            io.github.erp12/schema-inference {:git/sha "1faafd005f6862b75c0e15f7254ebfcf6c97af4b"}
-            io.github.erp12/ga-clj           {:git/sha "2d255a19a9c313eed48feea3f8f8185241177066"}
+            io.github.erp12/schema-inference {:git/sha "724355178b041a2c83abda6e68a9d4bd83d55a43"}
+            io.github.erp12/ga-clj           {:git/sha "a6ef20b104875369a4266bd7fd4ff6cc0e7fa786"}
             clj-fuzzy/clj-fuzzy              {:mvn/version "0.4.1"}}
  :jvm-opts ["-XX:CompressedClassSpaceSize=2g"]
  :aliases  {:build      {:extra-deps {io.github.seancorfield/build-clj {:git/tag "v0.8.3" :git/sha "7ac1f8d"}}
                          :ns-default build}
             :test       {:extra-paths ["test"]
-                         :extra-deps  {io.github.metabase/hawk {:sha "ca1775da999ed066947bd37ca5710167f4adecaa"}
-                                       meander/epsilon         {:mvn/version "0.0.650"}
+                         :extra-deps  {io.github.metabase/hawk   {:sha "ca1775da999ed066947bd37ca5710167f4adecaa"}
+                                       meander/epsilon           {:mvn/version "0.0.650"}
                                        com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                                   :git/tag "v0.5.0" :git/sha "b3fd0d2"}}
                          :main-opts   ["-m" "cognitect.test-runner"]
