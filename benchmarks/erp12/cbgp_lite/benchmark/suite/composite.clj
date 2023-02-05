@@ -1,7 +1,8 @@
 (ns erp12.cbgp-lite.benchmark.suite.composite
   (:require [clj-fuzzy.levenshtein :as lev] 
             [erp12.cbgp-lite.benchmark.utils :as bu]
-            [erp12.cbgp-lite.lang.lib :as lib]))
+            [erp12.cbgp-lite.lang.lib :as lib]
+            [clojure.set :as st]))
 
 (defn rand-int-range
   "Returns random int between low and high, both inclusive."
@@ -73,6 +74,16 @@
     {:inputs [in-cm]
      :output (list out-m out-cm)}))
 
+(defn set-symmetric-difference-case-generator
+  []
+  (let [set-generator (fn [] (set (repeatedly (rand-int 50) #(rand-int 50))))
+        set1 (set-generator)
+        set2 (set-generator)
+        output (st/union (st/difference set1 set2)
+                         (st/difference set2 set1))]
+    {:inputs [set1 set2]
+     :output output}))
+
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
@@ -143,6 +154,16 @@
        :loss-fns    [#(bu/absolute-distance (first %1) (first %2))
                      #(bu/absolute-distance (second %1) (second %2))]}
       
+      "set-symmetric-difference" ; untested
+      {:description "Given two sets, find the symmetric difference
+                     https://en.wikipedia.org/wiki/Symmetric_difference "
+       :input->type {'input1 {:type :set :child {:type 'int?}}
+                     'input2 {:type :set :child {:type 'int?}}}
+       :ret-type    {:type :set :child {:type 'int?}}
+       :other-types [{:type 'boolean?} {:type 'int?}]
+       :extra-genes [{:gene :lit, :val #{}, :type {:type :set :child {:type 'int?}}}]
+       :case-generator set-symmetric-difference-case-generator
+       :loss-fns    [bu/jaccard-similarity-loss]}
       }
 
      ;; This adds nil penalties to all loss functions
@@ -156,11 +177,9 @@
     {:train (repeatedly n-train case-generator)
      :test  (repeatedly n-test case-generator)}))
 
+
 (comment
 
-  (sum-2D-case-generator)
-
-  (centimeters-to-meters-case-generator)
+  (bu/jaccard-similarity-loss #{5 2} #{5 2})
   
-
   )
