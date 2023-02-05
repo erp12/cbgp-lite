@@ -542,7 +542,7 @@
                                         (vector-of (s-var 'a1))
                                         (vector-of (s-var 'a2))]
                                        (vector-of (s-var 'b)))}
-   `map-indexed        (scheme (fn-of [(fn-of [INT (s-var 'a)] (s-var 'b))
+   `mapv-indexed       (scheme (fn-of [(fn-of [INT (s-var 'a)] (s-var 'b))
                                        (vector-of (s-var 'a))]
                                       (vector-of (s-var 'b))))
    'filterv            {:type   :scheme
