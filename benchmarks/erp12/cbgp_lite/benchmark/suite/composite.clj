@@ -84,6 +84,28 @@
     {:inputs [set1 set2]
      :output output}))
 
+(defn make-int-to-int-fn
+  [bound]
+  (let [rand-map (zipmap (range bound) (shuffle (range bound)))
+        options [(fn [x] (+ (- (abs (- (rand-int bound) x)))
+                            (rand-int-range -50 50)))
+                 (fn [x] (let [a (rand-int bound)]
+                           (+ (* -1 (- a x) (- a x))
+                              (rand-int-range -50 50))))
+                 (fn [x] (get rand-map x))]]
+    (rand-nth options)))
+
+(defn max-applied-fn-case-generator
+  "Given an integer X < 50 and a (int => int) function, return
+   the integer in [0, X) that results in the maximum value for the function."
+  []
+  (let [bound (rand-int-range 1 49)
+        the-fn (make-int-to-int-fn bound)
+        output (first (apply max-key second (map #(list % (the-fn %))
+                                                 (range bound))))]
+    {:inputs [bound the-fn]
+     :output output}))
+
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
@@ -143,7 +165,7 @@
        :case-generator sum-2D-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "centimeters-to-meters" ; untested
+      "centimeters-to-meters"
       {:description "Given a length in centimeters, return a tuple of (meters, centimeters) that corresponds to the same length."
        :input->type {'input1 {:type 'int?}}
        :ret-type    {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
@@ -153,8 +175,8 @@
        :case-generator centimeters-to-meters-case-generator
        :loss-fns    [#(bu/absolute-distance (first %1) (first %2))
                      #(bu/absolute-distance (second %1) (second %2))]}
-      
-      "set-symmetric-difference" ; untested
+
+      "set-symmetric-difference"
       {:description "Given two sets, find the symmetric difference
                      https://en.wikipedia.org/wiki/Symmetric_difference "
        :input->type {'input1 {:type :set :child {:type 'int?}}
@@ -164,6 +186,21 @@
        :extra-genes [{:gene :lit, :val #{}, :type {:type :set :child {:type 'int?}}}]
        :case-generator set-symmetric-difference-case-generator
        :loss-fns    [bu/jaccard-similarity-loss]}
+
+      "max-applied-fn"
+      {:description "Given an integer X < 50 and a (int => int) function, return
+                     the integer in [0, X) that results in the maximum value for
+                     the function."
+       :input->type {'input1 {:type 'int?}
+                     'input2 (lib/unary-transform {:type 'int?})}
+       :ret-type    {:type 'int?}
+       :other-types [{:type 'boolean?} {:type :vector :child {:type 'int?}}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val true, :type {:type 'boolean?}}
+                     {:gene :lit, :val false, :type {:type 'boolean?}}]
+       :case-generator max-applied-fn-case-generator
+       :loss-fns    [bu/absolute-distance]}
+      
       }
 
      ;; This adds nil penalties to all loss functions
@@ -182,4 +219,6 @@
 
   (bu/jaccard-similarity-loss #{5 2} #{5 2})
   
+  (max-applied-fn-case-generator)
+
   )
