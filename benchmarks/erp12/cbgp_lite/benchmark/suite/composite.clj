@@ -2,12 +2,64 @@
   (:require [clj-fuzzy.levenshtein :as lev] 
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.lib :as lib]
-            [clojure.set :as st]))
+            [clojure.set :as st]
+            [clojure.string :as str]))
 
 (defn rand-int-range
   "Returns random int between low and high, both inclusive."
   [low high]
   (+ low (rand-int (inc (- high low)))))
+
+(defn rand-int-predicate
+  []
+  (rand-nth [zero?
+             pos?
+             neg?
+             even?
+             odd?
+             #(zero? (mod % 5))
+             #(> % 12)
+             #(< % -53)]))
+
+(defn rand-float-predicate
+  []
+  (rand-nth [pos?
+             neg?
+             #(> % -32)
+             #(< % 19)
+             #(and (> % -10)
+                   (< % 10))]))
+
+(defn rand-bool-predicate
+  []
+  (rand-nth [true?
+             false?]))
+
+(defn rand-string-predicate
+  []
+  (rand-nth [empty?
+             #(or (empty? %) (apply distinct? %))
+             #(str/includes? % "a")
+             #(> (count %) 5)
+             #(zero? (mod (count %) 2))]))
+
+(defn rand-char-predicate
+  []
+  (rand-nth [#(pos? (compare % \T))
+             #(neg? (compare % \h))
+             #(= % (first (str/upper-case (str %))))
+             #(= % (first (str/lower-case (str %))))
+             #(or (= % \space) (= % \newline (= % \tab)))]))
+
+(defn rand-set-of-ints-predicate
+  []
+  (rand-nth [empty?
+             #(contains? % 0)
+             #(st/subset? % (set (repeatedly 50 (fn [] (rand-int-range -100 100)))))
+             #(st/superset? % (set (repeatedly 3 (fn [] (rand-int-range -100 100)))))
+             #(some even? %)
+             #(some neg? %)
+             #(> (count %) 10)]))
 
 ;;;;;;;;;;;;;;;
 ;; Case generator functions
@@ -106,6 +158,32 @@
     {:inputs [bound the-fn]
      :output output}))
 
+(defn make-random-vector-and-pred-of-same-type
+  []
+  (let [[item-generator pred-generator]
+        (rand-nth (map vector
+                       [(bu/int-generator 100)
+                        #(- (rand 200.0) 100.0)
+                        bu/rand-bool
+                        (bu/string-generator 12)
+                        bu/rand-char
+                        #(set (repeatedly (rand-int 21) (bu/int-generator 100)))]
+                       [rand-int-predicate rand-float-predicate rand-bool-predicate rand-string-predicate rand-char-predicate rand-set-of-ints-predicate]))
+        the-vector (vec (repeatedly (rand-int 51) item-generator))]
+    [the-vector (pred-generator)]))
+
+(defn count-true-case-generator
+  "Given a vector of T and a predicate T => bool, return the
+   count of the number of elements in T that make the predicate true."
+  []
+  (let [[the-vector the-pred] (make-random-vector-and-pred-of-same-type)]
+    {:inputs [the-vector the-pred]
+     :output (count (filter the-pred the-vector))}))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;; Problems ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
@@ -194,14 +272,25 @@
        :input->type {'input1 {:type 'int?}
                      'input2 (lib/unary-transform {:type 'int?})}
        :ret-type    {:type 'int?}
-       :other-types [{:type 'boolean?} {:type :vector :child {:type 'int?}}]
+       :other-types [{:type 'boolean?}]
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
                      {:gene :lit, :val true, :type {:type 'boolean?}}
                      {:gene :lit, :val false, :type {:type 'boolean?}}]
        :case-generator max-applied-fn-case-generator
        :loss-fns    [bu/absolute-distance]}
-      
-      }
+
+      "count-true"
+      {:description "Given a vector of T and a predicate T => bool, return the
+                     count of the number of elements in T that make the predicate true."
+       :input->type {'input1 {:type :vector :child {:type 'T}}
+                     'input2 (lib/unary-pred {:type 'T})}
+       :ret-type    {:type 'int?}
+       :other-types [{:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val true, :type {:type 'boolean?}}
+                     {:gene :lit, :val false, :type {:type 'boolean?}}]
+       :case-generator count-true-case-generator
+       :loss-fns    [bu/absolute-distance]}}
 
      ;; This adds nil penalties to all loss functions
      (fn [problem-map]
@@ -216,9 +305,7 @@
 
 
 (comment
-
-  (bu/jaccard-similarity-loss #{5 2} #{5 2})
   
-  (max-applied-fn-case-generator)
+  (apply + [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0])
 
   )
