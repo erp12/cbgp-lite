@@ -180,6 +180,20 @@
     {:inputs [the-vector the-pred]
      :output (count (filter the-pred the-vector))}))
 
+(defn first-index-of-true-case-generator
+  "Given a vector of T and a predicate T => bool, return the
+   first index in the vector where the predicate is true."
+  []
+  (loop [attempt 0]
+    (let [[the-vector the-pred] (make-random-vector-and-pred-of-same-type)
+          output (first (first (filter #(the-pred (second %))
+                                       (map-indexed vector the-vector))))]
+      (if (or (nil? output)
+              (< output (- 10 attempt)))
+        (recur (inc attempt))
+        {:inputs [the-vector the-pred]
+         :output output}))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;; Problems ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -290,7 +304,22 @@
                      {:gene :lit, :val true, :type {:type 'boolean?}}
                      {:gene :lit, :val false, :type {:type 'boolean?}}]
        :case-generator count-true-case-generator
-       :loss-fns    [bu/absolute-distance]}}
+       :loss-fns    [bu/absolute-distance]}
+
+      "first-index-of-true"
+      {:description "Given a vector of T and a predicate T => bool, return the
+                     first index in the vector where the predicate is true."
+       :input->type {'input1 {:type :vector :child {:type 'T}}
+                     'input2 (lib/unary-pred {:type 'T})}
+       :ret-type    {:type 'int?}
+       :other-types [{:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val true, :type {:type 'boolean?}}
+                     {:gene :lit, :val false, :type {:type 'boolean?}}]
+       :case-generator first-index-of-true-case-generator
+       :loss-fns    [bu/absolute-distance]}
+      
+      }
 
      ;; This adds nil penalties to all loss functions
      (fn [problem-map]
@@ -306,6 +335,19 @@
 
 (comment
   
-  (apply + [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0])
+  (map-indexed vector [\a \b \f \w \L])
+  
+  (defn median-and-mean
+    [stuff]
+    (vector
+     (nth (sort stuff) (quot (count stuff) 2))
+     (float (/ (apply + stuff) (count stuff)))))
+  
+  (median-and-mean (map :output (repeatedly 1000
+                                   first-index-of-true-case-generator)))
+
+  (map :output (repeatedly 100
+                           first-index-of-true-case-generator))
+
 
   )
