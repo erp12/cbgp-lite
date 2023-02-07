@@ -194,6 +194,43 @@
         {:inputs [the-vector the-pred]
          :output output}))))
 
+(defn set-cartesian-product-case-generator
+  []
+  (let [set-generator (fn [] (set (repeatedly (rand-int 21) #(rand-int 100))))
+        set1 (set-generator)
+        set2 (set-generator)
+        output (set (for [x set1
+                          y set2]
+                      (list x y)))]
+    {:inputs [set1 set2]
+     :output output}))
+
+(defn filter-bounds-case-generator
+  "Given a vector of elements that are all of the same comparable
+   type, T , and two instance of type T representing a lower and
+   upper bound, filter the list to the elements that fall
+   between two bounds (inclusively)."
+  []
+  (let [generator (rand-nth [(bu/string-generator 10)
+                             #(bu/rand-char)
+                             (bu/int-generator 1000)
+                             (bu/int-generator 20)
+                             rand])
+        the-vector (vec (repeatedly (rand-int-range 20 50) generator))
+        x (generator)
+        y (generator)
+        lower (lib/min' x y)
+        upper (lib/max' x y)]
+    {:inputs [the-vector lower upper]
+     :output (vec (filter #(and (lib/<' lower %) (lib/<' % upper)) the-vector))}))
+
+
+(comment
+   
+  (filter-bounds-case-generator)
+
+  )
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;; Problems ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -318,6 +355,31 @@
                      {:gene :lit, :val false, :type {:type 'boolean?}}]
        :case-generator first-index-of-true-case-generator
        :loss-fns    [bu/absolute-distance]}
+
+      "set-cartesian-product"
+      {:description "Given two sets, find their cartesian product, which will be a set of tuples."
+       :input->type {'input1 {:type :set :child {:type 'int?}}
+                     'input2 {:type :set :child {:type 'int?}}}
+       :ret-type    {:type :set :child {:type :tuple, :children [{:type 'int?} {:type 'int?}]}}
+       :other-types [{:type 'boolean?} {:type 'int?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}]
+       :case-generator set-cartesian-product-case-generator
+       :loss-fns    [bu/jaccard-similarity-loss]}
+
+      "filter-bounds"
+      {:description "Given a vector of elements that are all of the same comparable
+                     type, T , and two instance of type T representing a lower and
+                     upper bound, filter the list to the elements that fall
+                     between two bounds (inclusively)."
+       :input->type {'input1 {:type :vector :child {:type 'T}}
+                     'input2 {:type 'T}
+                     'input3 {:type 'T}}
+       :ret-type    {:type :vector :child {:type 'T}}
+       :other-types [{:type 'boolean?} {:type 'int?}]
+       :extra-genes [{:gene :lit, :val [], :type {:type :vector :child {:type 'T}}}]
+       :case-generator filter-bounds-case-generator
+       :loss-fns    [(fn [x y] (bu/absolute-distance (count x) (count y)))
+                     lev/distance]}
       
       }
 
@@ -335,19 +397,8 @@
 
 (comment
   
-  (map-indexed vector [\a \b \f \w \L])
+  (compare [false false] [true false false])
+ 
   
-  (defn median-and-mean
-    [stuff]
-    (vector
-     (nth (sort stuff) (quot (count stuff) 2))
-     (float (/ (apply + stuff) (count stuff)))))
-  
-  (median-and-mean (map :output (repeatedly 1000
-                                   first-index-of-true-case-generator)))
-
-  (map :output (repeatedly 100
-                           first-index-of-true-case-generator))
-
 
   )
