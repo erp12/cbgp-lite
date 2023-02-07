@@ -10,6 +10,11 @@
   [low high]
   (+ low (rand-int (inc (- high low)))))
 
+(defn rand-float-range
+  "Returns random float between low and high, both inclusive."
+  [low high]
+  (+ low (rand (- high low))))
+
 (defn rand-int-predicate
   []
   (rand-nth [zero?
@@ -104,7 +109,7 @@
                         #(bu/rand-char)
                         rand
                         #(vec (repeatedly (inc (rand-int 16)) bu/rand-bool)) ;; vector of booleans
-                        #(list (bu/rand-char) (rand-int-range -10 10)) ;; tuple containing a char and an integer
+                        #(vector (bu/rand-char) (rand-int-range -10 10)) ;; tuple containing a char and an integer
                         ]]
     (sum-2-vals-case-generator-generic (rand-nth all-generators))))
 
@@ -124,7 +129,7 @@
         out-m (quot in-cm 100)
         out-cm (mod in-cm 100)]
     {:inputs [in-cm]
-     :output (list out-m out-cm)}))
+     :output (vector out-m out-cm)}))
 
 (defn set-symmetric-difference-case-generator
   []
@@ -168,7 +173,8 @@
                         (bu/string-generator 12)
                         bu/rand-char
                         #(set (repeatedly (rand-int 21) (bu/int-generator 100)))]
-                       [rand-int-predicate rand-float-predicate rand-bool-predicate rand-string-predicate rand-char-predicate rand-set-of-ints-predicate]))
+                       [rand-int-predicate rand-float-predicate rand-bool-predicate
+                        rand-string-predicate rand-char-predicate rand-set-of-ints-predicate]))
         the-vector (vec (repeatedly (rand-int 51) item-generator))]
     [the-vector (pred-generator)]))
 
@@ -201,7 +207,7 @@
         set2 (set-generator)
         output (set (for [x set1
                           y set2]
-                      (list x y)))]
+                      (vector x y)))]
     {:inputs [set1 set2]
      :output output}))
 
@@ -224,10 +230,25 @@
     {:inputs [the-vector lower upper]
      :output (vec (filter #(and (lib/<' lower %) (lib/<' % upper)) the-vector))}))
 
+(defn area-of-rectangle-case-generator
+  []
+  (let [xs [(rand-float-range -100 100) (rand-float-range -100 100)]
+        ys [(rand-float-range -100 100) (rand-float-range -100 100)]
+        x1 (apply max xs)
+        x2 (apply min xs)
+        y1 (apply max ys)
+        y2 (apply min ys)
+        output (* (- x1 x2)
+                  (- y1 y2))]
+    {:inputs [[x1 y1] [x2 y2]]
+     :output output}))
 
 (comment
    
   (filter-bounds-case-generator)
+  
+  (area-of-rectangle-case-generator)
+
 
   )
 
@@ -294,8 +315,9 @@
        :case-generator sum-2D-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "centimeters-to-meters"
-      {:description "Given a length in centimeters, return a tuple of (meters, centimeters) that corresponds to the same length."
+      "centimeters-to-meters" ;; TODO: Rerun after figuring out error in some runs
+      {:description "Given a length in centimeters, return a tuple of (meters, centimeters)
+                     that corresponds to the same length."
        :input->type {'input1 {:type 'int?}}
        :ret-type    {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
        :other-types [{:type 'boolean?}]
@@ -305,7 +327,7 @@
        :loss-fns    [#(bu/absolute-distance (first %1) (first %2))
                      #(bu/absolute-distance (second %1) (second %2))]}
 
-      "set-symmetric-difference"
+      "set-symmetric-difference" ;; TODO: Rerun after figuring out error in some runs
       {:description "Given two sets, find the symmetric difference
                      https://en.wikipedia.org/wiki/Symmetric_difference "
        :input->type {'input1 {:type :set :child {:type 'int?}}
@@ -330,7 +352,7 @@
        :case-generator max-applied-fn-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "count-true"
+      "count-true" ;; TODO: Figure out weird subsample issue
       {:description "Given a vector of T and a predicate T => bool, return the
                      count of the number of elements in T that make the predicate true."
        :input->type {'input1 {:type :vector :child {:type 'T}}
@@ -343,7 +365,7 @@
        :case-generator count-true-case-generator
        :loss-fns    [bu/absolute-distance]}
 
-      "first-index-of-true"
+      "first-index-of-true" ;; TODO: Figure out weird subsample issue
       {:description "Given a vector of T and a predicate T => bool, return the
                      first index in the vector where the predicate is true."
        :input->type {'input1 {:type :vector :child {:type 'T}}
@@ -366,7 +388,7 @@
        :case-generator set-cartesian-product-case-generator
        :loss-fns    [bu/jaccard-similarity-loss]}
 
-      "filter-bounds"
+      "filter-bounds" ;; TODO: Figure out loss-fns
       {:description "Given a vector of elements that are all of the same comparable
                      type, T , and two instance of type T representing a lower and
                      upper bound, filter the list to the elements that fall
@@ -380,6 +402,18 @@
        :case-generator filter-bounds-case-generator
        :loss-fns    [(fn [x y] (bu/absolute-distance (count x) (count y)))
                      lev/distance]}
+      
+      "area-of-rectangle"
+      {:description "Given two tuples of floats representing the upper-right and
+                     lower-left coordinates of a rectangle in the cartesian plane,
+                     find the area of the rectangle."
+       :input->type {'input1 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}
+                     'input2 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}}
+       :ret-type    {:type 'double?}
+       :other-types []
+       :extra-genes []
+       :case-generator area-of-rectangle-case-generator
+       :loss-fns    [#(bu/round 4 (bu/absolute-distance %1 %2))]}
       
       }
 
