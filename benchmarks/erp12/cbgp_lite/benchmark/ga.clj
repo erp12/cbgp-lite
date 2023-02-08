@@ -95,7 +95,7 @@
                                                           {:grouped (group-by :errors individuals)})
                                        :breed           (make-breed opts)
                                        :individual-cmp  (comparator #(< (:total-error %1) (:total-error %2)))
-                                       :stop-fn         (let [{:keys [max-generations]} opts]
+                                       :stop-fn         (let [{:keys [max-generations cases]} opts]
                                                           (fn [{:keys [step step-start best new-best?]}]
                                                             (log/info :best-individual-errors (:errors best))
                                                             (log/info "REPORT"
