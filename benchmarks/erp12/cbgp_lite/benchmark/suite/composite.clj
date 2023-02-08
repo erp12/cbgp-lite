@@ -117,10 +117,7 @@
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
                        (fn wrapped-loss [program-output correct-output]
-                         (if (or (nil? program-output)
-                                 ; is a sequence and contains nil
-                                 (and (coll? program-output)
-                                      (some nil? program-output)))
+                         (if (bu/has-nil? program-output)
                            penalty
                            (loss-fn program-output correct-output))))]
     (update-vals

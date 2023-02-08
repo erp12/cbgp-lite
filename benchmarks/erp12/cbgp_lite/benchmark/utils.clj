@@ -1,6 +1,7 @@
 (ns erp12.cbgp-lite.benchmark.utils
-  (:require [erp12.ga-clj.toolbox :as tb]
-            [clojure.set :as st]))
+  (:require [clojure.set :as st]
+            [clojure.walk :as w]
+            [erp12.ga-clj.toolbox :as tb]))
 
 (defn read-problem
   [{:keys [suite-ns problem] :as config}]
@@ -160,6 +161,21 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loss Function Utils
+
+(defn tap-nodes
+  [f tree]
+  (w/walk (partial tap-nodes f) identity (f tree)))
+
+(defn has-nil?
+  [x]
+  (with-local-vars [result false]
+    (tap-nodes
+      (fn [node]
+        (when (nil? node)
+          (var-set result true))
+        node)
+      x)
+    @result))
 
 (defn round
   "Round a double to the given precision (number of significant digits)"
