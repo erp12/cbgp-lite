@@ -167,6 +167,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vector
 
+(def conj-vec (comp vec conj))
 (def distinctv (comp vec distinct))
 (def mapcatv (comp vec mapcat))
 (def mapv-indexed (comp vec map-indexed))
@@ -229,6 +230,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Set
 
+(def conj-set (comp set conj))
 (defn map-set [f s] (into #{} (map f s)))
 (defn filter-set [pred s] (into #{} (filter pred s)))
 
@@ -247,8 +249,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tuple
 
-(defn assoc-left [tuple val] (assoc tuple 0 val))
-(defn assoc-right [tuple val] (assoc tuple 1 val))
+(defn assoc-tuple
+  [tup i x]
+  (assoc (or tup [nil nil]) i x))
+
+(defn assoc-left [tuple val] (assoc-tuple tuple 0 val))
+(defn assoc-right [tuple val] (assoc-tuple tuple 1 val))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Ground Schemas
@@ -463,7 +469,7 @@
    `concatv            {:type   :scheme
                         :s-vars ['a]
                         :body   (binary-transform (vector-of (s-var 'a)))}
-   'vec-conj           {:type   :scheme
+   `conj-vec           {:type   :scheme
                         :s-vars ['a]
                         :body   (fn-of [(vector-of (s-var 'a)) (s-var 'a)] (vector-of (s-var 'a)))}
    `takev              {:type   :scheme
@@ -624,7 +630,7 @@
    `set/superset?      (scheme (fn-of [(set-of (s-var 'e))
                                        (set-of (s-var 'e))]
                                       BOOLEAN))
-   'set-conj           (scheme (fn-of [(set-of (s-var 'e)) (s-var 'e)]
+   `conj-set           (scheme (fn-of [(set-of (s-var 'e)) (s-var 'e)]
                                       (set-of (s-var 'e))))
    'disj               (scheme (fn-of [(set-of (s-var 'e)) (s-var 'e)]
                                       (set-of (s-var 'e))))
@@ -787,14 +793,12 @@
     right             second
     set->map          erp12.cbgp-lite.lang.lib/->map
     set->vec          vec
-    set-conj          conj
     set-contains?     contains?
     split-str-on-char erp12.cbgp-lite.lang.lib/split-str
     str-join-sep      clojure.string/join
     string->chars     vec
     vec->map          erp12.cbgp-lite.lang.lib/->map
     vec->set          set
-    vec-conj          conj
     vec-mapv          mapv
     zero-double?      zero?
     zero-int?         zero?
