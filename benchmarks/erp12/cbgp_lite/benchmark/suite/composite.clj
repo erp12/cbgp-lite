@@ -468,6 +468,27 @@
                                output (apply str (map the-fn the-string))]
                            {:inputs [the-string the-fn]
                             :output output}))
+       :loss-fns       [lev/distance]}
+
+      "get-vals-of-key"
+      {:description    "Given a vector of maps [{string => int} ...] and a key,
+                        make a list of the values of that key in all the maps."
+       :input->type    {'input1 {:type :vector :child
+                                 {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}}
+                        'input2 {:type 'string?}}
+       :ret-type       {:type :vector :child {:type 'int?}}
+       :other-types    [{:type 'boolean?} {:type 'string?} {:type 'int?}]
+       :extra-genes    [{:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}]
+       :case-generator (fn get-vals-of-key-gen
+                         []
+                         (let [num-keys-per-map (rand-int-range 1 8)
+                               keys (repeatedly num-keys-per-map (bu/string-generator 10))
+                               map-gen #(zipmap keys (repeatedly (bu/int-generator 1000)))
+                               the-maps (rand-vector 0 25 map-gen)
+                               the-key (rand-nth keys)
+                               output (mapv #(get % the-key) the-maps)]
+                           {:inputs [the-maps the-key]
+                            :output output}))
        :loss-fns       [lev/distance]}}
 
 
