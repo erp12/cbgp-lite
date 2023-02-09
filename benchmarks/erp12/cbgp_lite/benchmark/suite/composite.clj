@@ -327,8 +327,21 @@
                               {:inputs [the-vector lower upper]
                                :output (filterv #(and (lib/<' lower %) (lib/<' % upper))
                                                 the-vector)})))
-        :loss-fns       [(fn [x y] (bu/absolute-distance (count x) (count y)))
-                         lev/distance]}
+        :loss-fns       (vec
+                         (conj (map (fn [index]
+                                      (fn [actual expected]
+                                        (cond
+                                          ; expected output vector isn't this long, so loss = 0
+                                          (<= (count expected) index) 0
+
+                                          ; actual isn't long enough, so get's penalty error
+                                          (<= (count actual) index) penalty
+
+                                          ; otherwise, check if correct and assign binary error
+                                          (= (nth actual index) (nth expected index)) 0
+                                          :else 1)))
+                                    (range 50)) ;; 50 is max length of input vector
+                               (fn [x y] (bu/absolute-distance (count x) (count y)))))}
 
        "area-of-rectangle"
        {:description    "Given two tuples of floats representing the upper-right and
