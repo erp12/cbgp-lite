@@ -142,9 +142,9 @@
         :loss-fns       [bu/absolute-distance]}
 
        "sum-2-vals-polymorphic"
-       {:description    "Given a map from 'a to ints and two 'a that are
-                     keys of the map, look up the values associated with those keys
-                     in the map and return their sum."
+       {:description    "Given a map from 'T to ints and two 'T that are
+                         keys of the map, look up the values associated with those keys
+                         in the map and return their sum."
         :input->type    {'input1 {:type :map-of, :key {:type 'T}, :value {:type 'int?}}
                          'input2 {:type 'T}
                          'input3 {:type 'T}}
@@ -153,7 +153,7 @@
         :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
         :case-generator (let [key-generators [(bu/string-generator 10)
                                               (bu/int-generator 1000)
-                                              #(bu/rand-char)
+                                              bu/rand-char
                                               rand
                                               ;; vector of booleans
                                               #(vec (repeatedly (inc (rand-int 16)) bu/rand-bool))
@@ -301,7 +301,7 @@
         :other-types    [{:type 'boolean?}]
         :extra-genes    []
         :case-generator (let [generators [(bu/string-generator 10)
-                                          #(bu/rand-char)
+                                          bu/rand-char
                                           (bu/int-generator 1000)
                                           (bu/int-generator 20)
                                           rand]]
@@ -406,7 +406,37 @@
                                                                     records)))]
                             {:inputs [records the-name]
                              :output output}))
-        :loss-fns       [bu/absolute-distance]}}
+        :loss-fns       [bu/absolute-distance]}
+
+       "min-key"
+       {:description    "Given map of {key => int}, return the key with the min value."
+        :input->type    {'input1 {:type :map-of, :key {:type 'T}, :value {:type 'int?}}}
+        :ret-type       {:type 'T}
+        :other-types    [{:type 'int?} {:type 'boolean?}]
+        :extra-genes    []
+        :case-generator (let [generators [(bu/string-generator 10)
+                                          bu/rand-char
+                                          (bu/int-generator 1000)
+                                          rand
+                                          bu/rand-bool
+                                          ;; vector of booleans
+                                          #(vec (repeatedly (inc (rand-int 16)) bu/rand-bool))
+                                          ;; tuple containing a char and an integer
+                                          #(vector (bu/rand-char) (rand-int-range -10 10))]]
+                          (fn min-key-gen []
+                            (let [val-gen (rand-nth generators)
+                                  the-map (zipmap (rand-vector 1 50 val-gen)
+                                                  (repeatedly (bu/int-generator 1000)))
+                                  output (first (apply min-key second the-map))]
+                              ;; Ensure the min is unique, i.e. there aren't two keys with same min
+                              ;; Just recur to try again if not.
+                              (if (< 1 (count (filter #(= (get the-map output) %)
+                                                      (vals the-map))))
+                                (recur)
+                                {:inputs [the-map]
+                                 :output output}))))
+        :loss-fns       [#(if (= %1 %2) 0 1)]}}
+
 
       ;; This adds nil penalties to all loss functions
       (fn [problem-map]
@@ -424,6 +454,6 @@
   
   ;; Current number of problems
   (count (keys (problems {:penalty nil})))
-
+  
   
 )
