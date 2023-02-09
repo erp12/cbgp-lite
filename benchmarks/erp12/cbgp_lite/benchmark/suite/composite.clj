@@ -21,6 +21,9 @@
   (vec (repeatedly (rand-float-range min-size max-size)
                    element-gen)))
 
+(def names-100 
+  ["Abel" "Margaret" "Kimber" "Kase" "Cecelia" "Katalina" "Alianna" "Bode" "Cody" "Charles" "Kinsley" "Kaliyah" "Jon" "Salem" "Nora" "Brodie" "Davis" "Ares" "Andres" "Adrian" "Michael" "Mara" "Azariah" "Eileen" "Russell" "Royal" "Ricardo" "Andi" "Hank" "Annika" "Oaklyn" "Shepherd" "Killian" "Oakleigh" "Garrett" "Forest" "Daleyza" "Deacon" "Eden" "Oscar" "Lillie" "Cole" "Emberly" "Nathan" "Indie" "Elise" "Andy" "Brayan" "Brylee" "Princess" "Julie" "Raelyn" "Clay" "Georgia" "Manuel" "Cataleya" "Lian" "Krew" "Marceline" "Ryder" "Asa" "Beckham" "Emmy" "Piper" "Cal" "Isabella" "Blaine" "Peyton" "Jasiah" "Elon" "Kai" "Mariam" "Ryan" "Jamie" "Zavier" "Lee" "Declan" "Adalynn" "Griffin" "Bristol" "Colt" "Eva" "Erin" "Landry" "Maeve" "Finley" "Spencer" "Luciano" "Trevor" "Adelynn" "Everlee" "Damon" "Alexis" "Renata" "Layne" "Emerson" "Khari" "Gracelynn" "Ozzy" "Eve"])
+
 (def int-predicates
   [zero?
    pos?
@@ -410,8 +413,29 @@
                             {:inputs [the-sets the-int]
                              :output output}))
         :loss-fns       [bu/jaccard-similarity-loss]}
-       
-       }
+
+       "timesheet"
+       {:description    "Given a list of tuples of the form: [(name, hours), ...],
+                         and a specific name, sum the hours associated with that name."
+        :input->type    {'input1 {:type :vector :child
+                                  {:type :tuple, :children [{:type 'string?} {:type 'int?}]}}
+                         'input2 {:type 'string?}}
+        :ret-type       {:type 'int?}
+        :other-types    [{:type :tuple, :children [{:type 'string?} {:type 'int?}]} {:type 'boolean?}]
+        :extra-genes    [{:gene :lit, :val true, :type {:type 'boolean?}}
+                         {:gene :lit, :val false, :type {:type 'boolean?}}]
+        :case-generator (fn timesheet-gen []
+                          (let [num-records (inc (rand-int 50))
+                                num-names (inc (rand-int 10))
+                                names (vec (take num-names (shuffle names-100)))
+                                records (vec (repeatedly num-records #(vector (rand-nth names)
+                                                                              (rand-int 50))))
+                                the-name (rand-nth names)
+                                output (apply + (map second (filter #(= the-name (first %))
+                                                                    records)))]
+                            {:inputs [records the-name]
+                             :output output}))
+        :loss-fns       [bu/absolute-distance]}}
 
       ;; This adds nil penalties to all loss functions
       (fn [problem-map]
@@ -428,5 +452,4 @@
 (comment
   
 
-
-  )
+)
