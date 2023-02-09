@@ -383,7 +383,35 @@
                              :output (apply + (map the-map the-vector))}))
         :loss-fns       [bu/absolute-distance]}
 
-}
+       "sets-with-element"
+       {:description    "Given a set of sets, filter to only contain sets that
+                         contain a certain element."
+        :input->type    {'input1 {:type :set :child {:type :set :child {:type 'int?}}}
+                         'input2  {:type 'int?}}
+        :ret-type       {:type :set :child {:type :set :child {:type 'int?}}}
+        :other-types    [{:type :set :child {:type 'int?}} {:type 'boolean?}]
+        :extra-genes    [{:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}
+                         {:gene :lit, :val true, :type {:type 'boolean?}}
+                         {:gene :lit, :val false, :type {:type 'boolean?}}
+                         {:gene :lit, :val #{}, :type {:type :set :child {:type 'int?}}}]
+        :case-generator (fn sets-with-element-gen []
+                          (let [max-int 100
+                                num-sets (rand-int 25)
+                                int-gen #(rand-int max-int)
+                                the-int (int-gen)
+                                prob (rand) ; prob of including the-int
+                                set-gen #(let [s (set (repeatedly (rand-int 25) int-gen))]
+                                           (if (< (rand) prob)
+                                             (conj s the-int)
+                                             (disj s the-int)))
+                                the-sets (set (repeatedly num-sets set-gen))
+                                output (set (filter #(contains? % the-int)
+                                                    the-sets))]
+                            {:inputs [the-sets the-int]
+                             :output output}))
+        :loss-fns       [bu/jaccard-similarity-loss]}
+       
+       }
 
       ;; This adds nil penalties to all loss functions
       (fn [problem-map]
@@ -398,7 +426,7 @@
 
 
 (comment
+  
 
-  (compare [false false] [true false false])
 
   )
