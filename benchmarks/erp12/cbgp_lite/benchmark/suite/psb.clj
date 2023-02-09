@@ -527,6 +527,7 @@
       {:input->type {'input1 {:type :vector :child {:type 'int?}}}
        :ret-type    {:type :tuple, :children [{:type :vector :child {:type 'int?}}
                                               {:type :vector :child {:type 'int?}}]}
+       :out-key     [:output1 :output2]
        :other-types [{:type 'int?} {:type 'boolean?}]
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
                      {:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
@@ -550,6 +551,7 @@
       {:input->type {'input1 {:type :vector :child {:type 'int?}}
                      'input2 {:type 'int?}}
        :ret-type    {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
+       :out-key     [:output1 :output2]
        :other-types [{:type 'boolean?}]
        :extra-genes [{:gene :lit, :val -1, :type {:type 'int?}}
                      {:gene :lit, :val 0, :type {:type 'int?}}

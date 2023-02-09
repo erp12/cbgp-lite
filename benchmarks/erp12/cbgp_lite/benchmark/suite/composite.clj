@@ -124,21 +124,7 @@
                            penalty
                            (loss-fn program-output correct-output))))]
     (update-vals
-      {"add-them"
-       {:description    "simple problem to make sure this file is working"
-        :input->type    {'input1 {:type 'int?}
-                         'input2 {:type 'int?}}
-        :ret-type       {:type 'int?}
-        :other-types    [{:type 'boolean?}]
-        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
-        :case-generator (fn add-them-gen []
-                          (let [x (rand-int-range -1000 1000)
-                                y (rand-int-range -1000 1000)]
-                            {:inputs [x y]
-                             :output (+ x y)}))
-        :loss-fns       [bu/absolute-distance]}
-
-       "sum-2-vals"
+      {"sum-2-vals"
        {:description    "Given a map from strings to ints and two strings that are
                      keys of the map, look up the values associated with those keys
                      in the map and return their sum."
@@ -303,18 +289,17 @@
                                :output output})))
         :loss-fns       [bu/jaccard-similarity-loss]}
 
-       ;; TODO: Figure out loss-fns
        "filter-bounds"
-       {:description    "Given a vector of elements that are all of the same comparable
-                     type, T , and two instance of type T representing a lower and
-                     upper bound, filter the list to the elements that fall
-                     between two bounds (inclusively)."
-        :input->type    {'input1 {:type :vector :child {:type 'T}}
+       {:description    "Given a set of elements that are all of the same comparable
+                         type, T , and two instance of type T representing a lower and
+                         upper bound, filter the set to the elements that fall
+                         between two bounds (inclusively)."
+        :input->type    {'input1 {:type :set :child {:type 'T}}
                          'input2 {:type 'T}
                          'input3 {:type 'T}}
-        :ret-type       {:type :vector :child {:type 'T}}
-        :other-types    [{:type 'boolean?} {:type 'int?}]
-        :extra-genes    [{:gene :lit, :val [], :type {:type :vector :child {:type 'T}}}]
+        :ret-type       {:type :set :child {:type 'T}}
+        :other-types    [{:type 'boolean?}]
+        :extra-genes    []
         :case-generator (let [generators [(bu/string-generator 10)
                                           #(bu/rand-char)
                                           (bu/int-generator 1000)
@@ -322,29 +307,15 @@
                                           rand]]
                           (fn filter-bounds-gen []
                             (let [val-gen (rand-nth generators)
-                                  the-vector (rand-vector 20 50 val-gen)
+                                  the-set (set (rand-vector 20 50 val-gen))
                                   x (val-gen)
                                   y (val-gen)
                                   lower (lib/min' x y)
                                   upper (lib/max' x y)]
-                              {:inputs [the-vector lower upper]
-                               :output (filterv #(and (lib/<' lower %) (lib/<' % upper))
-                                                the-vector)})))
-        :loss-fns       (vec
-                         (conj (map (fn [index]
-                                      (fn [actual expected]
-                                        (cond
-                                          ; expected output vector isn't this long, so loss = 0
-                                          (<= (count expected) index) 0
-
-                                          ; actual isn't long enough, so get's penalty error
-                                          (<= (count actual) index) penalty
-
-                                          ; otherwise, check if correct and assign binary error
-                                          (= (nth actual index) (nth expected index)) 0
-                                          :else 1)))
-                                    (range 50)) ;; 50 is max length of input vector
-                               (fn [x y] (bu/absolute-distance (count x) (count y)))))}
+                              {:inputs [the-set lower upper]
+                               :output (set (filter #(and (lib/<' lower %) (lib/<' % upper))
+                                                    the-set))})))
+        :loss-fns       [bu/jaccard-similarity-loss]}
 
        "area-of-rectangle"
        {:description    "Given two tuples of floats representing the upper-right and
@@ -451,5 +422,8 @@
 
 (comment
   
+  ;; Current number of problems
+  (count (keys (problems {:penalty nil})))
 
+  
 )
