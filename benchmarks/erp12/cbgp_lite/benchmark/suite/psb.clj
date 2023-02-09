@@ -761,7 +761,9 @@
                   (filter (fn [[k _]] (str/starts-with? (name k) "input")))
                   (sort-by first)
                   (mapv second))
-     :output (out-key case)}
+     :output (if (sequential? out-key)
+               (vec (map #(get case %) out-key))
+               (out-key case))}
     (when stdout-key
       {:std-out (stdout-key case)})))
 
