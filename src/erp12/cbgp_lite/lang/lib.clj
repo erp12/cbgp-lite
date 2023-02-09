@@ -448,6 +448,7 @@
    `set-char           (fn-of [STRING INT CHAR] STRING)
    `str/join           (fn-of [(vector-of STRING)] STRING)
    'str-join-sep       (fn-of [STRING (vector-of STRING)] STRING)
+   'join-chars         (fn-of [(vector-of CHAR)] STRING)
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Boolean
    `and                (binary-transform BOOLEAN)
@@ -769,6 +770,7 @@
     int-mult          *
     int-quot          erp12.cbgp-lite.lang.lib/safe-quot
     int-sub           -
+    join-chars        clojure.string/join
     last-str          last
     left              first
     length            count
