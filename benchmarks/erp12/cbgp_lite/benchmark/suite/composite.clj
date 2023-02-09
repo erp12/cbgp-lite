@@ -64,7 +64,7 @@
 
 (defn sum-2-vals-case-generator
   "Produce a map of inputs and outputs.
-   Works with any key generator functyion key-gen"
+   Works with any key generator function key-gen"
   [key-gen]
   (let [key1 (key-gen)
         key2 (key-gen)
@@ -190,7 +190,6 @@
                              :output output}))
         :loss-fns       [bu/absolute-distance]}
 
-       ;; TODO: Rerun after figuring out error in some runs
        "centimeters-to-meters"
        {:description    "Given a length in centimeters, return a tuple of (meters, centimeters)
                      that corresponds to the same length."
@@ -208,7 +207,6 @@
         :loss-fns       [#(bu/absolute-distance (first %1) (first %2))
                          #(bu/absolute-distance (second %1) (second %2))]}
 
-       ;; TODO: Rerun after figuring out error in some runs
        "set-symmetric-difference"
        {:description    "Given two sets, find the symmetric difference
                      https://en.wikipedia.org/wiki/Symmetric_difference "
@@ -355,7 +353,24 @@
                              :output output}))
         :loss-fns       [#(bu/round 4 (bu/absolute-distance %1 %2))]}
 
-       }
+       "sum-vector-vals"
+       {:description    "Given a map {string => int} and vector of strings that are
+                         keys of the map, look up the values associated with those
+                         keys in the map and return their sum."
+        :input->type    {'input1 {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}
+                         'input2  {:type :vector :child {:type 'string?}}}
+        :ret-type       {:type 'int?}
+        :other-types    [{:type 'string?} {:type 'boolean?}]
+        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
+        :case-generator (fn sum-vector-vals-gen []
+                          (let [the-map (first (:inputs (sum-2-vals-case-generator (bu/string-generator 10))))
+                                prob (+ 0.1 (rand 0.8))
+                                the-vector (vec (random-sample prob (keys the-map)))]
+                            {:inputs [the-map the-vector]
+                             :output (apply + (map the-map the-vector))}))
+        :loss-fns       [bu/absolute-distance]}
+
+}
 
       ;; This adds nil penalties to all loss functions
       (fn [problem-map]
