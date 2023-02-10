@@ -239,7 +239,7 @@
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val true, :type {:type 'boolean?}}
                         {:gene :lit, :val false, :type {:type 'boolean?}}]
-       :case-generator (fn []
+       :case-generator (fn count-true-gen []
                          (let [{:keys [val-gen preds]} (rand-nth value-generators-and-predicates)
                                vector (rand-vector 0 50 val-gen)
                                pred (rand-nth preds)]
@@ -258,16 +258,20 @@
                         {:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val true, :type {:type 'boolean?}}
                         {:gene :lit, :val false, :type {:type 'boolean?}}]
-       :case-generator (fn []
-                         (let [{:keys [val-gen preds]} (rand-nth value-generators-and-predicates)
-                               the-vector (rand-vector 0 50 val-gen)
-                               pred (rand-nth preds)
-                               output (->> the-vector
-                                           (map-indexed vector)
-                                           (filter #(pred (second %)))
-                                           ffirst)]
-                           {:inputs [vector pred]
-                            :output (or output -1)}))
+       :case-generator (fn first-index-of-true-gen []
+                         (loop [attempt 0]
+                           (let [{:keys [val-gen preds]} (rand-nth value-generators-and-predicates)
+                                 the-vector (rand-vector 0 50 val-gen)
+                                 pred (rand-nth preds)
+                                 output (->> the-vector
+                                             (map-indexed vector)
+                                             (filter #(pred (second %)))
+                                             ffirst)]
+                             (if (or (nil? output)
+                                     (< output (- 10 attempt)))
+                               (recur (inc attempt))
+                               {:inputs [the-vector pred]
+                                :output output}))))
        :loss-fns       [bu/absolute-distance]}
 
       "set-cartesian-product"
@@ -503,12 +507,21 @@
     {:train (repeatedly n-train case-generator)
      :test  (repeatedly n-test case-generator)}))
 
+(defn print-problem-descriptions
+  "Prints the problem description associated with each file in one line."
+  []
+  (doseq [d (let [descriptions (map :description (vals (sort-by first (problems {:penalty nil}))))
+                  cleaner (fn [desc]
+                            (str/replace desc #"\s\s+" " "))]
+              (map cleaner descriptions))]
+    (println d)))
 
 (comment
 
   ;; Current number of problems
   (count (keys (problems {:penalty nil})))
 
+  ((:case-generator (get (problems {:penalty nil}) "first-index-of-true")))
 
 
   )
