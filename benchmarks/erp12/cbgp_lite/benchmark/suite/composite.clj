@@ -93,24 +93,15 @@
 (defn make-int-to-int-fn
   [bound]
   (let [rand-map (zipmap (range bound) (shuffle (range bound)))
-        options [(fn [x] (+ (- (abs (- (rand-int bound) x)))
-                            (rand-int-range -50 50)))
-                 (fn [x] (let [a (rand-int bound)]
+        rand-int-bound (rand-int bound)
+        rand-int-range-50-50 (rand-int-range -50 50)
+        options [(fn [x] (+ (- (abs (- rand-int-bound x)))
+                            rand-int-range-50-50))
+                 (fn [x] (let [a rand-int-bound]
                            (+ (* -1 (- a x) (- a x))
-                              (rand-int-range -50 50))))
+                              rand-int-range-50-50)))
                  (fn [x] (get rand-map x))]]
     (rand-nth options)))
-
-(defn max-applied-fn-case-generator
-  "Given an integer X < 50 and a (int => int) function, return
-   the integer in [0, X) that results in the maximum value for the function."
-  []
-  (let [bound (rand-int-range 1 49)
-        the-fn (make-int-to-int-fn bound)
-        output (first (apply max-key second (map #(list % (the-fn %))
-                                                 (range bound))))]
-    {:inputs [bound the-fn]
-     :output output}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;; Problems ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -226,7 +217,13 @@
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val true, :type {:type 'boolean?}}
                         {:gene :lit, :val false, :type {:type 'boolean?}}]
-       :case-generator max-applied-fn-case-generator
+       :case-generator (fn max-applied-fn-case-gen
+                         []
+                         (let [bound (rand-int-range 1 49)
+                               the-fn (make-int-to-int-fn bound)
+                               output (apply max-key the-fn (range bound))]
+                           {:inputs [bound the-fn]
+                            :output output}))
        :loss-fns       [bu/absolute-distance]}
 
       "count-true"
@@ -521,7 +518,5 @@
   ;; Current number of problems
   (count (keys (problems {:penalty nil})))
 
-  ((:case-generator (get (problems {:penalty nil}) "first-index-of-true")))
-
-
+  
   )
