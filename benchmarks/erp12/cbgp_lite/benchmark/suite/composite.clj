@@ -386,7 +386,7 @@
                             :output output}))
        :loss-fns       [bu/jaccard-similarity-loss]}
 
-      "timesheet"
+      "time-sheet"
       {:description    "Given a list of tuples of the form: [(name, hours), ...],
                          and a specific name, sum the hours associated with that name."
        :input->type    {'input1 {:type :vector :child
@@ -396,7 +396,7 @@
        :other-types    [{:type :tuple, :children [{:type 'string?} {:type 'int?}]} {:type 'boolean?}]
        :extra-genes    [{:gene :lit, :val true, :type {:type 'boolean?}}
                         {:gene :lit, :val false, :type {:type 'boolean?}}]
-       :case-generator (fn timesheet-gen []
+       :case-generator (fn time-sheet-gen []
                          (let [num-records (inc (rand-int 50))
                                num-names (inc (rand-int 10))
                                names (vec (take num-names (shuffle names-100)))
@@ -518,5 +518,6 @@
   ;; Current number of problems
   (count (keys (problems {:penalty nil})))
 
+  (map :loss-fns (vals (problems {:penalty nil})))
   
   )
