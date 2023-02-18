@@ -33,7 +33,7 @@
       "collatz-numbers"
       {:input->type {'input1 {:type 'int?}}
        :ret-type    {:type 'int?}
-       :other-types [{:type 'int?} {:type 'double?} {:type 'boolean?}]
+       :other-types [{:type 'double?} {:type 'boolean?}]
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
                      {:gene :lit, :val 1, :type {:type 'int?}}
                      {:gene :lit-generator, :fn (bu/int-generator 128), :type {:type 'int?}}]
@@ -277,7 +277,7 @@
       "scrabble-score"
       {:input->type {'input1 {:type 'string?}}
        :ret-type    {:type 'int?}
-       :other-types [{:type 'boolean?} {:type 'char?} {:type :vector :child {:type 'int?}}]
+       :other-types [{:type 'boolean?} {:type 'char?}]
        :extra-genes [{:gene :lit,
                       :val  (let [scrabble-map {\a 1
                                                 \b 3
