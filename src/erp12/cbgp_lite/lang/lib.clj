@@ -151,20 +151,6 @@
   (Character/isLetter c))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Coll
-
-(defn safe-nth
-  [coll idx]
-  (if (empty? coll)
-    (throw (ex-info "Cannot take safe-nth of empty vector." {:coll coll :idx idx}))
-    (let [idx (mod idx (count coll))]
-      (nth coll idx))))
-
-(defn occurrences-of
-  [coll el]
-  (count (filter #{el} coll)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vector
 
 (def conj-vec (comp vec conj))
@@ -187,6 +173,10 @@
 (defn index-of
   [coll el]
   (.indexOf coll el))
+
+(defn occurrences-of
+  [coll el]
+  (count (filter #{el} coll)))
 
 (defn in?
   [coll el]
@@ -356,11 +346,11 @@
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Common
    '=                  {:type   :scheme
-                        :s-vars ['a 'b]
-                        :body   (fn-of [(s-var 'a) (s-var 'b)] BOOLEAN)}
+                        :s-vars ['a]
+                        :body   (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN)}
    'not=               {:type   :scheme
-                        :s-vars ['a 'b]
-                        :body   (fn-of [(s-var 'a) (s-var 'b)] BOOLEAN)}
+                        :s-vars ['a]
+                        :body   (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN)}
    `<'                 (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))
    `<='                (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))
    `>'                 (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))

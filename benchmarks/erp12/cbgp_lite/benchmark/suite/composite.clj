@@ -498,7 +498,7 @@
        (update problem-map :loss-fns #(map penalize-nil %))))))
 
 (defn read-cases
-  [{:keys [problem n-train n-test]}] [problem :case-generator]
+  [{:keys [problem n-train n-test]}]
   (let [case-generator (get-in (problems nil)
                                [(name problem) :case-generator])]
     {:train (repeatedly n-train case-generator)
