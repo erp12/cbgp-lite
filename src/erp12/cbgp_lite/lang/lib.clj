@@ -150,6 +150,14 @@
   [^Character c]
   (Character/isLetter c))
 
+(defn char-upper
+  [^Character c]
+  (Character/toUpperCase c))
+
+(defn char-lower
+  [^Character c]
+  (Character/toLowerCase c))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vector
 
@@ -368,6 +376,7 @@
    'int-mod            (binary-transform INT)
    'int-inc            (unary-transform INT)
    'int-dec            (unary-transform INT)
+   'int-neg            (unary-transform INT)
    ;'int-lt              (binary-pred INT)
    ;'int-gt              (binary-pred INT)
    ;'int-le              (binary-pred INT)
@@ -380,6 +389,7 @@
    'double-mod         (binary-transform DOUBLE)
    'double-inc         (unary-transform DOUBLE)
    'double-dec         (unary-transform DOUBLE)
+   'double-neg         (unary-transform DOUBLE)
    ;'double-lt           (binary-pred DOUBLE)
    ;'double-gt           (binary-pred DOUBLE)
    ;'double-le           (binary-pred DOUBLE)
@@ -439,6 +449,8 @@
    `str/join           (fn-of [(vector-of STRING)] STRING)
    'str-join-sep       (fn-of [STRING (vector-of STRING)] STRING)
    'join-chars         (fn-of [(vector-of CHAR)] STRING)
+   `char-upper         (unary-transform CHAR)
+   `char-lower         (unary-transform CHAR)
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Boolean
    `and                (binary-transform BOOLEAN)
@@ -710,8 +722,7 @@
                         :body   (fn-of [(s-var 'a)] NIL)}
    'println            {:type   :scheme
                         :s-vars ['a]
-                        :body   (fn-of [(s-var 'a)] NIL)}
-   })
+                        :body   (fn-of [(s-var 'a)] NIL)}})
 
 (def dealiases
   '{->map1            hash-map
@@ -742,6 +753,7 @@
     double-inc        inc
     double-mod        erp12.cbgp-lite.lang.lib/safe-mod
     double-mult       *
+    double-neg        -
     double-quot       erp12.cbgp-lite.lang.lib/safe-quot
     double-sub        -
     empty-str?        empty?
@@ -758,6 +770,7 @@
     int-inc           inc
     int-mod           erp12.cbgp-lite.lang.lib/safe-mod
     int-mult          *
+    int-neg           -
     int-quot          erp12.cbgp-lite.lang.lib/safe-quot
     int-sub           -
     join-chars        clojure.string/join
@@ -806,3 +819,19 @@
                  (core/or (= (:type typ) :scheme)
                           (some #(schema/occurs? % typ) types))))
        (into {})))
+
+(comment
+
+  (Character/toUpperCase \q)
+  ;; => \Q
+
+  (char-lower \Q)
+  ;; => \q
+
+  (char-lower \8)
+  ;; => \8
+
+  (- -5)
+
+
+  )
