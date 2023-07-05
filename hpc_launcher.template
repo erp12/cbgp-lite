@@ -36,7 +36,7 @@ echo "Changing to directory $PBS_O_WORKDIR"
 cd $PBS_O_WORKDIR
 
 echo "Making directory and copying CBGP into it: $DIRECTORY"
-mkdir -p "$DIRECTORY/$PROBLEM"
+mkdir -p "$DIRECTORY/$PROBLEM/HPC-logs/"
 
 if [ $PBS_ARRAYID = "0" ]
 then
