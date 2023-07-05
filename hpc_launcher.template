@@ -27,13 +27,14 @@ PROBLEM="#namespace#"
 # your username (in my case, thelmuth).
 DIRECTORY="#dir#"
 
-CLOJURECMD="export PATH=$PATH:/usr/java/latest/bin; /usr/local/bin/clojure -X:benchmarks erp12.cbgp-lite.benchmark.ga/run :suite-ns erp12.cbgp-lite.benchmark.suite.#suite# :data-dir #data-dir# :problem $PROBLEM #cmd-line-params# :type-counts-file $DIRECTORY/run${PBS_ARRAYID}_types.edn 2>&1 > $DIRECTORY/run${PBS_ARRAYID}.txt"
+CLOJURECMD="/usr/local/bin/clojure -X:benchmarks erp12.cbgp-lite.benchmark.ga/run :suite-ns erp12.cbgp-lite.benchmark.suite.#suite# :data-dir #data-dir# :problem $PROBLEM #cmd-line-params# :type-counts-file $DIRECTORY/run${PBS_ARRAYID}_types.edn 2>&1 > $DIRECTORY/run${PBS_ARRAYID}.txt"
 
 echo "Running on node(s):"
 cat $PBS_NODEFILE
 echo ""
 echo "Changing to directory $PBS_O_WORKDIR"
 cd $PBS_O_WORKDIR
+export PATH=$PATH:/usr/java/latest/bin
 
 echo "Making directory and copying CBGP into it: $DIRECTORY"
 mkdir -p "$DIRECTORY/$PROBLEM"
