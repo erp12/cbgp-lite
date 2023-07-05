@@ -34,7 +34,6 @@ cat $PBS_NODEFILE
 echo ""
 echo "Changing to directory $PBS_O_WORKDIR"
 cd $PBS_O_WORKDIR
-export PATH=$PATH:/usr/java/latest/bin
 
 echo "Making directory and copying CBGP into it: $DIRECTORY"
 mkdir -p "$DIRECTORY/$PROBLEM"
