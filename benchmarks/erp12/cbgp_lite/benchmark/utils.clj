@@ -179,11 +179,12 @@
 
 (defn round
   "Round a double to the given precision (number of significant digits)"
-  [precision n]
-  (if (nil? n)
-    nil
-    (let [factor (Math/pow 10 precision)]
-      (/ (Math/round (* n factor)) factor))))
+  [precision n] 
+  (cond
+    (nil? n) nil
+    (NaN? n) (Math/round ##Inf)
+    :else (let [factor (Math/pow 10 precision)]
+            (/ (Math/round (* n factor)) factor))))
 
 (defn absolute-distance
   [actual expected]
