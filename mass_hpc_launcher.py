@@ -97,7 +97,7 @@ elif suite == "composite":
 ### token to replace in template_replacements
 
 with open('hpc_launcher.template', 'r') as hpc_template:
-    hpc_launcher = hpc_template.read()
+    hpc_launcher_template = hpc_template.read()
 
 for problem in problems:
     template_replacements = {"#qsub-name#": problem + qstat_suffix,
@@ -108,6 +108,7 @@ for problem in problems:
                              "#run-nums#": run_nums,
                              "#cmd-line-params#": cmd_line_params}
 
+    hpc_launcher = hpc_launcher_template
     for k in template_replacements:
         hpc_launcher = hpc_launcher.replace(k, template_replacements[k])
 

@@ -51,10 +51,6 @@ echo ""
 echo "clojure command: $CLOJURECMD"
 echo ""
 
-### Uncomment these to make results directories available to everyone
-# touch "$DIRECTORY/log$PBS_ARRAYID.txt"
-# chmod -R o+rx $DIRECTORY
-
 time $CLOJURECMD
 
 echo ""
