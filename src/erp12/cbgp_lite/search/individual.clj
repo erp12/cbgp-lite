@@ -2,7 +2,7 @@
   (:require [clj-fuzzy.levenshtein :as lev]
             [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.search.pluhsy :as pl]
+            [erp12.cbgp-lite.search.plushy :as pl]
             [taoensso.timbre :as log])
   (:import (java.io StringWriter)))
 

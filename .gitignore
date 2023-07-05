@@ -28,6 +28,7 @@ ga-clj.iml
 
 # VS Codes / Calva
 .calva/
+.vscode/
 
 # OS
 *~

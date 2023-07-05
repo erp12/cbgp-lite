@@ -4,7 +4,7 @@
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.search.individual :as i]
-            [erp12.cbgp-lite.search.pluhsy :as pl]
+            [erp12.cbgp-lite.search.plushy :as pl]
             [erp12.cbgp-lite.task :as task]
             [erp12.ga-clj.search.ga :as ga]
             [erp12.ga-clj.toolbox :as tb]
