@@ -27,7 +27,7 @@ PROBLEM="#namespace#"
 # your username (in my case, thelmuth).
 DIRECTORY="#dir#"
 
-CLOJURECMD="/usr/local/bin/clojure -X:benchmarks erp12.cbgp-lite.benchmark.ga/run :suite-ns erp12.cbgp-lite.benchmark.suite.#suite# :data-dir '\x22#data-dir#\x22' :problem $PROBLEM #cmd-line-params# :type-counts-file '\x22$DIRECTORY/$PROBLEM/run${PBS_ARRAYID}_types.edn\x22' 2>&1 > $DIRECTORY/$PROBLEM/run${PBS_ARRAYID}.txt"
+CLOJURECMD="/usr/local/bin/clojure -X:benchmarks erp12.cbgp-lite.benchmark.ga/run :suite-ns erp12.cbgp-lite.benchmark.suite.#suite# :data-dir '"\""#data-dir#"\""' :problem $PROBLEM #cmd-line-params# :type-counts-file '"\""$DIRECTORY/$PROBLEM/run${PBS_ARRAYID}_types.edn"\""'"
 
 echo "Running on node(s):"
 cat $PBS_NODEFILE
@@ -51,7 +51,7 @@ echo ""
 echo "clojure command: $CLOJURECMD"
 echo ""
 
-time $CLOJURECMD
+time $CLOJURECMD 2>&1 > "$DIRECTORY/$PROBLEM/run${PBS_ARRAYID}.txt"
 
 echo ""
 echo -n "Finished program at: "
