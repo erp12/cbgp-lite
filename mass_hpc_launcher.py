@@ -4,10 +4,10 @@ import os
 suite = "psb"
 
 # Used to identify runs in qstat. Change to make easy to identify
-qstat_suffix = "-CBGP"
+qstat_suffix = "-CBGP-new-PSB2-instructions"
 
 # Directory to hold results for each problem. Change for each set of runs
-basedir = "/usr/local/research/compsci/helmuth/thelmuth/Results/cbgp-launcher-testing/"
+basedir = "/usr/local/research/compsci/helmuth/ahevia/research/ahevia/cbgp-new-instructions/"
 
 # Directory where input data either can be found or will be downloaded.
 # Can either be local (default) or global (will use less HDD if multiple projects use it)
