@@ -186,11 +186,18 @@
     :else (let [factor (Math/pow 10 precision)]
             (/ (Math/round (* n factor)) factor))))
 
+(defn abs'
+"Return the absolute value of x, but coerce to bigger data type if necessary"
+  [x]
+  (if (neg? x)
+    (-' x)
+    x))
+
 (defn absolute-distance
   [actual expected]
   (if (or (nil? actual) (nil? expected))
     nil
-    (Math/abs (- actual expected))))
+    (abs' (- actual expected))))
 
 (defn vector-of-numbers-loss
   [actual expected]
