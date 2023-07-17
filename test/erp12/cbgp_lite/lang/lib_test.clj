@@ -1,6 +1,7 @@
 (ns erp12.cbgp-lite.lang.lib-test
   (:require [clojure.test :refer [deftest testing is]]
-            [erp12.cbgp-lite.lang.lib :as l])
+            [erp12.cbgp-lite.lang.lib :as l]
+            [clojure.set :as set])
   (:import (clojure.lang ExceptionInfo)))
 
 (deftest mapcatv-test
@@ -104,3 +105,7 @@
   (is (= :b (l/safe-nth [:a :b] 3)))
   (is (thrown? ExceptionInfo
                (l/safe-nth [] 0))))
+
+(deftest all-dealiases-in-type-env-test
+  (is (empty? (set/difference (set (keys l/dealiases))
+                              (set (keys l/type-env))))))
