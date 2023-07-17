@@ -496,6 +496,9 @@
    `safe-nth           {:type   :scheme
                         :s-vars ['a]
                         :body   (fn-of [(vector-of (s-var 'a)) INT] (s-var 'a))}
+   'nth-or-else        {:type   :scheme
+                        :s-vars ['a]
+                        :body   (fn-of [(vector-of (s-var 'a)) INT (s-var 'a)] (s-var 'a))}
    `reversev           {:type   :scheme
                         :s-vars ['a]
                         :body   (fn-of [(vector-of (s-var 'a))] (vector-of (s-var 'a)))}
@@ -720,8 +723,7 @@
                         :body   (fn-of [(s-var 'a)] NIL)}
    'println            {:type   :scheme
                         :s-vars ['a]
-                        :body   (fn-of [(s-var 'a)] NIL)}
-   })
+                        :body   (fn-of [(s-var 'a)] NIL)}})
 
 (def dealiases
   '{->map1            hash-map
@@ -801,7 +803,6 @@
     string->chars     vec
     vec->map          erp12.cbgp-lite.lang.lib/->map
     vec->set          set
-    vec-mapv          mapv
     zero-double?      zero?
     zero-int?         zero?
     })
