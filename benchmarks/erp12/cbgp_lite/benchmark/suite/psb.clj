@@ -1,33 +1,17 @@
 (ns erp12.cbgp-lite.benchmark.suite.psb
   (:require [clj-fuzzy.levenshtein :as lev]
             [clojure.string :as str]
-            [clojure.walk :as w]
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.individual :as i]
             [erp12.cbgp-lite.task :as task]
             [psb2.core :as psb2]))
 
-(defn tap-nodes
-  [f tree]
-  (w/walk (partial tap-nodes f) identity (f tree)))
-
-(defn has-nil?
-  [x]
-  (with-local-vars [result false]
-    (tap-nodes
-      (fn [node]
-        (when (nil? node)
-          (var-set result true))
-        node)
-      x)
-    @result))
-
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
                        (fn wrapped-loss [program-output correct-output]
-                         (if (has-nil? program-output)
+                         (if (bu/has-nil? program-output)
                            penalty
                            (loss-fn program-output correct-output))))]
     (update-vals
