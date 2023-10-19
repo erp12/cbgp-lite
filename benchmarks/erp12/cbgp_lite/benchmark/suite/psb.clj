@@ -521,7 +521,21 @@
 
 
    ;;  "coin-sums" ;; NEEDS MULTIPLE OUTPUTS
-   ;;  "cut-vector" ;; NEEDS MULTIPLE OUTPUTS
+
+      "cut-vector"
+      {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+       :ret-type    {:type :tuple, :children [{:type :vector :child {:type 'int?}}
+                                              {:type :vector :child {:type 'int?}}]}
+       :out-key     [:output1 :output2]
+       :other-types [{:type 'int?} {:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
+                           ;; This is a random vector generator
+                     {:gene :lit-generator,
+                      :fn   (fn [] (vec (repeatedly (rand-int 21) #(inc (rand-int 10000)))))
+                      :type {:type :vector :child {:type 'int?}}}]
+       :loss-fns    [#(bu/vector-of-numbers-loss (first %1) (first %2))
+                     #(bu/vector-of-numbers-loss (second %1) (second %2))]}
 
       "dice-game"
       {:input->type {'input1 {:type 'int?}
@@ -532,7 +546,19 @@
                      {:gene :lit, :val 1.0, :type {:type 'double?}}]
        :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}
 
-   ;;  "find-pair" ;; NEEDS MULTIPLE OUTPUTS
+      "find-pair"
+      {:input->type {'input1 {:type :vector :child {:type 'int?}}
+                     'input2 {:type 'int?}}
+       :ret-type    {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
+       :out-key     [:output1 :output2]
+       :other-types [{:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val -1, :type {:type 'int?}}
+                     {:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val 1, :type {:type 'int?}}
+                     {:gene :lit, :val 2, :type {:type 'int?}}
+                     {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
+       :loss-fns    [#(bu/absolute-distance (first %1) (first %2))
+                     #(bu/absolute-distance (second %1) (second %2))]}
 
       "fizz-buzz"
       {:input->type {'input1 {:type 'int?}}
@@ -741,15 +767,15 @@
 (defn reshape-case
   [case {:keys [out-key stdout-key] :or {out-key :output1}}]
   (merge
-    {:inputs (->> case
-                  (filter (fn [[k _]] (str/starts-with? (name k) "input")))
-                  (sort-by first)
-                  (mapv second))
-     :output (if (sequential? out-key)
-               (vec (map #(get case %) out-key))
-               (out-key case))}
-    (when stdout-key
-      {:std-out (stdout-key case)})))
+   {:inputs (->> case
+                 (filter (fn [[k _]] (str/starts-with? (name k) "input")))
+                 (sort-by first)
+                 (mapv second))
+    :output (if (sequential? out-key)
+              (vec (map #(get case %) out-key))
+              (out-key case))}
+   (when stdout-key
+     {:std-out (stdout-key case)})))
 
 (defn read-cases
   [{:keys [data-dir problem n-train n-test]}]
@@ -787,6 +813,4 @@
 
 (comment
 
-  (validate-solutions {:data-dir "data/psb/" :num-cases 50})
-
-  )
+  (validate-solutions {:data-dir "data/psb/" :num-cases 50}))
