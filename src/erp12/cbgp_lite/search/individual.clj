@@ -2,7 +2,7 @@
   (:require [clj-fuzzy.levenshtein :as lev]
             [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.search.pluhsy :as pl]
+            [erp12.cbgp-lite.search.plushy :as pl]
             [taoensso.timbre :as log])
   (:import (java.io StringWriter)))
 
@@ -37,16 +37,16 @@
         {expected-output :output expected-stdout :std-out} case]
     (->> (conj
            ;; Compute loss values on returned value
-           (mapv (fn [lf]
-                   (if (or (nil? actual-output) (instance? Exception actual-output))
-                     penalty
-                     (lf actual-output expected-output)))
-                 loss-fns)
+          (mapv (fn [lf]
+                  (if (or (nil? actual-output) (instance? Exception actual-output))
+                    penalty
+                    (lf actual-output expected-output)))
+                loss-fns)
            ;; Compute loss on printed output using string edit distance.
-           (when (contains? case :std-out)
-             (if (nil? actual-stdout)
-               penalty
-               (lev/distance actual-stdout expected-stdout))))
+          (when (contains? case :std-out)
+            (if (nil? actual-stdout)
+              penalty
+              (lev/distance actual-stdout expected-stdout))))
          (filter some?)
          vec)))
 
@@ -122,11 +122,11 @@
           ;; Compile the Push into a Clojure form that accepts and returns the
           ;; correct types.
           ast (::c/ast (c/push->ast (assoc opts
-                                      :push push
-                                      :locals arg-symbols
-                                      ;; @todo Experimental - record final stack AST sizes and types.
-                                      ;; Disabled to reduce concurrent compilation coordination.
-                                      :record-sketch? false)))
+                                           :push push
+                                           :locals arg-symbols
+                                           ;; @todo Experimental - record final stack AST sizes and types.
+                                           ;; Disabled to reduce concurrent compilation coordination.
+                                           :record-sketch? false)))
           _ (log/debug "AST" ast)
           form (when ast
                  (a/ast->form ast))

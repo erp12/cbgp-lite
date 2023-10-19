@@ -2,6 +2,15 @@
   (:require [erp12.schema-inference.impl.util :as su]
             [clojure.walk :as w]))
 
+(defn schema-terms
+  [form]
+  (->> form
+       (tree-seq coll? identity)
+       (map :type)
+       (distinct)
+       (filter some?)
+       (into #{})))
+
 (defn occurs?
   [term form]
   (let [t (transient #{})]

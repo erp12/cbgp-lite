@@ -18,12 +18,11 @@
 (defn s-vars
   [schema]
   (let [x (transient #{})]
-    (tap-nodes
-      (fn [node]
-        (when (= (:type node) :s-var)
-          (conj! x (:sym node)))
-        node)
-      schema)
+    (tap-nodes (fn [node]
+                 (when (= (:type node) :s-var)
+                   (conj! x (:sym node)))
+                 node)
+               schema)
     (persistent! x)))
 
 (defn canonical-type
@@ -52,7 +51,7 @@
                                  {:root (:op ast)
                                   :size (a/ast-size ast)
                                   :type type})))
-                     (inc (or (get % sketch) 0))))))
+                   (inc (or (get % sketch) 0))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State Manipulation
@@ -97,9 +96,9 @@
                           ast
                           biggest)]
     (assoc state
-      :asts (conj (:asts state) ast)
-      :biggest biggest-out-ast
-      :newest newest-out-ast)))
+           :asts (conj (:asts state) ast)
+           :biggest biggest-out-ast
+           :newest newest-out-ast)))
 
 (defn nth-local
   "Get the nth variable from the state using modulo to ensure `n` always selects a
@@ -368,9 +367,9 @@
   (let [state-output-fn (or state-output-fn default-state-output-fn)]
     (loop [state (assoc empty-state
                    ;; Ensure a list
-                   :push (reverse (into '() push))
-                   :locals locals
-                   :ret-type ret-type)]
+                        :push (reverse (into '() push))
+                        :locals locals
+                        :ret-type ret-type)]
       (if (empty? (:push state))
         (let [_ (log/trace "Final:" (state->log state))
               ;; @todo Experimental - record final stack AST sizes and types.

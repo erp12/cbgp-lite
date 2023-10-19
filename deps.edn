@@ -1,13 +1,9 @@
 {:path     ["src"]
- :deps     {org.clojure/core.match           {:mvn/version "1.0.0"}
-            com.taoensso/timbre              {:mvn/version "6.0.4"}
+ :deps     {com.taoensso/timbre              {:mvn/version "6.0.4"}
             io.github.erp12/schema-inference {:git/sha "724355178b041a2c83abda6e68a9d4bd83d55a43"}
             clj-fuzzy/clj-fuzzy              {:mvn/version "0.4.1"}}
  :jvm-opts ["-XX:CompressedClassSpaceSize=2g"]
- :aliases  {:build      {:deps       {io.github.clojure/tools.build {:git/tag "v0.9.5"
-                                                                     :git/sha "24f2894"}}
-                         :ns-default build}
-            :test       {:extra-paths ["test"]
+ :aliases  {:test       {:extra-paths ["test"]
                          :extra-deps  {io.github.metabase/hawk   {:sha "9c97bcb6d4de116325e651b40973fd0a75b7ae21"}
                                        meander/epsilon           {:mvn/version "0.0.650"}}
                          :exec-fn     mb.hawk.core/find-and-run-tests-cli}
