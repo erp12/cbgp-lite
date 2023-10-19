@@ -1,7 +1,7 @@
 (ns erp12.cbgp-lite.task
   (:require [clojure.set :as set]
             [erp12.cbgp-lite.lang.lib :as lib]
-            [erp12.cbgp-lite.search.pluhsy :as pl]
+            [erp12.cbgp-lite.search.plushy :as pl]
             [erp12.cbgp-lite.utils :as u]))
 
 (defn arg-symbols

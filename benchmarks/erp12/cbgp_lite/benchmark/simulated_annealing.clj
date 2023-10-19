@@ -1,7 +1,7 @@
 (ns erp12.cbgp-lite.benchmark.simulated-annealing
   (:require [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.search.individual :as i]
-            [erp12.cbgp-lite.search.pluhsy :as pl]
+            [erp12.cbgp-lite.search.plushy :as pl]
             [erp12.cbgp-lite.task :as task]
             [erp12.ga-clj.search.simulated-annealing :as sa]
             [erp12.ga-clj.toolbox :as tb]
