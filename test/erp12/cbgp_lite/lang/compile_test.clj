@@ -6,7 +6,7 @@
             [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.lang.schema :as schema]
-            [hawk.core]
+            [mb.hawk.core]
             [meander.epsilon :as m])
   (:import (java.io StringWriter)))
 
@@ -19,8 +19,8 @@
                                  node))
                              template)]
     `(m/match ~value
-              ~template true
-              ~(quote ?else) false)))
+       ~template true
+       ~(quote ?else) false)))
 
 (deftest matches?-test
   (is (matches? {:op ?_ :name ?a}
@@ -157,6 +157,7 @@
                                    :state     c/empty-state
                                    :type-env  {}}))))
   (testing "compile var"
+    #_{:clj-kondo/ignore [:invalid-arity :unresolved-symbol]}
     (is (matches? {:asts   ({::c/ast  {:op :var :var '=}
                              ::c/type {:type   :=>
                                        :input  {:type     :cat
@@ -190,12 +191,12 @@
                    :locals []}
                   (c/compile-step {:push-unit {:gene :apply}
                                    :state     (assoc c/empty-state
-                                                :asts (list {::c/ast  {:op :const :val 2}
-                                                             ::c/type {:type 'int?}}
-                                                            {::c/ast  {:op :var :var 'int-sub}
-                                                             ::c/type (lib/type-env 'int-sub)}
-                                                            {::c/ast  {:op :const :val 1}
-                                                             ::c/type {:type 'int?}}))
+                                                     :asts (list {::c/ast  {:op :const :val 2}
+                                                                  ::c/type {:type 'int?}}
+                                                                 {::c/ast  {:op :var :var 'int-sub}
+                                                                  ::c/type (lib/type-env 'int-sub)}
+                                                                 {::c/ast  {:op :const :val 1}
+                                                                  ::c/type {:type 'int?}}))
                                    :type-env  lib/type-env})))
     (is (partial= {:asts   (list {::c/ast  {:op   :invoke
                                             :fn   {:op :var :var 'if}
@@ -207,20 +208,21 @@
                    :locals ['x]}
                   (c/compile-step {:push-unit {:gene :apply}
                                    :state     (assoc c/empty-state
-                                                :asts (list {::c/ast  {:op :const :val 1}
-                                                             ::c/type {:type 'int?}}
-                                                            {::c/ast  {:op :const :val -1}
-                                                             ::c/type {:type 'int?}}
-                                                            {::c/ast  {:op :var :var 'if}
-                                                             ::c/type (schema/instantiate (lib/type-env 'if))}
-                                                            {::c/ast  {:op :local :name 'x}
-                                                             ::c/type {:type 'boolean?}})
-                                                :locals ['x])
+                                                     :asts (list {::c/ast  {:op :const :val 1}
+                                                                  ::c/type {:type 'int?}}
+                                                                 {::c/ast  {:op :const :val -1}
+                                                                  ::c/type {:type 'int?}}
+                                                                 {::c/ast  {:op :var :var 'if}
+                                                                  ::c/type (schema/instantiate (lib/type-env 'if))}
+                                                                 {::c/ast  {:op :local :name 'x}
+                                                                  ::c/type {:type 'boolean?}})
+                                                     :locals ['x])
                                    :type-env  (assoc lib/type-env
-                                                'x {:type 'boolean?})})))
+                                                     'x {:type 'boolean?})})))
     ;; @todo Test when args are missing
     )
   (testing "compile fn"
+    #_{:clj-kondo/ignore [:invalid-arity :unresolved-symbol]}
     (is (matches? {:asts   ({::c/ast  {:op      :fn
                                        :methods [{:op     :fn-method
                                                   :params [{:op :binding :name ?a}]
@@ -235,8 +237,8 @@
                                                :arg-types [lib/INT]
                                                :ret-type lib/INT}
                                    :state     (assoc c/empty-state
-                                                :asts (list)
-                                                :push [[{:gene :local :idx 1}]])
+                                                     :asts (list)
+                                                     :push [[{:gene :local :idx 1}]])
                                    :type-env  {}})))
     (testing "nullary fn"
       (is (partial= {:asts   (list {::c/ast  {:op      :fn
@@ -250,11 +252,12 @@
                      :locals []}
                     (c/compile-step {:push-unit {:gene :fn :ret-type lib/STRING}
                                      :state     (assoc c/empty-state
-                                                  :asts (list {::c/ast  {:op :var :var 'x}
-                                                               ::c/type {:type 'string?}})
-                                                  :push [])
+                                                       :asts (list {::c/ast  {:op :var :var 'x}
+                                                                    ::c/type {:type 'string?}})
+                                                       :push [])
                                      :type-env  {'x {:type 'string?}}})))))
   (testing "compile let"
+    #_{:clj-kondo/ignore [:invalid-arity :unresolved-symbol]}
     (is (matches? {:asts   ({::c/ast  {:op       :let
                                        :bindings [{:op   :binding
                                                    :name ?v
@@ -265,13 +268,14 @@
                    :locals []}
                   (c/compile-step {:push-unit {:gene :let}
                                    :state     (assoc c/empty-state
-                                                :asts (list {::c/ast  {:op :const :val 1}
-                                                             ::c/type {:type 'int?}})
-                                                :push [[{:gene :local :idx 1}]])
+                                                     :asts (list {::c/ast  {:op :const :val 1}
+                                                                  ::c/type {:type 'int?}})
+                                                     :push [[{:gene :local :idx 1}]])
                                    :type-env  {}})))))
 
 (deftest push->ast-test
   (testing "composing schemes"
+    #_{:clj-kondo/ignore [:invalid-arity :unresolved-symbol]}
     (is (matches? {::c/ast  {:op   :invoke
                              :fn   {:op :var :var 'identity}
                              :args [{:op :var :var 'poly-f}]}
@@ -320,6 +324,7 @@
                       :input  {:type :cat :children []}
                       :output {:type 'int?}}})))
   (testing "polymorphic thunk"
+    #_{:clj-kondo/ignore [:invalid-arity :unresolved-symbol]}
     (is (matches? {::c/ast  {:op      :fn
                              :methods [{:op     :fn-method
                                         :params []
@@ -352,7 +357,7 @@
                                             :locals    ['in1]
                                             :ret-type  {:type 'int?}
                                             :type-env  (assoc lib/type-env
-                                                         'in1 {:type 'int?})
+                                                              'in1 {:type 'int?})
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'int?}))
         form (a/ast->form ast)
@@ -374,7 +379,7 @@
                                             :locals    ['in1]
                                             :ret-type  {:type 'string?}
                                             :type-env  (assoc lib/type-env
-                                                         'in1 {:type 'int?})
+                                                              'in1 {:type 'int?})
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'string?}))
         form (a/ast->form ast)
@@ -398,13 +403,15 @@
                                             :locals    ['in1]
                                             :ret-type  {:type 'int?}
                                             :type-env  (assoc lib/type-env
-                                                         'in1 {:type 'int?})
+                                                              'in1 {:type 'int?})
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'int?}))
         form (a/ast->form ast)
-        _ (is (matches? (let [?v (* in1 in1)]
-                          (+ ?v ?v))
-                        form))
+        _ (is
+           #_{:clj-kondo/ignore [:unresolved-symbol]}
+           (matches? (let [?v (* in1 in1)]
+                       (+ ?v ?v))
+                     form))
         func (eval `(fn [~'in1] ~form))]
     (is (= (func 0) 0))
     (is (= (func 2) 8))
@@ -476,11 +483,11 @@
         _ (is (= type {:type 'int?}))
         form (a/ast->form ast)
         _ (is (= form '(do (println "Hello world!") 0)))
-        func (eval `(fn [] ~form))]
-    (let [s (new StringWriter)]
-      (binding [*out* s]
-        (is (= (func) 0))
-        (is (= (str s) "Hello world!\n"))))))
+        func (eval `(fn [] ~form))
+        s (new StringWriter)]
+    (binding [*out* s]
+      (is (= (func) 0))
+      (is (= (str s) "Hello world!\n")))))
 
 (deftest replace-space-with-newline-test
   (let [{::c/keys [ast type]} (c/push->ast {:push      [{:gene :lit :val \newline :type {:type 'char?}}
@@ -507,19 +514,21 @@
                                             :locals    ['in1]
                                             :ret-type  {:type 'int?}
                                             :type-env  (assoc lib/type-env
-                                                         'in1 {:type 'string?})
+                                                              'in1 {:type 'string?})
                                             :dealiases lib/dealiases})
         _ (is (= type {:type 'int?}))
         form (a/ast->form ast)
-        _ (is (matches? (let [?v (erp12.cbgp-lite.lang.lib/replace-char in1 \space \newline)]
-                          (do (println ?v)
-                              (count (erp12.cbgp-lite.lang.lib/remove-char ?v \newline))))
-                        form))
-        func (eval `(fn [~'in1] ~form))]
-    (let [s (new StringWriter)]
-      (binding [*out* s]
-        (is (= (func "a b c") 3))
-        (is (= (str s) "a\nb\nc\n"))))))
+        _ (is
+           #_{:clj-kondo/ignore [:unresolved-symbol :redundant-do]}
+           (matches? (let [?v (erp12.cbgp-lite.lang.lib/replace-char in1 \space \newline)]
+                       (do (println ?v)
+                           (count (erp12.cbgp-lite.lang.lib/remove-char ?v \newline))))
+                     form))
+        func (eval `(fn [~'in1] ~form))
+        s (new StringWriter)]
+    (binding [*out* s]
+      (is (= (func "a b c") 3))
+      (is (= (str s) "a\nb\nc\n")))))
 
 (deftest polymorphic-output-test
   (let [{::c/keys [ast type]} (c/push->ast {:push      [{:gene :local :idx 0}
@@ -527,11 +536,11 @@
                                                         {:gene :lit :val true :type {:type 'boolean?}}
                                                         {:gene :var :name 'if}
                                                         {:gene :apply}]
-                                            :locals    ['x 'y ]
+                                            :locals    ['x 'y]
                                             :ret-type  (lib/s-var 'a)
                                             :type-env  (assoc lib/type-env
-                                                         'x (lib/s-var 'a)
-                                                         'y (lib/s-var 'a))
+                                                              'x (lib/s-var 'a)
+                                                              'y (lib/s-var 'a))
                                             :dealiases lib/dealiases})
         _ (is (= (:type type) :s-var))
         form (a/ast->form ast)

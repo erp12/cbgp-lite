@@ -62,5 +62,5 @@ Running these images in a container will perform a single run.
 ### Running Tests
 
 ```text
-clj -T:build tests
+clj -X:test
 ```
