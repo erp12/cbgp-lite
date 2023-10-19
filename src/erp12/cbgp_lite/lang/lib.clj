@@ -346,11 +346,11 @@
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Common
    '=                  {:type   :scheme
-                        :s-vars ['a 'b]
-                        :body   (fn-of [(s-var 'a) (s-var 'b)] BOOLEAN)}
+                        :s-vars ['a]
+                        :body   (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN)}
    'not=               {:type   :scheme
-                        :s-vars ['a 'b]
-                        :body   (fn-of [(s-var 'a) (s-var 'b)] BOOLEAN)}
+                        :s-vars ['a]
+                        :body   (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN)}
    `<'                 (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))
    `<='                (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))
    `>'                 (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))
@@ -794,8 +794,7 @@
     vec->map          erp12.cbgp-lite.lang.lib/->map
     vec->set          set
     zero-double?      zero?
-    zero-int?         zero?
-    })
+    zero-int?         zero?})
 
 (def macros
   #{'if 'do2 'do3})
