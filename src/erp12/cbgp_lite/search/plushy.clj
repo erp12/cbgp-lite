@@ -1,4 +1,4 @@
-(ns erp12.cbgp-lite.search.pluhsy
+(ns erp12.cbgp-lite.search.plushy
   (:require [erp12.cbgp-lite.utils :as u]))
 
 (defn prob-by-gene-kind

@@ -1,6 +1,6 @@
-(ns erp12.cbgp-lite.search.pluhsy-test
+(ns erp12.cbgp-lite.search.plushy-test
   (:require [clojure.test :refer [deftest is testing]]
-            [erp12.cbgp-lite.search.pluhsy :as pl]))
+            [erp12.cbgp-lite.search.plushy :as pl]))
 
 (deftest random-gene-test
   (let [genes [{:gene :var :name '+}
