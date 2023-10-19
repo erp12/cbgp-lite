@@ -24,7 +24,7 @@
 
 (defn <'
   [a b]
-  (= -1 (compare a b)))
+  (< (compare a b) 0))
 
 (defn <='
   [a b]
