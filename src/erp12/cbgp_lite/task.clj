@@ -16,7 +16,10 @@
 
 (defn vars-for-types
   [types]
-  (set (keys (lib/lib-for-types types))))
+  (let [type-thing 
+        (set (keys (lib/lib-for-types types)))]
+    (println "Vars for this problem:" type-thing)
+    type-thing))
 
 (defn type-environment
   [{:keys [input->type vars]}]

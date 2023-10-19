@@ -1,5 +1,7 @@
 (ns erp12.cbgp-lite.benchmark.utils
-  (:require [erp12.ga-clj.toolbox :as tb]))
+  (:require [clojure.set :as st]
+            [clojure.walk :as w]
+            [erp12.ga-clj.toolbox :as tb]))
 
 (defn read-problem
   [{:keys [suite-ns problem] :as config}]
@@ -160,13 +162,36 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loss Function Utils
 
+(defn tap-nodes
+  [f tree]
+  (w/walk (partial tap-nodes f) identity (f tree)))
+
+(defn has-nil?
+  [x]
+  (with-local-vars [result false]
+    (tap-nodes
+      (fn [node]
+        (when (nil? node)
+          (var-set result true))
+        node)
+      x)
+    @result))
+
 (defn round
   "Round a double to the given precision (number of significant digits)"
-  [precision n]
-  (if (nil? n)
-    nil
-    (let [factor (Math/pow 10 precision)]
-      (/ (Math/round (* n factor)) factor))))
+  [precision n] 
+  (cond
+    (nil? n) nil
+    (NaN? n) (Math/round ##Inf)
+    :else (let [factor (Math/pow 10 precision)]
+            (/ (Math/round (* n factor)) factor))))
+
+(defn abs'
+"Return the absolute value of x, but coerce to bigger data type if necessary"
+  [x]
+  (if (neg? x)
+    (-' x)
+    x))
 
 (defn abs'
   "Returns absolute value, coercing to bigint if necessary."
@@ -190,3 +215,13 @@
                         expected
                         actual))
         (*' 1000 (abs (- (count expected) (count actual)))))))
+
+(defn jaccard-similarity-loss
+  "this = (1 - Jaccard similarity coefficent), since we want lower to be better
+   https://en.wikipedia.org/wiki/Jaccard_index "
+  [actual expected]
+  (cond
+    (or (nil? actual) (nil? expected)) nil
+    (= actual expected) 0 ; if equal (including both empty), 0 loss
+    :else (- 1.0 (/ (count (st/intersection actual expected))
+                    (count (st/union actual expected))))))

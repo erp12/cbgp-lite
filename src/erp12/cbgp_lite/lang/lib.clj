@@ -3,7 +3,8 @@
   (:require [clojure.core :as core]
             [clojure.set :as set]
             [clojure.string :as str]
-            [erp12.cbgp-lite.lang.schema :as schema]))
+            [erp12.cbgp-lite.lang.schema :as schema]
+            [erp12.cbgp-lite.lang.lib :as lib]))
 
 ;; @todo What do do about nil?
 ;; first, last, etc. return nil on empty collections.
@@ -24,7 +25,7 @@
 
 (defn <'
   [a b]
-  (= -1 (compare a b)))
+  (< (compare a b) 0))
 
 (defn <='
   [a b]
@@ -73,6 +74,88 @@
   [x]
   (Math/tan x))
 
+(defn safe-pow
+  [x y]
+  (let [result (Math/pow x y)]
+    (if (or (NaN? result) (infinite? result))
+      (throw (ex-info "Pow resulting in undefined value." {:base x :exponent y}))
+      result)))
+
+(defn int-pow
+  [x y]
+  (long (safe-pow x y)))
+
+(defn double-pow
+  [x y]
+  (safe-pow x y))
+
+(defn int-square
+  [x]
+  (long (safe-pow x 2)))
+
+(defn double-square
+  [x]
+  (safe-pow x 2))
+
+(defn safe-sqrt
+  "Use absolute value of x"
+  [x]
+  (Math/sqrt (abs x)))
+
+(defn safe-log2
+  "Takes log_2(x)"
+  [x]
+  (let [safe-x (if (<= x 0)
+                 1e-100
+                 x)]
+    (/ (Math/log safe-x)
+        (Math/log 2))))
+
+(defn safe-log10
+  [x]
+  (let [safe-x (if (<= x 0)
+                 1e-100
+                 x)]
+     (Math/log10 safe-x)))
+
+(defn ceil
+  [x]
+  (Math/ceil x))
+
+(defn int-ceil
+  [x]
+  (long (Math/ceil x)))
+
+(defn floor
+  [x]
+  (Math/floor x))
+
+(defn int-floor
+  [x]
+  (long (Math/floor x)))
+
+(defn safe-acos-x
+  [x]
+  (dec (mod (inc x) 2)))
+
+(defn safe-acos
+  [x]
+  (if (= 1.0 (mod x 2))
+    0 
+    (let [safe-x (safe-acos-x x)]
+      (Math/acos safe-x))))
+
+(defn safe-asin
+  [x]
+   (if (= 1.0 (mod x 2))
+     (/ Math/PI 2)
+     (let [safe-x (safe-acos-x x)]
+       (Math/asin safe-x))))
+
+(defn atan
+  [x]
+  (Math/atan x))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text
 
@@ -104,6 +187,12 @@
        (replace regex-char-esc-smap)
        str/join
        re-pattern))
+
+(defn string-sort
+  "Sort the given string alphabetically"
+  [s]
+  (apply str (sort s))
+  )
 
 (defn split-str
   [s on]
@@ -150,19 +239,13 @@
   [^Character c]
   (Character/isLetter c))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Coll
+(defn char-upper
+  [^Character c]
+  (Character/toUpperCase c))
 
-(defn safe-nth
-  [coll idx]
-  (if (empty? coll)
-    (throw (ex-info "Cannot take safe-nth of empty vector." {:coll coll :idx idx}))
-    (let [idx (mod idx (count coll))]
-      (nth coll idx))))
-
-(defn occurrences-of
-  [coll el]
-  (count (filter #{el} coll)))
+(defn char-lower
+  [^Character c]
+  (Character/toLowerCase c))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vector
@@ -187,6 +270,10 @@
 (defn index-of
   [coll el]
   (.indexOf coll el))
+
+(defn occurrences-of
+  [coll el]
+  (count (filter #{el} coll)))
 
 (defn in?
   [coll el]
@@ -356,11 +443,11 @@
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Common
    '=                  {:type   :scheme
-                        :s-vars ['a 'b]
-                        :body   (fn-of [(s-var 'a) (s-var 'b)] BOOLEAN)}
+                        :s-vars ['a]
+                        :body   (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN)}
    'not=               {:type   :scheme
-                        :s-vars ['a 'b]
-                        :body   (fn-of [(s-var 'a) (s-var 'b)] BOOLEAN)}
+                        :s-vars ['a]
+                        :body   (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN)}
    `<'                 (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))
    `<='                (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))
    `>'                 (scheme (fn-of [(s-var 'a) (s-var 'a)] BOOLEAN))
@@ -378,6 +465,10 @@
    'int-mod            (binary-transform INT)
    'int-inc            (unary-transform INT)
    'int-dec            (unary-transform INT)
+   'int-neg            (unary-transform INT)
+   'int-abs            (unary-transform INT)
+   `int-pow            (binary-transform INT)
+   `int-square         (unary-transform INT)
    ;'int-lt              (binary-pred INT)
    ;'int-gt              (binary-pred INT)
    ;'int-le              (binary-pred INT)
@@ -390,6 +481,10 @@
    'double-mod         (binary-transform DOUBLE)
    'double-inc         (unary-transform DOUBLE)
    'double-dec         (unary-transform DOUBLE)
+   'double-neg         (unary-transform DOUBLE)
+   'double-abs         (unary-transform DOUBLE)
+   `double-pow         (binary-transform DOUBLE)
+   `double-square      (unary-transform DOUBLE)
    ;'double-lt           (binary-pred DOUBLE)
    ;'double-gt           (binary-pred DOUBLE)
    ;'double-le           (binary-pred DOUBLE)
@@ -401,10 +496,20 @@
    ;'min-double          (binary-transform DOUBLE)
    ;'max-int             (binary-transform INT)
    ;'max-double          (binary-transform DOUBLE)
+   'sqrt               (unary-transform DOUBLE)
    `sin                (unary-transform DOUBLE)
    `cos                (unary-transform DOUBLE)
    `tan                (unary-transform DOUBLE)
-   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   'asin                (unary-transform DOUBLE)
+   'acos                (unary-transform DOUBLE)
+   `atan                (unary-transform DOUBLE)
+   'log2               (unary-transform DOUBLE)
+   'log10              (unary-transform DOUBLE)
+   `ceil               (unary-transform DOUBLE)
+   `int-ceil           (fn-of [DOUBLE] INT)
+   `floor              (unary-transform DOUBLE)
+   `int-floor           (fn-of [DOUBLE] INT)
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Text
    'str                {:type   :scheme
                         :s-vars ['t]
@@ -449,6 +554,12 @@
    `str/join           (fn-of [(vector-of STRING)] STRING)
    'str-join-sep       (fn-of [STRING (vector-of STRING)] STRING)
    'join-chars         (fn-of [(vector-of CHAR)] STRING)
+   `str/capitalize     (unary-transform STRING)
+   `str/upper-case     (unary-transform STRING)
+   `str/lower-case     (unary-transform STRING)
+   `string-sort        (unary-transform STRING)
+   `char-upper         (unary-transform CHAR)
+   `char-lower         (unary-transform CHAR)
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Boolean
    `and                (binary-transform BOOLEAN)
@@ -736,7 +847,9 @@
     ->vector1         vector
     ->vector2         vector
     ->vector3         vector
+    acos              erp12.cbgp-lite.lang.lib/safe-acos
     append-str        str
+    asin              erp12.cbgp-lite.lang.lib/safe-asin     
     char->int         int
     char-occurrences  erp12.cbgp-lite.lang.lib/occurrences-of
     comp2-fn1         comp
@@ -748,12 +861,14 @@
     count-vec         count
     do2               do
     do3               do
+    double-abs        abs
     double-add        +
     double-dec        dec
     double-div        erp12.cbgp-lite.lang.lib/safe-div
     double-inc        inc
     double-mod        erp12.cbgp-lite.lang.lib/safe-mod
     double-mult       *
+    double-neg        -
     double-quot       erp12.cbgp-lite.lang.lib/safe-quot
     double-sub        -
     empty-str?        empty?
@@ -764,18 +879,22 @@
     get-or-else       get
     index-of-char     clojure.string/index-of
     index-of-str      clojure.string/index-of
+    int-abs           abs
     int-add           +
     int-dec           dec
     int-div           erp12.cbgp-lite.lang.lib/safe-div
     int-inc           inc
     int-mod           erp12.cbgp-lite.lang.lib/safe-mod
     int-mult          *
+    int-neg           -
     int-quot          erp12.cbgp-lite.lang.lib/safe-quot
     int-sub           -
     join-chars        clojure.string/join
     last-str          last
     left              first
     length            count
+    log2              erp12.cbgp-lite.lang.lib/safe-log2
+    log10             erp12.cbgp-lite.lang.lib/safe-log10
     map->set          set
     map->vec          vec
     map-contains?     contains?
@@ -799,13 +918,13 @@
     set->vec          vec
     set-contains?     contains?
     split-str-on-char erp12.cbgp-lite.lang.lib/split-str
+    sqrt              erp12.cbgp-lite.lang.lib/safe-sqrt
     str-join-sep      clojure.string/join
     string->chars     vec
     vec->map          erp12.cbgp-lite.lang.lib/->map
     vec->set          set
     zero-double?      zero?
-    zero-int?         zero?
-    })
+    zero-int?         zero?})
 
 (def macros
   #{'if 'do2 'do3})
@@ -817,3 +936,20 @@
                  (core/or (= (:type typ) :scheme)
                           (some #(schema/occurs? % typ) types))))
        (into {})))
+
+(comment
+
+  (Character/toUpperCase \q)
+  ;; => \Q
+
+  (char-lower \Q)
+  ;; => \q
+
+  (char-lower \8)
+  ;; => \8
+
+  (- -5)
+
+  (pow 5 2)
+
+  )

@@ -8,26 +8,11 @@
             [erp12.cbgp-lite.task :as task]
             [psb2.core :as psb2]))
 
-(defn tap-nodes
-  [f tree]
-  (w/walk (partial tap-nodes f) identity (f tree)))
-
-(defn has-nil?
-  [x]
-  (with-local-vars [result false]
-    (tap-nodes
-      (fn [node]
-        (when (nil? node)
-          (var-set result true))
-        node)
-      x)
-    @result))
-
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
                        (fn wrapped-loss [program-output correct-output]
-                         (if (has-nil? program-output)
+                         (if (bu/has-nil? program-output)
                            penalty
                            (loss-fn program-output correct-output))))]
     (update-vals
@@ -48,7 +33,7 @@
       "collatz-numbers"
       {:input->type {'input1 {:type 'int?}}
        :ret-type    {:type 'int?}
-       :other-types [{:type 'int?} {:type 'double?} {:type 'boolean?}]
+       :other-types [{:type 'double?} {:type 'boolean?}]
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
                      {:gene :lit, :val 1, :type {:type 'int?}}
                      {:gene :lit-generator, :fn (bu/int-generator 128), :type {:type 'int?}}]
@@ -292,7 +277,7 @@
       "scrabble-score"
       {:input->type {'input1 {:type 'string?}}
        :ret-type    {:type 'int?}
-       :other-types [{:type 'boolean?} {:type 'char?} {:type :vector :child {:type 'int?}}]
+       :other-types [{:type 'boolean?} {:type 'char?}]
        :extra-genes [{:gene :lit,
                       :val  (let [scrabble-map {\a 1
                                                 \b 3
@@ -537,7 +522,21 @@
 
 
    ;;  "coin-sums" ;; NEEDS MULTIPLE OUTPUTS
-   ;;  "cut-vector" ;; NEEDS MULTIPLE OUTPUTS
+
+      "cut-vector"
+      {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+       :ret-type    {:type :tuple, :children [{:type :vector :child {:type 'int?}}
+                                              {:type :vector :child {:type 'int?}}]}
+       :out-key     [:output1 :output2]
+       :other-types [{:type 'int?} {:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
+                     ;; This is a random vector generator
+                     {:gene :lit-generator,
+                      :fn   (fn [] (vec (repeatedly (rand-int 21) #(inc (rand-int 10000)))))
+                      :type {:type :vector :child {:type 'int?}}}]
+       :loss-fns    [#(bu/vector-of-numbers-loss (first %1) (first %2))
+                     #(bu/vector-of-numbers-loss (second %1) (second %2))]}
 
       "dice-game"
       {:input->type {'input1 {:type 'int?}
@@ -548,7 +547,19 @@
                      {:gene :lit, :val 1.0, :type {:type 'double?}}]
        :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}
 
-   ;;  "find-pair" ;; NEEDS MULTIPLE OUTPUTS
+      "find-pair"
+      {:input->type {'input1 {:type :vector :child {:type 'int?}}
+                     'input2 {:type 'int?}}
+       :ret-type    {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
+       :out-key     [:output1 :output2]
+       :other-types [{:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val -1, :type {:type 'int?}}
+                     {:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val 1, :type {:type 'int?}}
+                     {:gene :lit, :val 2, :type {:type 'int?}}
+                     {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
+       :loss-fns    [#(bu/absolute-distance (first %1) (first %2))
+                     #(bu/absolute-distance (second %1) (second %2))]}
 
       "fizz-buzz"
       {:input->type {'input1 {:type 'int?}}
@@ -804,5 +815,42 @@
 (comment
 
   (validate-solutions {:data-dir "data/psb/" :num-cases 50})
+
+  (read-cases {:data-dir "data/psb/"
+               :problem "substitution-cipher"
+               :n-train 10
+               :n-test 0})
+  ;; => {:train
+  ;;     ({:inputs ["" "" ""], :output ""}
+  ;;      {:inputs ["a" "a" "a"], :output "a"}
+  ;;      {:inputs ["j" "h" "j"], :output "h"}
+  ;;      {:inputs ["a" "z" "a"], :output "z"}
+  ;;      {:inputs ["e" "l" "eeeeeeeeee"], :output "llllllllll"}
+  ;;      {:inputs ["h" "d" "hhhhhhhhhhhhhhhhhhhh"], :output "dddddddddddddddddddd"}
+  ;;      {:inputs ["o" "z" "oooooooooooooooooooooooooo"], :output "zzzzzzzzzzzzzzzzzzzzzzzzzz"}
+  ;;      {:inputs ["abcdefghijklmnopqrstuvwxyz" "zyxwvutsrqponmlkjihgfedcba" "bvafvuqgjkkbeccipwdfqttgzl"],
+  ;;       :output "yezuefjtqppyvxxrkdwujggtao"}
+  ;;      {:inputs ["abcdefghijklmnopqrstuvwxyz" "cdqutzayxshgfenjowrkvmpbil" "thequickbrownfxjmpsvlazydg"],
+  ;;       :output "kytovxqhdwnpezbsfjrmgcliua"}
+  ;;      {:inputs ["otghvwmkclidzryxsfqeapnjbu" "alpebhxmnrcyiosvtgzjwuqdfk" "aaabbbccc"], :output "wwwfffnnn"}),
+  ;;     :test ()}
+
+  (read-cases {:data-dir "data/psb/"
+               :problem "gcd"
+               :n-train 10
+               :n-test 0})
+  ;; => {:train
+  ;;     ({:inputs [1 1], :output 1}
+  ;;      {:inputs [4 400000], :output 4}
+  ;;      {:inputs [54 24], :output 6}
+  ;;      {:inputs [4200 3528], :output 168}
+  ;;      {:inputs [820000 63550], :output 2050}
+  ;;      {:inputs [123456 654321], :output 3}
+  ;;      {:inputs [524221 135232], :output 1}
+  ;;      {:inputs [586650 803185], :output 5}
+  ;;      {:inputs [347099 142029], :output 1}
+  ;;      {:inputs [902215 966305], :output 5}),
+  ;;     :test ()}
+
 
   )
