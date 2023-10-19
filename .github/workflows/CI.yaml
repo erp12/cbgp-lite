@@ -15,5 +15,5 @@ jobs:
       - name: Install Clojure CLI
         uses: DeLaGuardo/setup-clojure@master
         with:
-          cli: '1.10.3.1029'
-      - run: clojure -T:build ci
+          cli: '1.11.1.1413'
+      - run: clojure -X:test
