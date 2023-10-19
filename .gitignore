@@ -26,9 +26,10 @@ node_modules/
 .idea/
 ga-clj.iml
 
-# VS Codes / Calva
+# VS Code / Calva
 *.code-workspace
 .calva/
+.vscode/
 
 # OS
 *~

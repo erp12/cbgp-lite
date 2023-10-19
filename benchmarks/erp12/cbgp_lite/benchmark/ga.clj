@@ -4,7 +4,7 @@
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.search.individual :as i]
-            [erp12.cbgp-lite.search.pluhsy :as pl]
+            [erp12.cbgp-lite.search.plushy :as pl]
             [erp12.cbgp-lite.task :as task]
             [erp12.ga-clj.search.ga :as ga]
             [erp12.ga-clj.toolbox :as tb]
@@ -12,8 +12,8 @@
             [taoensso.timbre.appenders.core :as log-app]))
 
 (log/merge-config!
-  {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
-   :appenders {:println (assoc (log-app/println-appender) :min-level :info)}})
+ {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
+  :appenders {:println (assoc (log-app/println-appender) :min-level :info)}})
 
 (def default-config
   {:n-train              200
@@ -30,8 +30,7 @@
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Supported -  nil, :biggest, :newest, or a function from state to unboxed AST.
    ;; `nil` will search the stack for the top AST of a valid type.
-   :state-output-fn      nil
-   })
+   :state-output-fn      nil})
 
 (defn make-breed
   [opts]
@@ -63,6 +62,8 @@
                  task/enhance-task
                  (assoc :evaluate-fn i/evaluate-full-behavior))
         opts (merge config task)
+        _ (log/info "Type Constructors: " (:type-ctors opts))
+        _ (log/info "Vars:" (:vars opts))
         evaluator (i/make-evaluator (-> opts
                                         (assoc :cases (:train task))
                                         (dissoc :train :test)))
@@ -114,8 +115,7 @@
                                                                 ;; no individual can become the new best and the run will fail.
                                                                 ;; @todo Fix this in ga-clj somehow?
                                                                 (log/info "Best individual solved a batch but not all training cases.")))))
-                                       :mapper          pmap
-                                       })
+                                       :mapper          pmap})
         _ (log/info "PRE-SIMPLIFICATION" best)
         ;; Simplify the best individual seen during evolution.
         best (i/simplify {:individual           best
@@ -150,11 +150,7 @@
 
     (:func best)))
 
-
 (comment
-
   (run {:suite-ns        'erp12.cbgp-lite.benchmark.suite.psb
         :data-dir        "data/psb/"
-        :problem         "vectors-summed"})
-
-  )
+        :problem         "vectors-summed"}))
