@@ -25,7 +25,7 @@
                      {:gene :lit-generator, :fn (bu/int-generator 128), :type {:type 'int?}}
                      {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
        :loss-fns    [lev/distance
-                     #(if (not (empty? %1))
+                     #(if (seq %1)
                         (Math/abs (- (int (last %2)) (int (last %1)))) ;distance from correct last character
                         penalty)]}
 

@@ -2,7 +2,6 @@
 (ns erp12.cbgp-lite.benchmark.suite.composite
   (:require [clj-fuzzy.levenshtein :as lev]
             [clojure.set :as set]
-            [clojure.set :as st]
             [clojure.string :as str]
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.lib :as lib]))
@@ -117,9 +116,9 @@
                            (loss-fn program-output correct-output))))]
     (update-vals
      {"sum-2-vals"
-      {:description    "Given a map from strings to ints and two strings that are
-                     keys of the map, look up the values associated with those keys
-                     in the map and return their sum."
+      {:description    (str "Given a map from strings to ints and two strings that are "
+                            "keys of the map, look up the values associated with those keys "
+                            "in the map and return their sum.")
        :input->type    {'input1 {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}
                         'input2 {:type 'string?}
                         'input3 {:type 'string?}}
@@ -134,9 +133,9 @@
        :loss-fns       [bu/absolute-distance]}
 
       "sum-2-vals-polymorphic"
-      {:description    "Given a map from 'T to ints and two 'T that are
-                         keys of the map, look up the values associated with those keys
-                         in the map and return their sum."
+      {:description    (str "Given a map from 'T to ints and two 'T that are "
+                            "keys of the map, look up the values associated with those keys "
+                            "in the map and return their sum.")
        :input->type    {'input1 {:type :map-of, :key {:type 'T}, :value {:type 'int?}}
                         'input2 {:type 'T}
                         'input3 {:type 'T}}
@@ -172,8 +171,8 @@
        :loss-fns       [bu/absolute-distance]}
 
       "centimeters-to-meters"
-      {:description    "Given a length in centimeters, return a tuple of (meters, centimeters)
-                     that corresponds to the same length."
+      {:description    (str "Given a length in centimeters, return a tuple of (meters, centimeters) "
+                            "that corresponds to the same length.")
        :input->type    {'input1 {:type 'int?}}
        :ret-type       {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
        :other-types    [{:type 'boolean?}]
@@ -189,8 +188,8 @@
                         #(bu/absolute-distance (second %1) (second %2))]}
 
       "set-symmetric-difference"
-      {:description    "Given two sets, find the symmetric difference
-                     https://en.wikipedia.org/wiki/Symmetric_difference "
+      ;; https://en.wikipedia.org/wiki/Symmetric_difference
+      {:description    "Given two sets, find the symmetric difference."
        :input->type    {'input1 {:type :set :child {:type 'int?}}
                         'input2 {:type :set :child {:type 'int?}}}
        :ret-type       {:type :set :child {:type 'int?}}
@@ -201,16 +200,16 @@
                          (let [set-generator (fn [] (set (repeatedly (rand-int 50) #(rand-int 50))))
                                set1 (set-generator)
                                set2 (set-generator)
-                               output (st/union (st/difference set1 set2)
-                                                (st/difference set2 set1))]
+                               output (set/union (set/difference set1 set2)
+                                                 (set/difference set2 set1))]
                            {:inputs [set1 set2]
                             :output output}))
        :loss-fns       [bu/jaccard-similarity-loss]}
 
       "max-applied-fn"
-      {:description    "Given an integer X < 50 and a (int => int) function, return
-                     the integer in [0, X) that results in the maximum value for
-                     the function."
+      {:description   (str "Given an integer X < 50 and a (int => int) function, return "
+                           "the integer in [0, X) that results in the maximum value for "
+                           "the function.")
        :input->type    {'input1 {:type 'int?}
                         'input2 (lib/unary-transform {:type 'int?})}
        :ret-type       {:type 'int?}
@@ -228,8 +227,8 @@
        :loss-fns       [bu/absolute-distance]}
 
       "count-true"
-      {:description    "Given a vector of T and a predicate T => bool, return the
-                     count of the number of elements in T that make the predicate true."
+      {:description    (str "Given a vector of T and a predicate T => bool, return the "
+                            "count of the number of elements in T that make the predicate true.")
        :input->type    {'input1 {:type :vector :child {:type 'T}}
                         'input2 (lib/unary-pred {:type 'T})}
        :ret-type       {:type 'int?}
@@ -246,8 +245,8 @@
        :loss-fns       [bu/absolute-distance]}
 
       "first-index-of-true"
-      {:description    "Given a vector of T and a predicate T => bool, return the
-                     first index in the vector where the predicate is true."
+      {:description    (str "Given a vector of T and a predicate T => bool, return the "
+                            "first index in the vector where the predicate is true.")
        :input->type    {'input1 {:type :vector :child {:type 'T}}
                         'input2 (lib/unary-pred {:type 'T})}
        :ret-type       {:type 'int?}
@@ -292,10 +291,10 @@
        :loss-fns       [bu/jaccard-similarity-loss]}
 
       "filter-bounds"
-      {:description    "Given a set of elements that are all of the same comparable
-                         type, T , and two instance of type T representing a lower and
-                         upper bound, filter the set to the elements that fall
-                         between two bounds (inclusively)."
+      {:description    (str "Given a set of elements that are all of the same comparable "
+                            "type, T , and two instance of type T representing a lower and "
+                            "upper bound, filter the set to the elements that fall "
+                            "between two bounds (inclusively).")
        :input->type    {'input1 {:type :set :child {:type 'T}}
                         'input2 {:type 'T}
                         'input3 {:type 'T}}
@@ -320,9 +319,9 @@
        :loss-fns       [bu/jaccard-similarity-loss]}
 
       "area-of-rectangle"
-      {:description    "Given two tuples of floats representing the upper-right and
-                     lower-left coordinates of a rectangle in the cartesian plane,
-                     find the area of the rectangle."
+      {:description    (str "Given two tuples of floats representing the upper-right and "
+                            "lower-left coordinates of a rectangle in the cartesian plane, "
+                            "find the area of the rectangle.")
        :input->type    {'input1 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}
                         'input2 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}}
        :ret-type       {:type 'double?}
@@ -343,9 +342,9 @@
        :loss-fns       [#(bu/round 4 (bu/absolute-distance %1 %2))]}
 
       "sum-vector-vals"
-      {:description    "Given a map {string => int} and vector of strings that are
-                         keys of the map, look up the values associated with those
-                         keys in the map and return their sum."
+      {:description    (str "Given a map {string => int} and vector of strings that are "
+                            "keys of the map, look up the values associated with those "
+                            "keys in the map and return their sum.")
        :input->type    {'input1 {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}
                         'input2  {:type :vector :child {:type 'string?}}}
        :ret-type       {:type 'int?}
@@ -360,8 +359,8 @@
        :loss-fns       [bu/absolute-distance]}
 
       "sets-with-element"
-      {:description    "Given a set of sets, filter to only contain sets that
-                         contain a certain element."
+      {:description    (str "Given a set of sets, filter to only contain sets that "
+                            "contain a certain element.")
        :input->type    {'input1 {:type :set :child {:type :set :child {:type 'int?}}}
                         'input2  {:type 'int?}}
        :ret-type       {:type :set :child {:type :set :child {:type 'int?}}}
@@ -388,8 +387,8 @@
        :loss-fns       [bu/jaccard-similarity-loss]}
 
       "time-sheet"
-      {:description    "Given a list of tuples of the form: [(name, hours), ...],
-                         and a specific name, sum the hours associated with that name."
+      {:description    (str "Given a list of tuples of the form: [(name, hours), ...], "
+                            "and a specific name, sum the hours associated with that name.")
        :input->type    {'input1 {:type :vector :child
                                  {:type :tuple, :children [{:type 'string?} {:type 'int?}]}}
                         'input2 {:type 'string?}}
@@ -440,8 +439,8 @@
        :loss-fns       [#(if (= %1 %2) 0 1)]}
 
       "simple-encryption"
-      {:description    "Given a string and a function (char => char), use the
-                        function to encrypt the string."
+      {:description    (str "Given a string and a function (char => char), use the "
+                            "function to encrypt the string.")
        :input->type    {'input1 {:type 'string?}
                         'input2 (lib/unary-transform {:type 'char?})}
        :ret-type       {:type 'string?}
@@ -473,8 +472,8 @@
        :loss-fns       [lev/distance]}
 
       "get-vals-of-key"
-      {:description    "Given a vector of maps [{string => int} ...] and a key,
-                        make a list of the values of that key in all the maps."
+      {:description    (str "Given a vector of maps [{string => int} ...] and a key, "
+                            "make a list of the values of that key in all the maps.")
        :input->type    {'input1 {:type :vector :child
                                  {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}}
                         'input2 {:type 'string?}}
