@@ -79,7 +79,7 @@
           ;; so that it is followed by nested Push "chunk".
           (or (= kind :let)
               (and (= kind :fn)
-                   (not (empty? (:arg-types gene)))))
+                   (seq (:arg-types gene))))
           (recur (cons open (rest plushy))
                  (conj push gene))
 

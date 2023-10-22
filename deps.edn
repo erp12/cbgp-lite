@@ -1,6 +1,5 @@
 {:path     ["src"]
- :deps     {org.clojure/core.match           {:mvn/version "1.0.0"}
-            com.taoensso/timbre              {:mvn/version "6.0.4"}
+ :deps     {com.taoensso/timbre              {:mvn/version "6.0.4"}
             io.github.erp12/schema-inference {:git/sha "724355178b041a2c83abda6e68a9d4bd83d55a43"}
             clj-fuzzy/clj-fuzzy              {:mvn/version "0.4.1"}}
  :jvm-opts ["-XX:CompressedClassSpaceSize=2g"]

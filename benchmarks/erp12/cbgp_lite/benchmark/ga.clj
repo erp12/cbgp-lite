@@ -62,6 +62,7 @@
                  task/enhance-task
                  (assoc :evaluate-fn i/evaluate-full-behavior))
         opts (merge config task)
+        _ (log/info "Vars:" (:vars opts))
         evaluator (i/make-evaluator (-> opts
                                         (assoc :cases (:train task))
                                         (dissoc :train :test)))
