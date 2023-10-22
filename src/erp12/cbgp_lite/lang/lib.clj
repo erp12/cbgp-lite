@@ -61,6 +61,8 @@
   [n d]
   (if (zero? d) 0 (quot n d)))
 
+;; @todo Switch to clojure.math (in v1.11 and above)
+
 (defn sin
   [x]
   (Math/sin x))
@@ -72,6 +74,82 @@
 (defn tan
   [x]
   (Math/tan x))
+
+(defn safe-pow
+  [x y]
+  (let [result (Math/pow x y)]
+    (if (or (NaN? result) (infinite? result))
+      (throw (ex-info "Pow resulting in undefined value." {:base x :exponent y}))
+      result)))
+
+(defn int-pow
+  [x y]
+  (long (safe-pow x y)))
+
+(defn double-pow
+  [x y]
+  (safe-pow x y))
+
+(defn int-square
+  [x]
+  (long (safe-pow x 2)))
+
+(defn double-square
+  [x]
+  (safe-pow x 2))
+
+(defn safe-sqrt
+  [x]
+  (Math/sqrt (abs x)))
+
+(defn safe-log2
+  [x]
+  (let [safe-x (if (<= x 0) Float/MIN_VALUE x)]
+    (/ (Math/log safe-x)
+       (Math/log 2))))
+
+(defn safe-log10
+  [x]
+  (let [safe-x (if (<= x 0) Float/MIN_VALUE x)]
+    (Math/log10 safe-x)))
+
+(defn ceil
+  [x]
+  (Math/ceil x))
+
+(defn int-ceil
+  [x]
+  (long (Math/ceil x)))
+
+(defn floor
+  [x]
+  (Math/floor x))
+
+(defn int-floor
+  [x]
+  (long (Math/floor x)))
+
+(defn- safe-trig-x
+  [x]
+  (dec (mod (inc x) 2)))
+
+(defn safe-acos
+  [x]
+  (if (= 1.0 (mod x 2))
+    0.0
+    (let [safe-x (safe-trig-x x)]
+      (Math/acos safe-x))))
+
+(defn safe-asin
+  [x]
+  (if (= 1.0 (mod x 2))
+    (/ Math/PI 2)
+    (let [safe-x (safe-trig-x x)]
+      (Math/asin safe-x))))
+
+(defn atan
+  [x]
+  (Math/atan x))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text
@@ -104,6 +182,10 @@
        (replace regex-char-esc-smap)
        str/join
        re-pattern))
+
+(defn str-sort
+  [s]
+  (str/join (sort s)))
 
 (defn split-str
   [s on]
@@ -149,6 +231,14 @@
 (defn letter?
   [^Character c]
   (Character/isLetter c))
+
+(defn char-upper
+  [^Character c]
+  (Character/toUpperCase c))
+
+(defn char-lower
+  [^Character c]
+  (Character/toLowerCase c))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vector
@@ -368,6 +458,12 @@
    'int-mod            (binary-transform INT)
    'int-inc            (unary-transform INT)
    'int-dec            (unary-transform INT)
+   'int-neg            (unary-transform INT)
+   'int-abs            (unary-transform INT)
+   `int-pow            (binary-transform INT)
+   `int-square         (unary-transform INT)
+   `int-ceil           (fn-of [DOUBLE] INT)
+   `int-floor          (fn-of [DOUBLE] INT)
    ;'int-lt              (binary-pred INT)
    ;'int-gt              (binary-pred INT)
    ;'int-le              (binary-pred INT)
@@ -380,6 +476,10 @@
    'double-mod         (binary-transform DOUBLE)
    'double-inc         (unary-transform DOUBLE)
    'double-dec         (unary-transform DOUBLE)
+   'double-neg         (unary-transform DOUBLE)
+   'double-abs         (unary-transform DOUBLE)
+   `double-pow         (binary-transform DOUBLE)
+   `double-square      (unary-transform DOUBLE)
    ;'double-lt           (binary-pred DOUBLE)
    ;'double-gt           (binary-pred DOUBLE)
    ;'double-le           (binary-pred DOUBLE)
@@ -391,9 +491,17 @@
    ;'min-double          (binary-transform DOUBLE)
    ;'max-int             (binary-transform INT)
    ;'max-double          (binary-transform DOUBLE)
+   `safe-sqrt          (unary-transform DOUBLE)
    `sin                (unary-transform DOUBLE)
    `cos                (unary-transform DOUBLE)
    `tan                (unary-transform DOUBLE)
+   `safe-asin          (unary-transform DOUBLE)
+   `safe-acos          (unary-transform DOUBLE)
+   `atan               (unary-transform DOUBLE)
+   `safe-log2          (unary-transform DOUBLE)
+   `safe-log10         (unary-transform DOUBLE)
+   `ceil               (unary-transform DOUBLE)
+   `floor              (unary-transform DOUBLE)
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Text
    'str                {:type   :scheme
@@ -439,6 +547,12 @@
    `str/join           (fn-of [(vector-of STRING)] STRING)
    'str-join-sep       (fn-of [STRING (vector-of STRING)] STRING)
    'join-chars         (fn-of [(vector-of CHAR)] STRING)
+   `str/capitalize     (unary-transform STRING)
+   `str/upper-case     (unary-transform STRING)
+   `str/lower-case     (unary-transform STRING)
+   `str-sort           (unary-transform STRING)
+   `char-upper         (unary-transform CHAR)
+   `char-lower         (unary-transform CHAR)
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Boolean
    `and                (binary-transform BOOLEAN)
@@ -738,6 +852,7 @@
     count-vec         count
     do2               do
     do3               do
+    double-abs        abs
     double-add        +
     double-dec        dec
     double-div        erp12.cbgp-lite.lang.lib/safe-div
@@ -746,6 +861,7 @@
     double-mult       *
     double-quot       erp12.cbgp-lite.lang.lib/safe-quot
     double-sub        -
+    double-neg        -
     empty-str?        empty?
     first-str         first
     fold-vec          reduce
@@ -754,6 +870,7 @@
     get-or-else       get
     index-of-char     clojure.string/index-of
     index-of-str      clojure.string/index-of
+    int-abs           abs
     int-add           +
     int-dec           dec
     int-div           erp12.cbgp-lite.lang.lib/safe-div
@@ -762,6 +879,7 @@
     int-mult          *
     int-quot          erp12.cbgp-lite.lang.lib/safe-quot
     int-sub           -
+    int-neg           -
     join-chars        clojure.string/join
     last-str          last
     left              first

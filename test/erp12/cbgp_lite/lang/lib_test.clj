@@ -4,6 +4,24 @@
             [clojure.set :as set])
   (:import (clojure.lang ExceptionInfo)))
 
+(deftest safe-sqrt-test
+  (is (= 4.0 (l/safe-sqrt 16.0)))
+  (is (= 4.0 (l/safe-sqrt -16.0))))
+
+(deftest safe-log2-test
+  (is (= 3.0 (l/safe-log2 8.0)))
+  (is (= -149 (int (l/safe-log2 -1.0)))))
+
+(deftest safe-log10-test
+  (is (= 2.0 (l/safe-log10 100.0)))
+  (is (= -44 (int (l/safe-log10 -1.0)))))
+
+(deftest safe-trig-test
+  (is (= 0.0 (l/safe-acos 1.0)))
+  (is (= 0.0 (l/safe-acos 3.0)))
+  (is (= 0.0 (l/safe-asin 0.0)))
+  (is (= 0.0 (l/safe-asin 4.0))))
+
 (deftest mapcatv-test
   (is (= [:a :b] (l/mapcatv identity [[:a] [:b]]))))
 
@@ -21,6 +39,9 @@
 
 (deftest butlast-str-test
   (is (= "abc" (l/butlast-str "abcd"))))
+
+(deftest str-sort-test
+  (is (= "abc" (l/str-sort "cba"))))
 
 (deftest split-str-test
   (is (= ["a" "c"] (l/split-str "abc" "b"))))
