@@ -922,5 +922,5 @@
   (->> type-env
        (filter (fn [[_ typ]]
                  (core/or (= (:type typ) :scheme)
-                          (every? #(schema/occurs? % typ) types))))
+                          (some #(schema/occurs? % typ) types))))
        (into {})))
