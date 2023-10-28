@@ -1,24 +1,49 @@
+from typing import Tuple, Optional
 import argparse
 import os
 from datetime import datetime
 from functools import partial
-import subprocess
+from subprocess import run, Popen, PIPE
 from multiprocessing import Pool
 
 
-SUITE_NS = "erp12.cbgp-lite.benchmark.suite.psb"
+def active_branch_name(repo_path: str) -> Optional[str]:
+    with Popen(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=repo_path, 
+        stdout=PIPE, 
+        stderr=PIPE,
+    ) as p:
+        if p.wait() == 0:
+            return p.stdout.read().strip().decode()
+        return None
 
 
-def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
-    log_dir = os.path.join(opts.out, opts.start_time, opts.problem)
+def latest_commit(repo_path: str) -> Optional[str]:
+    with Popen(
+        ["git", "rev-parse", "--short", "HEAD"], 
+        cwd=repo_path, 
+        stdout=PIPE, 
+        stderr=PIPE,
+    ) as p:
+        if p.wait() == 0:
+            return p.stdout.read().strip().decode()
+        return None
+
+
+def run_cmd(opts: argparse.Namespace, problem: str, run_id: int) -> str:
+    branch = active_branch_name(opts.cbgp)
+    commit = latest_commit(opts.cbgp)
+    log_dir_parts = [opts.out, opts.start_time, branch, commit, problem]
+    log_dir = os.path.join(*[part for part in log_dir_parts if part])
     log_file = os.path.join(log_dir, f"run{run_id}.txt")
     main_ns = "erp12.cbgp-lite.benchmark." + opts.search
     types_file = os.path.join(log_dir, f"run{run_id}_types.edn")
     clj_cmd = " ".join([
         f"{opts.clj} -X:benchmarks {main_ns}/run",
-        f":suite-ns {SUITE_NS}",
-        f":data-dir '\"{opts.data_dir}\"'",
-        f":problem '\"{opts.problem}\"'",
+        f":suite-ns {opts.suite_ns}",
+        # f":data-dir '\"{opts.data_dir}\"'",
+        f":problem '\"{problem}\"'",
         f":type-counts-file '\"{types_file}\"'" if opts.log_types else "",
     ] + (opts.opts if opts.opts is not None else []))
     return "; ".join(
@@ -33,8 +58,9 @@ def run_cmd(opts: argparse.Namespace, run_id: int) -> str:
     )
 
 
-def start_run(opts: argparse.Namespace, run_id: int):
-    return subprocess.run(f"{run_cmd(opts, run_id)}", shell=True)
+def start_run(opts: argparse.Namespace, config: Tuple[str, int]):
+    problem, run_id = config
+    return run(f"{run_cmd(opts, problem, run_id)}", shell=True)
 
 
 def cli_opts() -> argparse.ArgumentParser:
@@ -44,7 +70,16 @@ def cli_opts() -> argparse.ArgumentParser:
         default="ga",
         help="Options: ga, random-search, simulated-annealing. Default is ga.",
     )
-    parser.add_argument("--problem", help="The name of the problem to run.")
+    parser.add_argument(
+        "--suite-ns",
+        default="erp12.cbgp-lite.benchmark.suite.psb",
+        help="The namespae of the problem suite file which the problem belongs to."
+    )
+    parser.add_argument(
+        "--problems", 
+        nargs="+",
+        help="The name of the problem(s) in the suite to run."
+    )
     parser.add_argument(
         "--data-dir",
         help="The directory to read (and in some cases, download) problem data files to.",
@@ -60,7 +95,7 @@ def cli_opts() -> argparse.ArgumentParser:
         "--num-runs",
         type=int,
         default=1,
-        help="The number of runs of the problem to start. Default is 1."
+        help="The number of runs per problem to start. Default is 1."
     )
     parser.add_argument(
         "--out", help="The path to put the log files of the run captured from stdout."
@@ -100,11 +135,16 @@ if __name__ == "__main__":
         os.makedirs(args.out)
 
     if args.run_number is not None:
-        assert args.num_runs == 1, "`--run-id` can only be set if `--num-runs` is 1."
+        assert args.num_runs == 1, f"`--run-id` can only be set if `--num-runs` is 1. Got {args.num_runs}."
+        assert len(args.problems) == 1, f"`--run-id` can only be set if one problem is provided. Got {args.problems}."
         start_run(args, args.run_number)
     else:
+        runs_configs = []
+        for problem in args.problems:
+            for run_id in range(args.num_runs):
+                runs_configs.append((problem, run_id))
         with Pool(args.parallelism) as p:
-            for r in p.imap_unordered(partial(start_run, args), range(args.num_runs)):
+            for r in p.imap_unordered(partial(start_run, args), runs_configs):
                 print(r)
 
 """
@@ -113,13 +153,13 @@ Example:
 # Batch of runs
 python3 scripts/local_runner.py \
     --search "ga" \
+    --suite-ns "erp12.cbgp-lite.benchmark.suite.psb" \
     --problem "vectors-summed" \
-    --data-dir "./data/psb/" \
     --num-runs 3 \
     --out "./data/logs/" \
     --log-types \
     --opts \
-    :state-output-fn :biggest \
+    :data-dir '\"./data/psb\"' \
     :population-size 10 \
     :max-generations 10
     
@@ -127,11 +167,11 @@ python3 scripts/local_runner.py \
 python3 scripts/local_runner.py \
     --search "ga" \
     --problem "vectors-summed" \
-    --data-dir "./data/psb/" \
     --run-number 1000 \
     --out "./data/logs/" \
     --log-types \
     --opts \
+    :data-dir '\"./data/psb\"' \
     :state-output-fn :biggest \
     :population-size 10 \
     :max-generations 10
