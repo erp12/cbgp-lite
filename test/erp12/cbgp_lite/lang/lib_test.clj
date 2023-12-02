@@ -130,3 +130,11 @@
 (deftest all-dealiases-in-type-env-test
   (is (empty? (set/difference (set (keys l/dealiases))
                               (set (keys l/type-env))))))
+
+(deftest lib-for-type-ctors-test
+  (is (empty? (keys (l/lib-for-type-ctors #{'boolean?}))))
+  (is (= #{'comp2-fn1 'comp2-fn2 'comp3-fn1 'comp3-fn2 'partial1-fn2 'partial1-fn3 'partial2-fn3 `l/max' `l/min'}
+         (set (keys (l/lib-for-type-ctors #{:=>})))))
+  (is (= #{'= `l/and 'not= `l/>' `l/or 'if `l/>=' `l/<=' 'not `l/<'}
+         (set/difference (set (keys (l/lib-for-type-ctors #{:=> 'boolean?})))
+                         (set (keys (l/lib-for-type-ctors #{:=>})))))))

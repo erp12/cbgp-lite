@@ -917,10 +917,27 @@
 (def macros
   #{'if 'do2 'do3})
 
-(defn lib-for-types
-  [types]
+;; (defn lib-for-types
+;;   [types]
+;;   (->> type-env
+;;        (filter (fn [[_ typ]]
+;;                  (core/or (= (:type typ) :scheme)
+;;                           (some #(schema/occurs? % typ) types))))
+;;        (into {})))
+
+(defn lib-for-type-ctors
+  [type-ctors]
   (->> type-env
        (filter (fn [[_ typ]]
-                 (core/or (= (:type typ) :scheme)
-                          (some #(schema/occurs? % typ) types))))
+                 (set/subset? (->> (schema/schema-terms typ)
+                                   (remove #{:cat :s-var :scheme}))
+                              type-ctors)))
        (into {})))
+
+
+(comment
+
+  (type-env 'not)
+
+  (set/difference (set (keys (lib-for-type-ctors #{:=> 'boolean?})))
+                  (set (keys (lib-for-type-ctors #{:=>})))))
