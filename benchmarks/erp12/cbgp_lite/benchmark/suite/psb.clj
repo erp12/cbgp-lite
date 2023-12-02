@@ -1,33 +1,17 @@
 (ns erp12.cbgp-lite.benchmark.suite.psb
   (:require [clj-fuzzy.levenshtein :as lev]
             [clojure.string :as str]
-            [clojure.walk :as w]
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.individual :as i]
             [erp12.cbgp-lite.task :as task]
             [psb2.core :as psb2]))
 
-(defn tap-nodes
-  [f tree]
-  (w/walk (partial tap-nodes f) identity (f tree)))
-
-(defn has-nil?
-  [x]
-  (with-local-vars [result false]
-    (tap-nodes
-      (fn [node]
-        (when (nil? node)
-          (var-set result true))
-        node)
-      x)
-    @result))
-
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
                        (fn wrapped-loss [program-output correct-output]
-                         (if (has-nil? program-output)
+                         (if (bu/has-nil? program-output)
                            penalty
                            (loss-fn program-output correct-output))))]
     (update-vals
@@ -41,14 +25,14 @@
                      {:gene :lit-generator, :fn (bu/int-generator 128), :type {:type 'int?}}
                      {:gene :lit-generator, :fn bu/rand-char, :type {:type 'char?}}]
        :loss-fns    [lev/distance
-                     #(if (not (empty? %1))
+                     #(if (seq %1)
                         (Math/abs (- (int (last %2)) (int (last %1)))) ;distance from correct last character
                         penalty)]}
 
       "collatz-numbers"
       {:input->type {'input1 {:type 'int?}}
        :ret-type    {:type 'int?}
-       :other-types [{:type 'int?} {:type 'double?} {:type 'boolean?}]
+       :other-types [{:type 'double?} {:type 'boolean?}]
        :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
                      {:gene :lit, :val 1, :type {:type 'int?}}
                      {:gene :lit-generator, :fn (bu/int-generator 128), :type {:type 'int?}}]
@@ -292,7 +276,7 @@
       "scrabble-score"
       {:input->type {'input1 {:type 'string?}}
        :ret-type    {:type 'int?}
-       :other-types [{:type 'boolean?} {:type 'char?} {:type :vector :child {:type 'int?}}]
+       :other-types [{:type 'boolean?} {:type 'char?}]
        :extra-genes [{:gene :lit,
                       :val  (let [scrabble-map {\a 1
                                                 \b 3
@@ -537,7 +521,21 @@
 
 
    ;;  "coin-sums" ;; NEEDS MULTIPLE OUTPUTS
-   ;;  "cut-vector" ;; NEEDS MULTIPLE OUTPUTS
+
+      "cut-vector"
+      {:input->type {'input1 {:type :vector :child {:type 'int?}}}
+       :ret-type    {:type :tuple, :children [{:type :vector :child {:type 'int?}}
+                                              {:type :vector :child {:type 'int?}}]}
+       :out-key     [:output1 :output2]
+       :other-types [{:type 'int?} {:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}
+                           ;; This is a random vector generator
+                     {:gene :lit-generator,
+                      :fn   (fn [] (vec (repeatedly (rand-int 21) #(inc (rand-int 10000)))))
+                      :type {:type :vector :child {:type 'int?}}}]
+       :loss-fns    [#(bu/vector-of-numbers-loss (first %1) (first %2))
+                     #(bu/vector-of-numbers-loss (second %1) (second %2))]}
 
       "dice-game"
       {:input->type {'input1 {:type 'int?}
@@ -548,7 +546,19 @@
                      {:gene :lit, :val 1.0, :type {:type 'double?}}]
        :loss-fns    [#(bu/round 3 (bu/absolute-distance %1 %2))]}
 
-   ;;  "find-pair" ;; NEEDS MULTIPLE OUTPUTS
+      "find-pair"
+      {:input->type {'input1 {:type :vector :child {:type 'int?}}
+                     'input2 {:type 'int?}}
+       :ret-type    {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
+       :out-key     [:output1 :output2]
+       :other-types [{:type 'boolean?}]
+       :extra-genes [{:gene :lit, :val -1, :type {:type 'int?}}
+                     {:gene :lit, :val 0, :type {:type 'int?}}
+                     {:gene :lit, :val 1, :type {:type 'int?}}
+                     {:gene :lit, :val 2, :type {:type 'int?}}
+                     {:gene :lit-generator, :fn (bu/int-generator 1000), :type {:type 'int?}}]
+       :loss-fns    [#(bu/absolute-distance (first %1) (first %2))
+                     #(bu/absolute-distance (second %1) (second %2))]}
 
       "fizz-buzz"
       {:input->type {'input1 {:type 'int?}}
@@ -757,15 +767,15 @@
 (defn reshape-case
   [case {:keys [out-key stdout-key] :or {out-key :output1}}]
   (merge
-    {:inputs (->> case
-                  (filter (fn [[k _]] (str/starts-with? (name k) "input")))
-                  (sort-by first)
-                  (mapv second))
-     :output (if (sequential? out-key)
-               (vec (map #(get case %) out-key))
-               (out-key case))}
-    (when stdout-key
-      {:std-out (stdout-key case)})))
+   {:inputs (->> case
+                 (filter (fn [[k _]] (str/starts-with? (name k) "input")))
+                 (sort-by first)
+                 (mapv second))
+    :output (if (sequential? out-key)
+              (vec (map #(get case %) out-key))
+              (out-key case))}
+   (when stdout-key
+     {:std-out (stdout-key case)})))
 
 (defn read-cases
   [{:keys [data-dir problem n-train n-test]}]
@@ -803,6 +813,4 @@
 
 (comment
 
-  (validate-solutions {:data-dir "data/psb/" :num-cases 50})
-
-  )
+  (validate-solutions {:data-dir "data/psb/" :num-cases 50}))

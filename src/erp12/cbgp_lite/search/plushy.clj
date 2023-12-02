@@ -1,4 +1,4 @@
-(ns erp12.cbgp-lite.search.pluhsy
+(ns erp12.cbgp-lite.search.plushy
   (:require [erp12.cbgp-lite.utils :as u]))
 
 (defn prob-by-gene-kind
@@ -79,7 +79,7 @@
           ;; so that it is followed by nested Push "chunk".
           (or (= kind :let)
               (and (= kind :fn)
-                   (not (empty? (:arg-types gene)))))
+                   (seq (:arg-types gene))))
           (recur (cons open (rest plushy))
                  (conj push gene))
 

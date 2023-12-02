@@ -1,6 +1,7 @@
 (ns erp12.cbgp-lite.task
   (:require [clojure.set :as set]
             [erp12.cbgp-lite.lang.lib :as lib]
+            [erp12.cbgp-lite.lang.schema :as schema]
             [erp12.cbgp-lite.search.pluhsy :as pl]
             [erp12.cbgp-lite.utils :as u]))
 
@@ -8,15 +9,18 @@
   [{:keys [input->type]}]
   (vec (sort (keys input->type))))
 
-(defn task-types
-  [{:keys [input->type ret-type other-types] :or {other-types #{}}}]
-  (set/union (set (vals input->type))
-             #{ret-type}
-             (set other-types)))
+(defn task-type-ctors
+  [{:keys [input->type ret-type other-type-ctors] :or {other-type-ctors #{}}}]
+  (->> (schema/schema-terms {:type :=>
+                             :input {:type :cat
+                                     :children (vec (vals (input->type)))}
+                             :output ret-type})
+       (set/union (set other-type-ctors))
+       (remove #{:cat :s-var :scheme})))
 
 (defn vars-for-types
   [types]
-  (set (keys (lib/lib-for-types types))))
+  (set (keys (lib/lib-for-type-ctors types))))
 
 (defn type-environment
   [{:keys [input->type vars]}]
@@ -38,23 +42,23 @@
 (defn default-genetic-source
   [{:keys [types vars extra-genes]}]
   (pl/make-genetic-source
-    (pl/prob-by-gene-kind (concat (map (fn [v] {:gene :var :name v}) vars)
+   (pl/prob-by-gene-kind (concat (map (fn [v] {:gene :var :name v}) vars)
                                   ;; Task-specific genes
-                                  extra-genes
+                                 extra-genes
                                   ;; 1-arg functions
-                                  (for [arg types ret types]
-                                    {:gene :fn :arg-types [arg] :ret-type ret})
+                                 (for [arg types ret types]
+                                   {:gene :fn :arg-types [arg] :ret-type ret})
                                   ;; 2-arg functions
-                                  (for [arg1 types
-                                        arg2 types
-                                        ret types]
-                                    {:gene :fn :arg-types [arg1 arg2] :ret-type ret})
+                                 (for [arg1 types
+                                       arg2 types
+                                       ret types]
+                                   {:gene :fn :arg-types [arg1 arg2] :ret-type ret})
                                   ;; Always used genes
-                                  [{:gene :local}
-                                   {:gene :apply}
-                                   {:gene :let}
-                                   {:gene :close}])
-                          default-gene-distribution)))
+                                 [{:gene :local}
+                                  {:gene :apply}
+                                  {:gene :let}
+                                  {:gene :close}])
+                         default-gene-distribution)))
 
 (defn enhance-task
   [opts]
@@ -62,19 +66,19 @@
       (assoc :dealiases lib/dealiases)
       (u/enhance
         ;; The size of an individual's error vector
-        :num-errors (fn [{:keys [train loss-fns stdout-key]}]
-                      (+ (* (count train) (count loss-fns))
-                         (if (nil? stdout-key) 0 (count train))))
+       :num-errors (fn [{:keys [train loss-fns stdout-key]}]
+                     (+ (* (count train) (count loss-fns))
+                        (if (nil? stdout-key) 0 (count train))))
         ;; Create a sequence of program argument symbols
-        :arg-symbols arg-symbols
+       :arg-symbols arg-symbols
         ;; Find all types related to the task
-        :types task-types
+       :types task-type-ctors
         ;; Find the set of all variables that leverage to task's types.
         ;; Includes generic functions.
-        :vars (fn [{:keys [types]}] (vars-for-types types))
+       :vars (fn [{:keys [types]}] (vars-for-types types))
         ;; Derive the full type-environment used to compile programs from genomes.
-        :type-env type-environment
+       :type-env type-environment
         ;; Derive the genetic source.
-        :genetic-source default-genetic-source
+       :genetic-source default-genetic-source
         ;; Derive a function for generating genomes.
-        :genome-factory (fn [opts] #(pl/random-plushy-genome opts)))))
+       :genome-factory (fn [opts] #(pl/random-plushy-genome opts)))))
