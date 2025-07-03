@@ -10,7 +10,7 @@ qstat_suffix = "-ad-hoc"
 email = "inahon@hamilton.edu"
 
 # Directory to hold results for each problem. Change for each set of runs
-basedir = "/usr/local/research/compsci/helmuth/Inahon/Results/ad-hoc-polymorphism/"
+basedir = "/usr/local/research/compsci/helmuth/inahon/Results/ad-hoc-polymorphism/"
 
 # Directory where input data either can be found or will be downloaded.
 # Can either be local (default) or global (will use less HDD if multiple projects use it)
