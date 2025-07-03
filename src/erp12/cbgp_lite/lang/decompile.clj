@@ -178,7 +178,7 @@
 
    ;; Text
 
-;; Collections
+   ;; Collections
    'count
    'vec
    'set
@@ -187,7 +187,10 @@
    'empty?
    'contains?
    'assoc
-   'merge])
+   'merge
+   'disj
+   'get
+   'update])
 
 (def ast-aliasing
   {;; Common
@@ -205,7 +208,7 @@
    'multiply '*
    'quotient 'quot
    'divide '/
-   'neg `lib/neg ; minus w/ one arg <- arity
+   'neg `lib/neg ; --> arity; minus w/ one arg
    'pow `lib/pow
    ; square (skip)
    'intCast 'int
@@ -224,30 +227,28 @@
    'isZero 'zero-int?
 
    ;; Text
-   ; '__  `lib/str/join
-   ; 'str, 'append-str (probable arity issues)
+   ; `lib/join, 'str-join-sep --> arity; str-join-sep w/ 2 args
+   ; 'str, 'append-str --> arity; append-str w/ 2 args
    'charCast `lib/int->char
    'isWhitespace `lib/whitespace?
    'isDigit `lib/digit?
    'isLetter `lib/letter?
-   ; split-str-on-ws, split-str --> arity
-   ; char-occurrences (doesn't exist in clojure; see char-occurrences)
-   ; `lib/set-char
-   ; 'str-join-sep
-   ; 'capitalize  `lib/str/capitalize
-   ; 'upper-case  `lib/str/upper-case
-   ; 'lower-case  `lib/str/lower-case
-   ; '__  `lib/char-upper
-   ; '__  `lib/char-lower
+   ; split-str-on-ws, split-str --> arity; split-str w/ 2 args
+   ; `lib/set-char (doesn't exist in clojure?)
+   'capitalize  `str/capitalize
+   'upper-case  `str/upper-case
+   'lower-case  `str/lower-case
+   'toUpperCase  `lib/char-upper
+   'toLowerCase  `lib/char-lower
 
    ;; Boolean
-   ; 'and__5600__auto__  `lib/and  --> :op :binding
+   ; 'and__5600__auto__  `lib/and
    ; 'or__5602__auto__  `lib/or
-
+   
    ;; Collections
    ; 'mapv
-   ; `lib/map2v
-   ; `lib/->map (arity?)
+   ; `lib/map2v --> arity; mapv w/ 2 args
+   ; `lib/->map --> (?) arity
    'concat `lib/concat'
    'conj `lib/conj'
    'rest `lib/rest'
@@ -257,24 +258,25 @@
    'index-of `lib/index-of
    'filter `lib/filter'
    'remove `lib/remove'
-   ; `lib/remove-element
+   ; `lib/remove-element --> arity; remove w/ 2 args
    ; 'reduce, 'fold --> arity
    'mapcat `lib/mapcat'
 
    ;; Text/Vec
-   ; `lib/safe-nth
-   ; `lib/replace'
-   ; `lib/replace-first'
-   ; `lib/take'
-   ; `lib/reverse'
-   ; `lib/sort'
-   ; `lib/safe-sub'
+   'nth `lib/safe-nth
+   'replace `lib/replace'
+   'replace-first `lib/replace-first'
+   'take `lib/take'
+   'reverse `lib/reverse'
+   'sort `lib/sort'
+   'subs `lib/safe-sub-coll'
+   'subvec `lib/safe-sub-coll'
 
    ;; Vector
    ; ->vector (arity)
-   ; 'nth-or-else
-   ; `lib/occurrences-of [!] merge w/ char-occurrences
-   ; 'safe-assoc-nth
+   ; 'nth-or-else (arity; 'nth)
+   ; `lib/occurrences-of (doesn't exist in clojure?)
+   ; 'safe-assoc-nth (typed; assoc on a vec)
    ; 'range (arity)
    'map-indexed `lib/mapv-indexed
    'distinct `lib/distinctv
@@ -288,15 +290,12 @@
    'difference `set/difference
    'intersection `set/intersection
    'subset? `set/subset?
-   ; `lib/set/superset?
-   ; 'disj
-   ; `lib/map-set
-
+   'superset? `set/superset?
+   ; `lib/map-set (may delete; keep mapv-set)
+   
    ;; Map
    ; ->map (arity)
-   ; 'get
-   ; 'get-or-else
-   ; 'update
+   ; 'get-or-else (arity; 'get w/ 3 args)
    'keys `lib/keys-vec
    ; `lib/keys-set (doesn't exist in clojure?)
    'vals `lib/vals-vec})
@@ -313,8 +312,6 @@
   ;;  'dec "dec"
   ;;  'neg "neg" ; minus w/ one arg
   ;;  'abs "abs"
-
-  ;;  ;;; other adhoc polymorphic methods
   ;;  'intCast 'int
    })
    ; 'intCast 'char->int
@@ -340,6 +337,22 @@
   ;;  'fold "fold"
 
 (def ast-arity-aliasing
+  ;; to include in this map:
+  ; - neg
+  ; `lib/join 'str-join-sep
+  ; 'str 'append-str
+  ; split-str-on-ws split-str
+  ; mapv map2v
+  ; ->map ->map1 ->map2 ->map3
+  ; ->vector1 ->vector2 ->vector3
+  ; ->set1 ->set2 ->set3 
+  ; range1 range2 range3
+  ; remove remove-element
+  ; reduce fold
+  ; nth nth-or-else
+  ; get get-or-else
+
+
   {'str {1 'str
          2 `lib/concat-str
          :default `lib/concat-str}
