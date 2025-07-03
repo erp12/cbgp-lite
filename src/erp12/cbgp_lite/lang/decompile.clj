@@ -1,11 +1,10 @@
 (ns erp12.cbgp-lite.lang.decompile
-  (:require [clojure.tools.analyzer.jvm :as ana.jvm] 
+  (:require [clojure.tools.analyzer.jvm :as ana.jvm]
             [erp12.cbgp-lite.lang.ast :as ast]
             [erp12.cbgp-lite.lang.compile :as co]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.plushy :as pl]
-            [erp12.cbgp-lite.task :as tsk]
-            ))
+            [erp12.cbgp-lite.task :as tsk]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;; Compilation testing
@@ -83,7 +82,7 @@
                      {:gene :var
                       :name 'count-vec} ;; count the filtered vector
                      {:gene :apply})] ;; apply count
-        
+
     (compile-debugging2 genome
                         task
                         [[8 3 2 5 7 0 11]]
@@ -136,9 +135,7 @@
     (compile-debugging2 genome
                         task
                         [100.23 33]
-                        true))) 
-  
-
+                        true)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;; Below here is work on decompiling
@@ -162,71 +159,172 @@
    'zero-double?])
 
 (def work-without-change
-  ['not
+  [;; FP
+   'comp
+   'partial
+
+   ;; Common/Misc
+   'not
    'not=
    'if
    'print
    'println
+
+   ;; Numeric
+   'mod
+   'inc
+   'dec
+   'abs
+
+   ;; Text
+
+;; Collections
+   'count
+   'vec
+   'set
+   'first
+   'last
+   'empty?
+   'contains?
    'assoc
    'merge])
 
 (def ast-aliasing
-  {'lt `lib/<'
+  {;; Common
+   'equiv '=
+   'lt `lib/<'
    'lte `lib/<='
    'gt `lib/>'
    'gte `lib/>='
-   'equiv '=
-
    'max `lib/max'
    'min `lib/min'
-   'doubleCast 'double
 
-   'isZero 'zero-int?
+   ;; Numeric
+   'add '+
+   'sub '-
+   'multiply '*
+   'quotient 'quot
+   'divide '/
+   'neg `lib/neg ; minus w/ one arg <- arity
+   'pow `lib/pow
+   ; square (skip)
+   'intCast 'int
+   'doubleCast 'double
    'sqrt `lib/safe-sqrt
-   'pow `lib/double-pow
    'sin `lib/sin
    'cos `lib/cos
    'tan `lib/tan
    'asin `lib/safe-asin
    'acos `lib/safe-acos
    'atan `lib/atan
+   ; safe-log2 (skip)
    'log10 `lib/safe-log10
    'ceil `lib/ceil
    'floor `lib/floor
-   ;; CBGP has log2 and square, which don't exist in clojure
+   'isZero 'zero-int?
 
+   ;; Text
+   ; '__  `lib/str/join
+   ; 'str, 'append-str (probable arity issues)
    'charCast `lib/int->char
    'isWhitespace `lib/whitespace?
    'isDigit `lib/digit?
    'isLetter `lib/letter?
+   ; split-str-on-ws, split-str --> arity
+   ; char-occurrences (doesn't exist in clojure; see char-occurrences)
+   ; `lib/set-char
+   ; 'str-join-sep
+   ; 'capitalize  `lib/str/capitalize
+   ; 'upper-case  `lib/str/upper-case
+   ; 'lower-case  `lib/str/lower-case
+   ; '__  `lib/char-upper
+   ; '__  `lib/char-lower
 
-   'concat `lib/concatv
-   'vals `lib/vals-vec
-   ;; There is a keys-set, which returns as a set
-   ;; but I don't think Clojure has this functionality
-   'keys `lib/keys-vec})
+   ;; Boolean
+   ; 'and__5600__auto__  `lib/and  --> :op :binding
+   ; 'or__5602__auto__  `lib/or
+
+   ;; Collections
+   ; 'mapv
+   ; `lib/map2v
+   ; `lib/->map (arity?)
+   'concat `lib/concat'
+   'conj `lib/conj'
+   'rest `lib/rest'
+   'butlast `lib/butlast'
+   'includes? `lib/in?
+   'indexOf `lib/index-of
+   'index-of `lib/index-of
+   'filter `lib/filter'
+   'remove `lib/remove'
+   ; `lib/remove-element
+   ; 'reduce, 'fold --> arity
+   'mapcat `lib/mapcat'
+
+   ;; Text/Vec
+   ; `lib/safe-nth
+   ; `lib/replace'
+   ; `lib/replace-first'
+   ; `lib/take'
+   ; `lib/reverse'
+   ; `lib/sort'
+   ; `lib/safe-sub'
+
+   ;; Vector
+   ; ->vector (arity)
+   ; 'nth-or-else
+   ; `lib/occurrences-of [!] merge w/ char-occurrences
+   ; 'safe-assoc-nth
+   ; 'range (arity)
+   'map-indexed `lib/mapv-indexed
+   'distinct `lib/distinctv
+   'sort-by `lib/sortv-by
+   'group-by 'group-by
+   'zipmap 'zipmap
+
+   ;; Set
+   ; ->set (arity)
+   'union `set/union
+   'difference `set/difference
+   'intersection `set/intersection
+   'subset? `set/subset?
+   ; `lib/set/superset?
+   ; 'disj
+   ; `lib/map-set
+
+   ;; Map
+   ; ->map (arity)
+   ; 'get
+   ; 'get-or-else
+   ; 'update
+   'keys `lib/keys-vec
+   ; `lib/keys-set (doesn't exist in clojure?)
+   'vals `lib/vals-vec})
 
 (def ast-number-aliasing
-  {'add "add"
-   'sub "sub"
-   'multiply "mult"
-   'divide "div"
-   'quotient "quot"
-   'mod "mod"
-   'inc "inc"
-   'dec "dec"
-   'neg "neg" ; minus w/ one arg
-   'abs "abs"
+  {
+  ;;  'add "add"
+  ;;  'sub "sub"
+  ;;  'multiply "mult"
+  ;;  'divide "div"
+  ;;  'quotient "quot"
+  ;;  'mod "mod"
+  ;;  'inc "inc"
+  ;;  'dec "dec"
+  ;;  'neg "neg" ; minus w/ one arg
+  ;;  'abs "abs"
 
-   ;;; other adhoc polymorphic methods
-   'intCast 'int})
+  ;;  ;;; other adhoc polymorphic methods
+  ;;  'intCast 'int
+   })
    ; 'intCast 'char->int
-   
+
 (def ast-str-vec-aliasing
-  {'first "first"
-   'last "last" 
+  {;'first "first"
+   ;'last "last" 
    'nth 'nth
-   'empty? "empty"})
+   ;'empty? "empty"
+   })
 
   ;; Same Namespace issues as in ast-number-aliasing
   ;; Make a new dictionary for namespace qualified (ns-q)
@@ -234,13 +332,12 @@
   ;; because ns-q vector symbols append v
   ;; whereas other non-ns-q append nothing or vec 
   ;; 'rest "`lib/rest"
-   
 
 (def ast-collection-aliasing
-  {'count "count"})
+  {;'count "count"
+   })
   ;;  'reduce "reduce"
   ;;  'fold "fold"
-   
 
 (def ast-arity-aliasing
   {'str {1 'str
@@ -263,26 +360,22 @@
             :default '->vector1}
    ; TO-DO: add check for vec->set and map->set
    'hash-set {1 '->set1
-         2 '->set2
-         3 '->set3
-         :default '->set1}
+              2 '->set2
+              3 '->set3
+              :default '->set1}
    ; TO-DO: add check for vec->map and set->map
    'hash-map {2 '->map1
-         4 '->map2
-         6 '->map3
-         :default '->map1}
+              4 '->map2
+              6 '->map3
+              :default '->map1}
    'range {1 'range1
            2 'range2
            3 'range3
-           :default 'range1}
-   })
-   
-   
+           :default 'range1}})
 
 (def ast-namespace-qualified-type-aliasing
   {'rest "rest"})
   ;;  'concat "concat"
-   
 
 (defn find-local
   "Takes a map or vec and recursively looks through it to find a map
@@ -291,7 +384,7 @@
   ;; (println (:tag map-or-vec))
   (cond
     (and (map? map-or-vec)
-         (= (:op map-or-vec) :local)) 
+         (= (:op map-or-vec) :local))
     map-or-vec
 
     (map? map-or-vec)
@@ -351,20 +444,20 @@
     ;; Vector stuff
     (contains? ast-str-vec-aliasing ast-fn-name)
     (symbol (str (get ast-str-vec-aliasing ast-fn-name)
-                 (cond 
+                 (cond
                    (= (:tag (first args)) java.lang.String) "-str"
                    (= (:tag (first args)) clojure.lang.APersistentVector) ""
-                   :else 
+                   :else
                    (if (= 'string?
                           (:type (get (:input->type task)
                                       (:form (find-local args)))))
                      "-str"
                      ""))
-                   
+
                  (if (= 'empty? ast-fn-name)
                    "?"
                    "")))
-    
+
     ;;Vector-set-map
     (contains? ast-collection-aliasing ast-fn-name)
     (symbol (let [symb (str (get ast-collection-aliasing ast-fn-name)
@@ -486,7 +579,7 @@
      (let [ast-fn-name (if (= op :static-call)
                          (:method ast)
                          (-> ast :fn :form))
-           raw-decompiled-args (map #(decompile-ast % task) args )
+           raw-decompiled-args (map #(decompile-ast % task) args)
            decompiled-args (flatten (reverse raw-decompiled-args))]
        (concat decompiled-args
                (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
@@ -519,7 +612,7 @@
                         :methods
                         first
                         :body)
-                    task) 
+                    task)
 
      :else
      (do
@@ -531,6 +624,7 @@
 
 (comment
 
+  (decompile-ast (ana.jvm/analyze '(and [1 2] 2)))
   (compile-debugging (decompile-ast (ana.jvm/analyze '(nth [1.0 2.0 3.0] 10 4.04)))
                      {:type 'double?})
 ;;;; THESE DON'T WORK
@@ -573,6 +667,5 @@
 
   (ana.jvm/analyze '(hash-map "a" 1))
 
-  (ana.jvm/analyze 'count) 
-  )
+  (ana.jvm/analyze 'count))
 

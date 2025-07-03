@@ -2,7 +2,7 @@
 #PBS -l nodes=1:ppn=8
 #PBS -l mem=20GB
 #PBS -q una-new
-#PBS -M jfedorof@hamilton.edu
+#PBS -M #email#
 #PBS -m n
 #PBS -j oe
 #PBS -l walltime=72:00:00

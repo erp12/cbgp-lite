@@ -34,8 +34,6 @@
   (testing "Stringable"
     (is (= #{#{'string? 'char?} :cat :s-var :=> :scheme} (set (sch/decompose-typeclass #{#{:stringable} :cat :s-var :=> :scheme}))))))
 
-
-
 (deftest schema-terms-test
   (testing "No Typeclasses"
     (is (= #{:scheme :cat :=> :map-of :s-var} 
@@ -88,47 +86,3 @@
     (is (= #{:=> :cat :s-var :scheme :map-of :tuple}
            (sch/schema-terms (last (:alternatives (get lib/type-env 'reduce))))))
     ))
-
-(comment
-
-  (use 'erp12.cbgp-lite.lang.lib)
-
-  (sch/decompose-typeclass #{#{:countable} :=> :cat :s-var :scheme 'int? {:sym 'c, :type :s-var}})
-
-  ;; digit?
-  (sch/schema-terms (unary-pred CHAR))
-  ;;=> #{:cat boolean? char? :=>}
-
-  ;; get
-  (sch/schema-terms (scheme (fn-of [(map-of (s-var 'k) (s-var 'v)) (s-var 'k)]
-                               (s-var 'v))))
-  ;;=> #{:cat :s-var :=> :map-of :scheme}
-
-  ;; +  
-  (sch/schema-terms (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}}))
-  ;;=> #{:cat :s-var :=> :scheme}
-
-  ;; count
-  (sch/schema-terms (scheme (fn-of [{:type (s-var 'c)}] INT)
-                        {'c #{:countable}}))
-  ;;=> #{:cat :s-var int? :=> :scheme}
-  )
-(comment
-
-  ;; add lib-test tests
-
-  (sort
-   (keys
-    (lib-for-type-ctors #{'int? :vector :=>})))
-
-  (sort
-   (keys
-    (lib-for-type-ctors #{:vector 'boolean? :=>})))
-
-  (sort
-   (keys
-    (lib-for-type-ctors #{'boolean? :=>})))
-
-  (set/superset? #{'int? :vector :=>} ;; type-ctors
-                 #{'int? :=>}) ;; types from an instruction
-  )
