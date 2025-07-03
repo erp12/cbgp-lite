@@ -637,7 +637,8 @@
 
 (comment
 
-  (decompile-ast (ana.jvm/analyze '(and [1 2] 2)))
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(+ 1 2))) {:type 'int?} true)
+  
   (compile-debugging (decompile-ast (ana.jvm/analyze '(nth [1.0 2.0 3.0] 10 4.04)))
                      {:type 'double?})
 ;;;; THESE DON'T WORK
