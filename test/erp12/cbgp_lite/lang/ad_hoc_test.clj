@@ -1,13 +1,13 @@
 (ns erp12.cbgp-lite.lang.ad-hoc-test
-  (:require [clojure.string :as str]
-            [clojure.test :refer :all]
-            [clojure.walk :as w]
+  (:require [clojure.test :refer [deftest is testing]]
             [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.lang.lib :as lib]
-            [erp12.cbgp-lite.lang.schema :as schema]
             [mb.hawk.core]
-            [meander.epsilon :as m]))
+            [taoensso.timbre :as log]))
+
+;; Uncomment to ignore debugging for testing
+(log/set-min-level! :report)
 
 (def verbose false)
 
@@ -475,7 +475,7 @@
                                        {:push      [{:gene :lit :val 3 :type {:type 'int?}}
                                                     {:gene :lit :val 0 :type {:type 'int?}}
                                                     {:gene :lit :val "Hamilton" :type {:type 'string?}}
-                                                    {:gene :var :name `lib/safe-sub}
+                                                    {:gene :var :name `lib/safe-sub-coll}
                                                     {:gene :apply}]
                                         :locals    []
                                         :ret-type  {:type 'string?}

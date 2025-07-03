@@ -56,7 +56,7 @@
   (is (l/in? "abc" \b)))
 
 (deftest char-occurrences-test
-  (is (= 1 (l/char-occurrences "abc" \b))))
+  (is (= 1 (l/occurrences-of "abc" \b))))
 
 (deftest replace-char-test
   (is (= "zzz" (l/replace' "aaa" \a \z))))
@@ -107,17 +107,17 @@
   (is (= [:a :_ :c :b]
          (l/replace-first' [:a :b :c :b] :b :_))))
 
-;; (deftest remove-element-test
-;;   (is (= [:a :c]
-;;          (l/remove-element [:a :b :c] :b))))
+(deftest remove-element-test
+  (is (= [:a :c]
+         (l/remove-element [:a :b :c] :b)))
+  (is (= [:a :b :c]
+         (l/remove-element [:a :b :c] :d))))
 
 (deftest safe-subs-test
-  (is (= "abc" (l/safe-sub "abc" -1 1000)))
-  (is (= "" (l/safe-sub "abc" 10 1))))
-
-(deftest safe-subvec-test
-  (is (= [:a] (l/safe-sub [:a] -1 10)))
-  (is (= [] (l/safe-sub [:a] 10 1))))
+  (is (= "abc" (l/safe-sub-coll "abc" -1 1000)))
+  (is (= "" (l/safe-sub-coll "abc" 10 1)))
+  (is (= [:a] (l/safe-sub-coll [:a] -1 10)))
+  (is (= [] (l/safe-sub-coll [:a] 10 1))))
 
 (deftest safe-assoc-test
   (is (= [:_ :b] (l/safe-assoc-nth [:a :b] 2 :_))))
@@ -133,8 +133,118 @@
 
 (deftest lib-for-type-ctors-test
   (is (empty? (keys (l/lib-for-type-ctors #{'boolean?}))))
-  (is (= #{`l/max' `l/min' '* '+ '- 'abs 'dec 'inc 'mod 'quot `l/neg `l/pow `l/square}
+  (is (= #{'comp 'partial}
          (set (keys (l/lib-for-type-ctors #{:=>})))))
-  (is (= #{'= `l/and 'not= `l/>' `l/or 'if `l/>=' `l/<=' 'not `l/<' 'zero? 'contains? 'empty?}
+  (is (= #{'= `l/and 'not= `l/>' `l/or 'if `l/>=' `l/<=' 'not `l/<' `l/min' `l/max'}
          (set/difference (set (keys (l/lib-for-type-ctors #{:=> 'boolean?})))
-                         (set (keys (l/lib-for-type-ctors #{:=>})))))))
+                         (set (keys (l/lib-for-type-ctors #{:=>}))))))
+
+  (is (= '(* +
+             -
+             ->vector1
+             ->vector2
+             ->vector3
+             abs
+             comp
+             count
+             dec
+             first
+             fold
+             inc
+             last
+             mapv
+             mod
+             nth-or-else
+             partial
+             quot
+             range1
+             range2
+             range3
+             reduce
+             erp12.cbgp-lite.lang.lib/butlast'
+             erp12.cbgp-lite.lang.lib/concat'
+             erp12.cbgp-lite.lang.lib/conj'
+             erp12.cbgp-lite.lang.lib/distinctv
+             erp12.cbgp-lite.lang.lib/index-of
+             erp12.cbgp-lite.lang.lib/map2v
+             erp12.cbgp-lite.lang.lib/mapcat'
+             erp12.cbgp-lite.lang.lib/mapv-indexed
+             erp12.cbgp-lite.lang.lib/max'
+             erp12.cbgp-lite.lang.lib/min'
+             erp12.cbgp-lite.lang.lib/neg
+             erp12.cbgp-lite.lang.lib/occurrences-of
+             erp12.cbgp-lite.lang.lib/pow
+             erp12.cbgp-lite.lang.lib/remove-element
+             erp12.cbgp-lite.lang.lib/replace'
+             erp12.cbgp-lite.lang.lib/replace-first'
+             erp12.cbgp-lite.lang.lib/rest'
+             erp12.cbgp-lite.lang.lib/reverse'
+             erp12.cbgp-lite.lang.lib/safe-assoc-nth
+             erp12.cbgp-lite.lang.lib/safe-nth
+             erp12.cbgp-lite.lang.lib/safe-sub-coll
+             erp12.cbgp-lite.lang.lib/sort'
+             erp12.cbgp-lite.lang.lib/sortv-by
+             erp12.cbgp-lite.lang.lib/square
+             erp12.cbgp-lite.lang.lib/take')
+         (sort
+          (keys
+           (l/lib-for-type-ctors #{'int? :vector :=>})))))
+
+  (is (= '(->vector1 ->vector2
+                     ->vector3
+                     =
+                     comp
+                     empty?
+                     first
+                     fold
+                     if
+                     last
+                     mapv
+                     not
+                     not=
+                     partial
+                     reduce
+                     erp12.cbgp-lite.lang.lib/<'
+                     erp12.cbgp-lite.lang.lib/<='
+                     erp12.cbgp-lite.lang.lib/>'
+                     erp12.cbgp-lite.lang.lib/>='
+                     erp12.cbgp-lite.lang.lib/and
+                     erp12.cbgp-lite.lang.lib/butlast'
+                     erp12.cbgp-lite.lang.lib/concat'
+                     erp12.cbgp-lite.lang.lib/conj'
+                     erp12.cbgp-lite.lang.lib/distinctv
+                     erp12.cbgp-lite.lang.lib/filter'
+                     erp12.cbgp-lite.lang.lib/in?
+                     erp12.cbgp-lite.lang.lib/map2v
+                     erp12.cbgp-lite.lang.lib/mapcat'
+                     erp12.cbgp-lite.lang.lib/max'
+                     erp12.cbgp-lite.lang.lib/min'
+                     erp12.cbgp-lite.lang.lib/or
+                     erp12.cbgp-lite.lang.lib/remove'
+                     erp12.cbgp-lite.lang.lib/remove-element
+                     erp12.cbgp-lite.lang.lib/replace'
+                     erp12.cbgp-lite.lang.lib/replace-first'
+                     erp12.cbgp-lite.lang.lib/rest'
+                     erp12.cbgp-lite.lang.lib/reverse'
+                     erp12.cbgp-lite.lang.lib/sort'
+                     erp12.cbgp-lite.lang.lib/sortv-by)
+         (sort
+          (keys
+           (l/lib-for-type-ctors #{:vector 'boolean? :=>})))))
+
+  (is (= '(= comp
+             if
+             not
+             not=
+             partial
+             erp12.cbgp-lite.lang.lib/<'
+             erp12.cbgp-lite.lang.lib/<='
+             erp12.cbgp-lite.lang.lib/>'
+             erp12.cbgp-lite.lang.lib/>='
+             erp12.cbgp-lite.lang.lib/and
+             erp12.cbgp-lite.lang.lib/max'
+             erp12.cbgp-lite.lang.lib/min'
+             erp12.cbgp-lite.lang.lib/or)
+         (sort
+          (keys
+           (l/lib-for-type-ctors #{'boolean? :=>}))))))

@@ -298,8 +298,33 @@
         end (min (count coll) (max start end))]
     (if (string? coll)
       (subs coll start end)
-      (subvec coll start end)
-    )))
+      (subvec coll start end))))
+
+;; (defn safe-subs
+;;   [s start end]
+;;   (let [start (min (count s) (max 0 start))
+;;         end (min (count s) (max start end))]
+;;     (subs s start end)))
+
+;; (defn safe-subvec
+;;   [vtr start end]
+;;   (let [start (min (count vtr) (max 0 start))
+;;         end (min (count vtr) (max start end))]
+;;     (subvec vtr start end)))
+
+;; ;;New safe-sub
+;; (defn safe-sub-coll
+;;   [coll start end]
+;;   (if (string? coll)
+;;     (safe-subs coll start end)
+;;     (safe-subvec coll start end)))
+
+
+(comment
+  
+  (safe-sub-coll "Hamilton" 0 3)
+  
+  )
 
 (defn map2v
   [expr coll1 coll2]
@@ -712,10 +737,10 @@
                        :alternatives [(scheme (fn-of [(vector-of (s-var 'e))] ; sortv
                                                      (vector-of (s-var 'e))))
                                       (unary-transform STRING)]} ; sort-str
-   `safe-sub-coll     {:type :overloaded}
+   `safe-sub-coll     {:type :overloaded
                        :alternatives [(fn-of [STRING INT INT] STRING) ; safe-subs
                                       (scheme (fn-of [(vector-of (s-var 'a)) INT INT] ; safe-sub-vec
-                                                     (vector-of (s-var 'a))))]
+                                                     (vector-of (s-var 'a))))]}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Vector
