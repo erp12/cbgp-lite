@@ -1,7 +1,7 @@
 import os
 
 # Which benchmark suite. Options: "psb", "composite"
-suite = "psb"
+suite = "composite"
 
 # Used to identify runs in qstat. Change to make easy to identify
 qstat_suffix = "-ad-hoc"
@@ -14,7 +14,7 @@ basedir = "/usr/local/research/compsci/helmuth/thelmuth/Results/ad-hoc-polymorph
 
 # Directory where input data either can be found or will be downloaded.
 # Can either be local (default) or global (will use less HDD if multiple projects use it)
-data_dir = "data/psb/"
+data_dir = "/usr/local/research/compsci/helmuth/data/psb/"
 
 # Any command line parameters for cbgp. Empty string for all defaults.
 cmd_line_params = """ """
@@ -59,7 +59,9 @@ if suite == "psb":
                 "bouncing-balls",
                 "bowling",
                 "camel-case",
+                "cut-vector",
                 "dice-game",
+                "find-pair",
                 "fizz-buzz",
                 "fuel-cost",
                 "gcd",
@@ -85,10 +87,13 @@ elif suite == "composite":
                 "count-true",
                 "filter-bounds",
                 "first-index-of-true",
+                "get-vals-of-key",
                 "max-applied-fn",
+                "min-key",
                 "set-cartesian-product",
                 "set-symmetric-difference",
                 "sets-with-element",
+                "simple-encryption",
                 "sum-2-vals",
                 "sum-2-vals-polymorphic",
                 "sum-2D",
