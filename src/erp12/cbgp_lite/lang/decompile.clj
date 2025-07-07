@@ -215,7 +215,6 @@
    'ceil `lib/ceil
    'floor `lib/floor
    'isZero 'zero?
-   'isZero 'zero?
 
    ;; Text
    'charCast `lib/int->char
@@ -284,8 +283,6 @@
    'str {1 'str
          2 `lib/concat'
          :default `lib/concat'}
-         2 `lib/concat'
-         :default `lib/concat'}
    'str/split {1 `lib/split-str-on-ws
                2 `lib/split-str
                :default `lib/split-str}
@@ -316,7 +313,7 @@
          :default `lib/safe-nth}
    'get {2 'get
          3 'get-or-else
-         :default 'get})
+         :default 'get}})
 
 (def type-specific-aliasing
   [
@@ -614,167 +611,4 @@
   (ana.jvm/analyze '(hash-map "a" 1))
 
   (ana.jvm/analyze 'count)
-  )
-
-(comment
-  ; :op :fn
-  ; :methods [{:children [:params :body] :op :fn-method :params [<locals>] :body {<ast>}}]
-  ; hmmm recursive call on body, w/ passed in locals
-  ; outside of recursive call, {:gene :fn :arg-types [????] :ret-type <:return-tag>}
-  ; target:  {:gene :fn :arg-types [(lib/tuple-of lib/INT lib/CHAR)] :ret-type lib/BOOLEAN}
-  ;          [<func body>]
-  
-  ; try :op :binding :form <var ID> --> {:gene :local :idx <var ID>}
-  ; get these locals from :params, and pass
-  {:args
-   [{:children [:methods],
-     :return-tag boolean,
-     :op :fn,
-     :env
-     {:context :ctx/expr,
-      :locals {},
-      :ns erp12.cbgp-lite.lang.decompile,
-      :column 36,
-      :line 517,
-      :file "/Users/sydneychen/Desktop/clojure_practice/cbgp-lite/src/erp12/cbgp_lite/lang/decompile.clj"},
-     :o-tag clojure.lang.AFunction,
-     :variadic? false,
-     :methods
-     [{:children [:params :body],
-       :loop-id loop_40214,
-       :arglist [p1__40211#],
-       :params
-       [{:name p1__40211#__#0,
-         :op :binding,
-         :env
-         {:context :ctx/expr,
-          :locals {},
-          :ns erp12.cbgp-lite.lang.decompile,
-          :once false,
-          :file "/Users/sydneychen/Desktop/clojure_practice/cbgp-lite/src/erp12/cbgp_lite/lang/decompile.clj",
-          :column 36,
-          :line 517},
-         :o-tag java.lang.Object,
-         :variadic? false,
-         :arg-id 0,
-         :form p1__40211#,
-         :tag java.lang.Object,
-         :atom #<Atom@12e1776b: {:tag java.lang.Object}>,
-         :local :arg}],
-       :fixed-arity 1,
-       :op :fn-method,
-       :env
-       {:context :ctx/expr,
-        :locals {},
-        :ns erp12.cbgp-lite.lang.decompile,
-        :once false,
-        :file "/Users/sydneychen/Desktop/clojure_practice/cbgp-lite/src/erp12/cbgp_lite/lang/decompile.clj",
-        :column 36,
-        :line 517},
-       :o-tag boolean,
-       :variadic? false,
-       :form ([p1__40211#] (zero? p1__40211#)),
-       :tag boolean,
-       :body
-       {:args
-        [{:children [],
-          :name p1__40211#__#0,
-          :op :local,
-          :env
-          {:loop-locals 1,
-           :locals
-           {p1__40211# {:form p1__40211#, :name p1__40211#, :variadic? false, :op :binding, :arg-id 0, :local :arg}},
-           :ns erp12.cbgp-lite.lang.decompile,
-           :loop-id loop_40214,
-           :file "/Users/sydneychen/Desktop/clojure_practice/cbgp-lite/src/erp12/cbgp_lite/lang/decompile.clj",
-           :column 45,
-           :line 517,
-           :once false,
-           :context :ctx/expr},
-          :o-tag java.lang.Object,
-          :variadic? false,
-          :arg-id 0,
-          :form p1__40211#,
-          :tag java.lang.Object,
-          :atom #<Atom@12e1776b: {:tag java.lang.Object}>,
-          :local :arg,
-          :assignable? false}],
-        :children [:args],
-        :body? true,
-        :method isZero,
-        :op :static-call,
-        :env
-        {:loop-locals 1,
-         :locals
-         {p1__40211# {:form p1__40211#, :name p1__40211#, :variadic? false, :op :binding, :arg-id 0, :local :arg}},
-         :ns erp12.cbgp-lite.lang.decompile,
-         :loop-id loop_40214,
-         :file "/Users/sydneychen/Desktop/clojure_practice/cbgp-lite/src/erp12/cbgp_lite/lang/decompile.clj",
-         :column 45,
-         :line 517,
-         :once false,
-         :context :ctx/return},
-        :o-tag boolean,
-        :class clojure.lang.Numbers,
-        :form (. clojure.lang.Numbers (clojure.core/isZero p1__40211#)),
-        :tag boolean,
-        :validated? true,
-        :raw-forms ((do (zero? p1__40211#)) (zero? p1__40211#))}}],
-     :once false,
-     :max-fixed-arity 1,
-     :form (fn* [p1__40211#] (zero? p1__40211#)),
-     :tag clojure.lang.AFunction,
-     :arglists ([p1__40211#])}
-    {:op :const,
-     :env
-     {:context :ctx/expr,
-      :locals {},
-      :ns erp12.cbgp-lite.lang.decompile,
-      :column 36,
-      :line 517,
-      :file "/Users/sydneychen/Desktop/clojure_practice/cbgp-lite/src/erp12/cbgp_lite/lang/decompile.clj"},
-     :form [0 2 3 3 0],
-     :val [0 2 3 3 0],
-     :type :vector,
-     :literal? true,
-     :o-tag clojure.lang.PersistentVector,
-     :tag clojure.lang.PersistentVector}],
-   :children [:fn :args],
-   :fn
-   {:op :var,
-    :assignable? false,
-    :var #'clojure.core/remove,
-    :meta
-    {:added "1.0",
-     :ns #namespace[clojure.core],
-     :name remove,
-     :file "clojure/core.clj",
-     :static true,
-     :column 1,
-     :line 2843,
-     :arglists ([pred] [pred coll]),
-     :doc
-     "Returns a lazy sequence of the items in coll for which\n  (pred item) returns logical false. pred must be free of side-effects.\n  Returns a transducer when no collection is provided."},
-    :env
-    {:context :ctx/expr,
-     :locals {},
-     :ns erp12.cbgp-lite.lang.decompile,
-     :column 36,
-     :line 517,
-     :file "/Users/sydneychen/Desktop/clojure_practice/cbgp-lite/src/erp12/cbgp_lite/lang/decompile.clj"},
-    :form remove,
-    :o-tag java.lang.Object,
-    :arglists ([pred] [pred coll])},
-   :meta {:line 517, :column 36},
-   :op :invoke,
-   :env
-   {:context :ctx/expr,
-    :locals {},
-    :ns erp12.cbgp-lite.lang.decompile,
-    :column 36,
-    :line 517,
-    :file "/Users/sydneychen/Desktop/clojure_practice/cbgp-lite/src/erp12/cbgp_lite/lang/decompile.clj"},
-   :o-tag java.lang.Object,
-   :top-level true,
-   :form (remove (fn* [p1__40211#] (zero? p1__40211#)) [0 2 3 3 0])}
   )
