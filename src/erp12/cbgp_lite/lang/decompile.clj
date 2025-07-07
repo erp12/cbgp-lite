@@ -274,15 +274,15 @@
    'vals `lib/vals-vec})
 
 (def ast-arity-aliasing
-  {'sub {1 'neg
+  {'minus {1 `lib/neg
          2 '-
          :default '-}
    'str/join {1 `str/join
               2 'str-join-sep
               :default `str/join}
    'str {1 'str
-         2 `lib/concat-str
-         :default `lib/concat-str}
+         2 `lib/concat'
+         :default `lib/concat'}
    'str/split {1 `lib/split-str-on-ws
                2 `lib/split-str
                :default `lib/split-str}

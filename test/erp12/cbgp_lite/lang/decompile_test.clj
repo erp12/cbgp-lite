@@ -120,71 +120,71 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(+ 22 33)))
          '({:gene :lit, :type {:type int?}, :val 33}
            {:gene :lit, :type {:type int?}, :val 22}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(* 3 4)))
          '({:gene :lit, :type {:type int?}, :val 4}
            {:gene :lit, :type {:type int?}, :val 3}
-           {:gene :var, :name int-mult}
+           {:gene :var, :name *}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(/ 3 4)))
          '({:gene :lit, :type {:type int?}, :val 4}
            {:gene :lit, :type {:type int?}, :val 3}
-           {:gene :var, :name int-div}
+           {:gene :var, :name /}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(/ 3.5 7.0)))
          '({:gene :lit, :type {:type double?}, :val 7.0}
            {:gene :lit, :type {:type double?}, :val 3.5}
-           {:gene :var, :name double-div}
+           {:gene :var, :name /}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(* 3.2 4.4)))
          '({:gene :lit, :type {:type double?}, :val 4.4}
            {:gene :lit, :type {:type double?}, :val 3.2}
-           {:gene :var, :name double-mult}
+           {:gene :var, :name *}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(quot 80 7)))
          '({:gene :lit, :type {:type int?}, :val 7}
            {:gene :lit, :type {:type int?}, :val 80}
-           {:gene :var, :name int-quot}
+           {:gene :var, :name quot}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(quot 80.3 7.8)))
          '({:gene :lit, :type {:type double?}, :val 7.8}
            {:gene :lit, :type {:type double?}, :val 80.3}
-           {:gene :var, :name double-quot}
+           {:gene :var, :name quot}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(+ 22.2 33.3)))
          '({:gene :lit, :type {:type double?}, :val 33.3}
            {:gene :lit, :type {:type double?}, :val 22.2}
-           {:gene :var, :name double-add}
+           {:gene :var, :name +}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(+ 22 (+ 33 44))))
          '({:gene :lit, :type {:type int?}, :val 44}
            {:gene :lit, :type {:type int?}, :val 33}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply}
            {:gene :lit, :type {:type int?}, :val 22}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(- 22 33)))
          '({:gene :lit, :type {:type int?}, :val 33}
            {:gene :lit, :type {:type int?}, :val 22}
-           {:gene :var, :name int-sub}
+           {:gene :var, :name -}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(- 22.5 33.5)))
          '({:gene :lit, :type {:type double?}, :val 33.5}
            {:gene :lit, :type {:type double?}, :val 22.5}
-           {:gene :var, :name double-sub}
+           {:gene :var, :name -}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(- 22 (- 33 44))))
          '({:gene :lit, :type {:type int?}, :val 44}
            {:gene :lit, :type {:type int?}, :val 33}
-           {:gene :var, :name int-sub}
+           {:gene :var, :name -}
            {:gene :apply}
            {:gene :lit, :type {:type int?}, :val 22}
-           {:gene :var, :name int-sub}
+           {:gene :var, :name -}
            {:gene :apply})))
 
   ;; comparison (<, <=, >, >=)
@@ -251,23 +251,23 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(zero? (- 4 1))))
          '({:gene :lit, :type {:type int?}, :val 1}
            {:gene :lit, :type {:type int?}, :val 4}
-           {:gene :var, :name int-sub}
+           {:gene :var, :name -}
            {:gene :apply}
            {:gene :var, :name zero-int?}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(- 1)))
-         '({:gene :lit, :type {:type int?}, :val 1} {:gene :var, :name int-neg} {:gene :apply})))
+         '({:gene :lit, :type {:type int?}, :val 1} {:gene :var, :name erp12.cbgp-lite.lang.lib/neg} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(- 1.0)))
-         '({:gene :lit, :type {:type double?}, :val 1.0} {:gene :var, :name double-neg} {:gene :apply})))
+         '({:gene :lit, :type {:type double?}, :val 1.0} {:gene :var, :name erp12.cbgp-lite.lang.lib/neg} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(- 4 5 (- 2))))
          '({:gene :lit, :type {:type int?}, :val 2}
-           {:gene :var, :name int-neg}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/neg}
            {:gene :apply}
            {:gene :lit, :type {:type int?}, :val 5}
            {:gene :lit, :type {:type int?}, :val 4}
-           {:gene :var, :name int-sub}
+           {:gene :var, :name -}
            {:gene :apply}
-           {:gene :var, :name int-sub}
+           {:gene :var, :name -}
            {:gene :apply})))
 
   ;;max and min
@@ -356,11 +356,11 @@
            {:gene :lit, :type {:type int?}, :val 3}
            {:gene :lit, :type {:type int?}, :val 2}
            {:gene :lit, :type {:type int?}, :val 1}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(* 1 2 3 4)))
@@ -368,11 +368,11 @@
            {:gene :lit, :type {:type int?}, :val 3}
            {:gene :lit, :type {:type int?}, :val 2}
            {:gene :lit, :type {:type int?}, :val 1}
-           {:gene :var, :name int-mult}
+           {:gene :var, :name *}
            {:gene :apply}
-           {:gene :var, :name int-mult}
+           {:gene :var, :name *}
            {:gene :apply}
-           {:gene :var, :name int-mult}
+           {:gene :var, :name *}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(- 1 2 3 4)))
@@ -380,11 +380,11 @@
            {:gene :lit, :type {:type int?}, :val 3}
            {:gene :lit, :type {:type int?}, :val 2}
            {:gene :lit, :type {:type int?}, :val 1}
-           {:gene :var, :name sub}
+           {:gene :var, :name -}
            {:gene :apply}
-           {:gene :var, :name sub}
+           {:gene :var, :name -}
            {:gene :apply}
-           {:gene :var, :name sub}
+           {:gene :var, :name -}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(/ 1 2 3 4)))
@@ -392,11 +392,11 @@
            {:gene :lit, :type {:type int?}, :val 3}
            {:gene :lit, :type {:type int?}, :val 2}
            {:gene :lit, :type {:type int?}, :val 1}
-           {:gene :var, :name int-div}
+           {:gene :var, :name /}
            {:gene :apply}
-           {:gene :var, :name int-div}
+           {:gene :var, :name /}
            {:gene :apply}
-           {:gene :var, :name int-div}
+           {:gene :var, :name /}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(+ 1.1 2.2 3.3 4.4)))
@@ -404,11 +404,11 @@
            {:gene :lit, :type {:type double?}, :val 3.3}
            {:gene :lit, :type {:type double?}, :val 2.2}
            {:gene :lit, :type {:type double?}, :val 1.1}
-           {:gene :var, :name double-add}
+           {:gene :var, :name +}
            {:gene :apply}
-           {:gene :var, :name double-add}
+           {:gene :var, :name +}
            {:gene :apply}
-           {:gene :var, :name double-add}
+           {:gene :var, :name +}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(* 1.1 2.2 3.3 4.4)))
@@ -416,11 +416,11 @@
            {:gene :lit, :type {:type double?}, :val 3.3}
            {:gene :lit, :type {:type double?}, :val 2.2}
            {:gene :lit, :type {:type double?}, :val 1.1}
-           {:gene :var, :name double-mult}
+           {:gene :var, :name *}
            {:gene :apply}
-           {:gene :var, :name double-mult}
+           {:gene :var, :name *}
            {:gene :apply}
-           {:gene :var, :name double-mult}
+           {:gene :var, :name *}
            {:gene :apply})))
 
    ;; other math (sin, cos, tan, etc)
@@ -457,11 +457,11 @@
            {:gene :lit, :type {:type double?}, :val 3.3}
            {:gene :lit, :type {:type double?}, :val 2.2}
            {:gene :lit, :type {:type double?}, :val 1.1}
-           {:gene :var, :name double-sub}
+           {:gene :var, :name -}
            {:gene :apply}
-           {:gene :var, :name double-sub}
+           {:gene :var, :name -}
            {:gene :apply}
-           {:gene :var, :name double-sub}
+           {:gene :var, :name -}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(/ 1.1 2.2 3.3 4.4)))
@@ -469,33 +469,33 @@
            {:gene :lit, :type {:type double?}, :val 3.3}
            {:gene :lit, :type {:type double?}, :val 2.2}
            {:gene :lit, :type {:type double?}, :val 1.1}
-           {:gene :var, :name double-div}
+           {:gene :var, :name /}
            {:gene :apply}
-           {:gene :var, :name double-div}
+           {:gene :var, :name /}
            {:gene :apply}
-           {:gene :var, :name double-div}
+           {:gene :var, :name /}
            {:gene :apply})))
 
 ;;inc and dec
   (is (= (de/decompile-ast (ana.jvm/analyze '(inc 4)))
-         '({:gene :lit, :type {:type int?}, :val 4} {:gene :var, :name int-inc} {:gene :apply})))
+         '({:gene :lit, :type {:type int?}, :val 4} {:gene :var, :name inc} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(dec 4)))
-         '({:gene :lit, :type {:type int?}, :val 4} {:gene :var, :name int-dec} {:gene :apply})))
+         '({:gene :lit, :type {:type int?}, :val 4} {:gene :var, :name dec} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(inc 4.2)))
-         '({:gene :lit, :type {:type double?}, :val 4.2} {:gene :var, :name double-inc} {:gene :apply})))
+         '({:gene :lit, :type {:type double?}, :val 4.2} {:gene :var, :name inc} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(dec 4.2)))
-         '({:gene :lit, :type {:type double?}, :val 4.2} {:gene :var, :name double-dec} {:gene :apply})))
+         '({:gene :lit, :type {:type double?}, :val 4.2} {:gene :var, :name dec} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(abs -10)))
-         '({:gene :lit, :type {:type int?}, :val -10} {:gene :var, :name int-abs} {:gene :apply})))
+         '({:gene :lit, :type {:type int?}, :val -10} {:gene :var, :name abs} {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(abs -10.5)))
-         '({:gene :lit, :type {:type double?}, :val -10.5} {:gene :var, :name double-abs} {:gene :apply})))
+         '({:gene :lit, :type {:type double?}, :val -10.5} {:gene :var, :name abs} {:gene :apply})))
 
   ;; int and double casting
   (is (= (de/decompile-ast (ana.jvm/analyze '(int 5.5)))
          '({:gene :lit, :type {:type double?}, :val 5.5} {:gene :var, :name int} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(int \t)))
-         '({:gene :lit, :type {:type char?}, :val \t} {:gene :var, :name char->int} {:gene :apply})))
+         '({:gene :lit, :type {:type char?}, :val \t} {:gene :var, :name int} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(double 5)))
          '({:gene :lit, :type {:type int?}, :val 5} {:gene :var, :name double} {:gene :apply})))
 
@@ -503,12 +503,12 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(Math/pow 2.0 3.0)))
          '({:gene :lit, :type {:type double?}, :val 3.0}
            {:gene :lit, :type {:type double?}, :val 2.0}
-           {:gene :var, :name erp12.cbgp-lite.lang.lib/double-pow}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/pow}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(Math/pow 2.5 2.5)))
          '({:gene :lit, :type {:type double?}, :val 2.5}
            {:gene :lit, :type {:type double?}, :val 2.5}
-           {:gene :var, :name erp12.cbgp-lite.lang.lib/double-pow}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/pow}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(Math/ceil 4.5)))
@@ -729,11 +729,11 @@
 ;;   (de/compile-debugging '({:gene :lit, :type {:type int?}, :val 3}
 ;;                         {:gene :lit, :type {:type int?}, :val 2}
 ;;                         {:gene :lit, :type {:type int?}, :val 1}
-;;                         {:gene :var, :name int-div}
+;;                         {:gene :var, :name /}
 ;;                         {:gene :apply}
-;;                         {:gene :var, :name int-div}
+;;                         {:gene :var, :name /}
 ;;                         {:gene :apply}
-;;                         {:gene :var, :name int-div}
+;;                         {:gene :var, :name /}
 ;;                         {:gene :apply})
 ;;                       {:type 'int?}) 
 
@@ -791,7 +791,7 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(concat [] [1 2])))
          '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [1 2]}
            {:gene :lit, :type {:child {:sym T, :type :s-var}, :type :vector}, :val []}
-           {:gene :var, :name erp12.cbgp-lite.lang.lib/concatv}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/concat'}
            {:gene :apply})))
 
   ; does not work until conj-vec and conj-set are implemented
@@ -817,14 +817,14 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(concat [1 2] [3 4])))
          '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [3 4]}
            {:gene :lit, :type {:child {:type int?}, :type :vector}, :val [1 2]}
-           {:gene :var, :name erp12.cbgp-lite.lang.lib/concatv}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/concat'}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(concat (rest [1 2 3]) [3 4])))
          '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [3 4]}
            {:gene :lit, :type {:child {:type int?}, :type :vector}, :val [1 2 3]}
-           {:gene :var, :name erp12.cbgp-lite.lang.lib/restv}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/rest'}
            {:gene :apply}
-           {:gene :var, :name erp12.cbgp-lite.lang.lib/concatv}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/concat'}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(last [1 2 3])))
          '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [1 2 3]} {:gene :var, :name last} {:gene :apply})))
@@ -833,29 +833,29 @@
 
   ;; strings
   (is (= (de/decompile-ast (ana.jvm/analyze '(first "Hello")))
-         '({:gene :lit, :type {:type string?}, :val "Hello"} {:gene :var, :name first-str} {:gene :apply})))
+         '({:gene :lit, :type {:type string?}, :val "Hello"} {:gene :var, :name first} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(last "String")))
-         '({:gene :lit, :type {:type string?}, :val "String"} {:gene :var, :name last-str} {:gene :apply})))
+         '({:gene :lit, :type {:type string?}, :val "String"} {:gene :var, :name last} {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(count "Hamilton")))
          '({:gene :lit, :type {:type string?}, :val "Hamilton"}
-           {:gene :var, :name length}
+           {:gene :var, :name count}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(count [1 2 3 4])))
          '({:gene :lit,
             :type {:child {:type int?}, :type :vector}, :val [1 2 3 4]}
-           {:gene :var, :name count-vec}
+           {:gene :var, :name count}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(count #{1.1 2.2 3.3 4.4})))
          '({:gene :lit,
             :type {:child {:type double?}, :type :set}, :val #{1.1 2.2 3.3 4.4}}
-           {:gene :var, :name count-set}
+           {:gene :var, :name count}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(count {"a" 1 "b" 2 "c" 3})))
          '({:gene :lit,
             :type {:key {:type string?}, :type :map-of, :value {:type int?}}, :val {"a" 1 "b" 2 "c" 3}}
-           {:gene :var, :name count-map}
+           {:gene :var, :name count}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(vals {1 \a 2 \b})))
@@ -887,19 +887,19 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(str "hello" "world")))
          '({:gene :lit, :type {:type string?}, :val "world"}
            {:gene :lit, :type {:type string?}, :val "hello"}
-           {:gene :var, :name erp12.cbgp-lite.lang.lib/concat-str}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/concat'}
            {:gene :apply})))
   ; doesn't work; 3+ args
   #_(is (= (de/decompile-ast (ana.jvm/analyze '(str "hello" "world" "yay")))
            '({:gene :lit, :type {:type string?}, :val "yay"}
              {:gene :lit, :type {:type string?}, :val "world"}
              {:gene :lit, :type {:type string?}, :val "hello"}
-             {:gene :var, :name erp12.cbgp-lite.lang.lib/concat-str}
+             {:gene :var, :name erp12.cbgp-lite.lang.lib/concat'}
              {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(str (+ 2 3))))
          '({:gene :lit, :type {:type int?}, :val 3}
            {:gene :lit, :type {:type int?}, :val 2}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply}
            {:gene :var, :name str}
            {:gene :apply})))
@@ -922,7 +922,7 @@
   ; replace concat'd genome w/ (ana.jvm/analyze '(conj [] 5)) when conj-vec is added
   ; (is (= (de/compile-debugging (concat (de/decompile-ast (ana.jvm/analyze '(conj [] 5))
   (is (= (de/compile-debugging (concat (de/decompile-ast (ana.jvm/analyze []))
-                                       (list {:gene :var :name `lib/conj-vec}
+                                       (list {:gene :var :name `lib/conj'}
                                              {:gene :lit :val 5 :type {:type 'int?}}
                                              {:gene :apply}))
                                {:type :vector :child {:type 'int?}})
@@ -931,7 +931,7 @@
   ; replace concat'd genome w/ (ana.jvm/analyze '(conj #{} 5)) when conj-set is added
   ; (is (= (de/compile-debugging (concat (de/decompile-ast (ana.jvm/analyze '(conj #{} 5))
   (is (= (de/compile-debugging (concat (de/decompile-ast (ana.jvm/analyze #{}))
-                                       (list {:gene :var :name `lib/conj-set}
+                                       (list {:gene :var :name `lib/conj'}
                                              {:gene :lit :val 5 :type {:type 'int?}}
                                              {:gene :apply}))
                                {:type :set :child {:type 'int?}})
@@ -1075,7 +1075,7 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn my-first [input1] (first input1)))
                            {:input->type {'input1 {:type 'string?}}
                             :ret-type {:type 'char?}})
-         '({:gene :local, :idx 0} {:gene :var, :name first-str} {:gene :apply})))
+         '({:gene :local, :idx 0} {:gene :var, :name first} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn my-first [input1] (first input1)))
                            {:input->type {'input1 {:type :vector :child {:type 'int?}}}
                             :ret-type {:type 'int?}})
@@ -1085,7 +1085,7 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn my-first [input1] (last input1)))
                            {:input->type {'input1 {:type 'string?}}
                             :ret-type {:type 'char?}})
-         '({:gene :local, :idx 0} {:gene :var, :name last-str} {:gene :apply})))
+         '({:gene :local, :idx 0} {:gene :var, :name last} {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn my-first [input1] (last input1)))
                            {:input->type {'input1 {:type :vector :child {:type 'int?}}}
                             :ret-type {:type 'int?}})
@@ -1128,23 +1128,23 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn local_int [input1] (inc input1)))
                            {:input->type {'input1 {:type 'int?}}
                             :ret-type {:type 'int?}})
-         '({:gene :local, :idx 0} {:gene :var, :name int-inc} {:gene :apply})))
+         '({:gene :local, :idx 0} {:gene :var, :name inc} {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn local_double [input1] (- input1)))
                            {:input->type {'input1 {:type 'double?}}
                             :ret-type {:type 'double?}})
-         '({:gene :local, :idx 0} {:gene :var, :name double-neg} {:gene :apply})))
+         '({:gene :local, :idx 0} {:gene :var, :name erp12.cbgp-lite.lang.lib/neg} {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn local_strint [input1] (count input1)))
                            {:input->type {'input1 {:type 'string?}}
                             :ret-type {:type 'int?}})
-         '({:gene :local, :idx 0} {:gene :var, :name length} {:gene :apply})))
+         '({:gene :local, :idx 0} {:gene :var, :name count} {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ input1 input2)))
                            {:input->type {'input1 {:type 'int?}
                                           'input2 {:type 'int?}}
                             :ret-type {:type 'int?}})
-         '({:gene :local, :idx 1} {:gene :local, :idx 0} {:gene :var, :name int-add} {:gene :apply})))
+         '({:gene :local, :idx 1} {:gene :local, :idx 0} {:gene :var, :name +} {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ (int input1) (int input2))))
                            {:input->type {'input1 {:type 'double?}
@@ -1156,7 +1156,7 @@
            {:gene :local, :idx 0}
            {:gene :var, :name int}
            {:gene :apply}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ input2 (int input1))))
@@ -1167,7 +1167,7 @@
            {:gene :var, :name int}
            {:gene :apply}
            {:gene :local, :idx 1}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ (count input1) input2)))
@@ -1176,9 +1176,9 @@
                             :ret-type {:type 'int?}})
          '({:gene :local, :idx 1}
            {:gene :local, :idx 0}
-           {:gene :var, :name length}
+           {:gene :var, :name count}
            {:gene :apply}
-           {:gene :var, :name int-add}
+           {:gene :var, :name +}
            {:gene :apply}))))
 
 (deftest decompile-recompile-locals-test
