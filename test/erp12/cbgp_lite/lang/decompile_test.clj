@@ -253,7 +253,7 @@
            {:gene :lit, :type {:type int?}, :val 4}
            {:gene :var, :name -}
            {:gene :apply}
-           {:gene :var, :name zero-int?}
+           {:gene :var, :name zero?}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(- 1)))
          '({:gene :lit, :type {:type int?}, :val 1} {:gene :var, :name erp12.cbgp-lite.lang.lib/neg} {:gene :apply})))
@@ -1187,7 +1187,7 @@
                                                    :ret-type {:type 'int?}})
                                 {:input->type {'input1 {:type 'int?}}
                                  :ret-type {:type 'int?}}
-                                [1])
+                                [1] true)
          2))
 
   (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn local_double [input1] (- input1)))

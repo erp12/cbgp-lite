@@ -25,7 +25,7 @@
          func (ast/form->fn [] form)]
      (func))))
 
-(defn compile-debugging2
+(defn compile-debugging2 
   ([genome task]
    (compile-debugging2 genome task []))
 
@@ -38,7 +38,7 @@
          _ (when verbose (println "PLUSHY:" genome))
          push (pl/plushy->push genome)
          _ (when verbose (println "PUSH:" push))
-         ast (::co/ast (co/push->ast
+         ast (::co/ast (:ast co/push->ast
                         (assoc
                          enhanced-task
                          :locals locals
@@ -214,7 +214,7 @@
    'log10 `lib/safe-log10
    'ceil `lib/ceil
    'floor `lib/floor
-   'isZero 'zero-int?
+   'isZero 'zero?
 
    ;; Text
    'charCast `lib/int->char
