@@ -316,7 +316,7 @@
          :default `lib/safe-nth}
    'get {2 'get
          3 'get-or-else
-         :default 'get}})
+         :default 'get})
 
 (def type-specific-aliasing
   [
