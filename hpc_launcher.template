@@ -1,7 +1,7 @@
 #PBS -N #qsub-name#
 #PBS -l nodes=1:ppn=8
 #PBS -l mem=20GB
-#PBS -q una-new
+#PBS -q una
 #PBS -M #email#
 #PBS -m n
 #PBS -j oe
@@ -27,7 +27,13 @@ PROBLEM="#namespace#"
 # your username (in my case, thelmuth).
 DIRECTORY="#dir#"
 
-CLOJURECMD="/usr/local/bin/clojure -X:benchmarks erp12.cbgp-lite.benchmark.ga/run :suite-ns erp12.cbgp-lite.benchmark.suite.#suite# :data-dir '"\""#data-dir#"\""' :problem $PROBLEM #cmd-line-params# :type-counts-file '"\""$DIRECTORY/$PROBLEM/run${PBS_ARRAYID}_types.edn"\""'"
+CLOJURECMD="/usr/local/bin/clojure -X:benchmarks erp12.cbgp-lite.benchmark.ga/run \
+   :suite-ns erp12.cbgp-lite.benchmark.suite.#suite# \
+   :data-dir \"#data-dir#\" \
+   :problem $PROBLEM \
+   #cmd-line-params# \
+   :type-counts-file \"$DIRECTORY/$PROBLEM/run${PBS_ARRAYID}_types.edn\""
+
 
 echo "Running on node(s):"
 cat $PBS_NODEFILE
