@@ -457,23 +457,29 @@
          (= op :invoke)
          (= op :var))
      (let [ast-fn-name (cond
-                         (= op :static-call)
+                         (= op :static-call) ; catch static-call
                          (:method ast)
 
-                         (= op :var)
+                         (= op :var) ; catch var (inside invoke)
                          (-> ast :meta :name)
                          
-                         (= (-> ast :fn :op) :var)
+                         (= (-> ast :fn :op) :var) ; catch var (regular func call)
                          (-> ast :fn :form)
 
-                         :else (-> ast :fn))
+                         :else (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast % task) args)
            decompiled-args (flatten (reverse raw-decompiled-args))]
        (concat decompiled-args
-               (if (= (ast-fn-name :op) :invoke)
-                 (decompile-ast ast-fn-name task)
+               (cond
+                 (= (ast-fn-name :op) :invoke)
+                 (concat (decompile-ast ast-fn-name task) (list {:gene :apply}))
+                 
+                 (= op :var) 
+                 (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
+                 
+                 :else 
                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                       {:gene :apply}))))
+                         {:gene :apply}))))
 
     ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -493,36 +499,13 @@
 
     ;; Handle anonymous function abstraction
      (= op :fn)
-     ; attempt 1!
-     (let [locals (map :form (-> (first (-> ast :methods)) :params))
+     (let [locals (map :form (-> (first (-> ast :methods)) :params)) ; diff way to reach into :methods [] ?
            decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body))
-           ;return-type (-> ast :return-tag)
-           return-type (get ground-type-alias-map (.getName (-> ast :return-tag)))
-          ;;  _ (println "lvl 0: " ast)
-          ;;  _ (println "lvl 0: " (-> ast :methods))
-          ;;  _ (println "lvl 1: " (first (-> ast :methods)))
-          ;;  _ (println "lvl 2: " (-> (first (-> ast :methods)) :body)) ; there's gotta be a better way to do this
-          ;;  _ (println "lvl 3: " (-> (first (-> ast :methods)) :body :args))
-          ;;  _ (println "ret: " (-> ast :return-tag)) 
-           ]
-       (println "locals: " locals)
-       (println "ret:" (-> ast :return-tag))
-       (println "type of ret:" (type (-> ast :return-tag)))
-       (println "name?? " (.getName (-> ast :return-tag)))
-       (println "name type?? " (type (.getName (-> ast :return-tag))))
-       (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types ["filler"] :ret-type return-type}))
-       (conj () (vec decompiled-body) {:gene :fn :arg-types ["filler"] :ret-type return-type}))
-
-       ; :op :fn
-       ; [!] methods is a list
-  ; :methods [{:children [:params :body] :op :fn-method :params [<locals>] :body {<ast>}}]
-  ; hmmm recursive call on body, w/ passed in locals
-  ; outside of recursive call, {:gene :fn :arg-types [????] :ret-type <:return-tag>}
-  ; target:  {:gene :fn :arg-types [(lib/tuple-of lib/INT lib/CHAR)] :ret-type lib/BOOLEAN}
-  ;          [<func body>]
+           return-type (get ground-type-alias-map (.getName (-> ast :return-tag)))]
+       #_(do (println "locals: " locals)
+           (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types ["filler"] :ret-type return-type})))
+       (conj () (vec decompiled-body) {:gene :fn :arg-types [lib/s-var] :ret-type return-type})) ; [] not maintained
      
-  ; try :op :binding :form <var ID> --> {:gene :local :idx <var ID>}
-  ; get these locals from :params, and pass
      
      (= op :def)
      (decompile-ast (-> ast
@@ -538,7 +521,7 @@
        (println "not handled yet AST op:" op)
        (println "failing AST: \n" ast)
        (println "---------------------------")
-       nil)))) 
+       nil))))
 
 (comment
   (:fn (ana.jvm/analyze '((comp inc +) 3 3 3)))
@@ -554,12 +537,18 @@
 
   (decompile-ast (ana.jvm/analyze '(and true false)))
   (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
+  (decompile-ast (ana.jvm/analyze '(+ ((partial + 2) 3) 10)))
   
   ; ok change invoke handling
   ; 1. look in :fn
   ; (prev, grabbed form; new, grab var)
   ; if there is an invoke binding, do whole process again
   ; 2. call get-fn-name on the :fn subtree
+
+    ; try :op :binding :form <var ID> --> {:gene :local :idx <var ID>}
+  ; get these locals from :params, and pass
+
+  (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
