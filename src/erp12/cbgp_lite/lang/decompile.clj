@@ -38,13 +38,13 @@
          _ (when verbose (println "PLUSHY:" genome))
          push (pl/plushy->push genome)
          _ (when verbose (println "PUSH:" push))
-         ast (::co/ast (:ast co/push->ast
+         ast (::co/ast (:ast (co/push->ast
                         (assoc
                          enhanced-task
                          :locals locals
                          :push push
                          :type-env (merge (:type-env enhanced-task)
-                                          lib/type-env))))
+                                          lib/type-env)))))
          _ (when verbose (println "AST:" ast))
          form (ast/ast->form ast)
          _ (when verbose (println "FORM:" form))

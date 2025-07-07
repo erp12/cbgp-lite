@@ -908,7 +908,9 @@
            {:gene :lit, :type {:type int?}, :val 10}
            {:gene :lit, :type {:child {:type double?}, :type :vector}, :val [1.0 2.0 3.0]}
            {:gene :var, :name nth-or-else}
-           {:gene :apply}))))
+           {:gene :apply})))
+
+
 
 (deftest decompile-recompile-collections-test
   ;; empty collections 
