@@ -195,7 +195,7 @@
    'min `lib/min'
 
    ;; Numeric
-   'add '+
+   'add '+ 
    'multiply '*
    'quotient 'quot
    'divide '/
@@ -275,8 +275,8 @@
 
 (def ast-arity-aliasing
   {'minus {1 `lib/neg
-         2 '-
-         :default '-}
+           2 '-
+           :default '-}
    'str/join {1 `str/join
               2 'str-join-sep
               :default `str/join}
@@ -330,6 +330,16 @@
    ; `lib/and (macro)
    ; `lib/or (macro)
    ])
+
+(def ground-type-alias-map
+  {"nil" `lib/NIL
+   "boolean" `lib/BOOLEAN
+  ;;  'number `lib/INT
+  ;;  'number `lib/DOUBLE
+   "character" `lib/CHAR
+   "string" `lib/STRING
+   "symbol" `lib/KEYWORD
+   })
 
 (defn find-local
   "Takes a map or vec and recursively looks through it to find a map
@@ -441,18 +451,29 @@
      (= :local op)
      (list {:gene :local
             :idx (:arg-id ast)})
-
-    ;; Handle static method or invoke
+     
+    ;; Handle static method or invoke or var
      (or (= op :static-call)
-         (= op :invoke))
-     (let [ast-fn-name (if (= op :static-call)
+         (= op :invoke)
+         (= op :var))
+     (let [ast-fn-name (cond
+                         (= op :static-call)
                          (:method ast)
-                         (-> ast :fn :form))
+
+                         (= op :var)
+                         (-> ast :meta :name)
+                         
+                         (= (-> ast :fn :op) :var)
+                         (-> ast :fn :form)
+
+                         :else (-> ast :fn))
            raw-decompiled-args (map #(decompile-ast % task) args)
            decompiled-args (flatten (reverse raw-decompiled-args))]
        (concat decompiled-args
-               (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                     {:gene :apply})))
+               (if (= (ast-fn-name :op) :invoke)
+                 (decompile-ast ast-fn-name task)
+                 (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
+                       {:gene :apply}))))
 
     ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -472,8 +493,37 @@
 
     ;; Handle anonymous function abstraction
      (= op :fn)
-     nil
+     ; attempt 1!
+     (let [locals (map :form (-> (first (-> ast :methods)) :params))
+           decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body))
+           ;return-type (-> ast :return-tag)
+           return-type (get ground-type-alias-map (.getName (-> ast :return-tag)))
+          ;;  _ (println "lvl 0: " ast)
+          ;;  _ (println "lvl 0: " (-> ast :methods))
+          ;;  _ (println "lvl 1: " (first (-> ast :methods)))
+          ;;  _ (println "lvl 2: " (-> (first (-> ast :methods)) :body)) ; there's gotta be a better way to do this
+          ;;  _ (println "lvl 3: " (-> (first (-> ast :methods)) :body :args))
+          ;;  _ (println "ret: " (-> ast :return-tag)) 
+           ]
+       (println "locals: " locals)
+       (println "ret:" (-> ast :return-tag))
+       (println "type of ret:" (type (-> ast :return-tag)))
+       (println "name?? " (.getName (-> ast :return-tag)))
+       (println "name type?? " (type (.getName (-> ast :return-tag))))
+       (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types ["filler"] :ret-type return-type}))
+       (conj () (vec decompiled-body) {:gene :fn :arg-types ["filler"] :ret-type return-type}))
 
+       ; :op :fn
+       ; [!] methods is a list
+  ; :methods [{:children [:params :body] :op :fn-method :params [<locals>] :body {<ast>}}]
+  ; hmmm recursive call on body, w/ passed in locals
+  ; outside of recursive call, {:gene :fn :arg-types [????] :ret-type <:return-tag>}
+  ; target:  {:gene :fn :arg-types [(lib/tuple-of lib/INT lib/CHAR)] :ret-type lib/BOOLEAN}
+  ;          [<func body>]
+     
+  ; try :op :binding :form <var ID> --> {:gene :local :idx <var ID>}
+  ; get these locals from :params, and pass
+     
      (= op :def)
      (decompile-ast (-> ast
                         :init
@@ -486,7 +536,31 @@
      :else
      (do
        (println "not handled yet AST op:" op)
-       nil))))
+       (println "failing AST: \n" ast)
+       (println "---------------------------")
+       nil)))) 
+
+(comment
+  (:fn (ana.jvm/analyze '((comp inc +) 3 3 3)))
+  ; :args has the comp function's args (3 3 3)
+  ; :fn has the comp function
+  
+  (decompile-ast (ana.jvm/analyze '(concat [1 2 3] [0])))
+  ; in above case, can do -> ast :fn :form
+  ; not the case for comp...
+  
+  (decompile-ast (ana.jvm/analyze '((comp inc +) 3 3 3)))
+  (decompile-ast (ana.jvm/analyze '((partial + 1) 3)))
+
+  (decompile-ast (ana.jvm/analyze '(and true false)))
+  (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
+  
+  ; ok change invoke handling
+  ; 1. look in :fn
+  ; (prev, grabbed form; new, grab var)
+  ; if there is an invoke binding, do whole process again
+  ; 2. call get-fn-name on the :fn subtree
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Testing
@@ -538,4 +612,3 @@
 
   (ana.jvm/analyze 'count)
   )
-
