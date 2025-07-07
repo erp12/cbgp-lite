@@ -1,7 +1,7 @@
 import os
 
 # Which benchmark suite. Options: "psb", "composite"
-suite = "composite"
+suite = "psb"
 
 # Used to identify runs in qstat. Change to make easy to identify
 qstat_suffix = "-ad-hoc"
