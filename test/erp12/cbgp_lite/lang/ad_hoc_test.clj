@@ -1537,3 +1537,48 @@
         _ (when verbose (println "FORM: " form))
         func (eval `(fn [] ~form))]
     (is (= [2 3 3] (func)))))
+
+
+(macroexpand '(and true false true))
+
+
+(deftest simple-let-with-locals
+  (let [{::c/keys [ast type]} (:ast (c/push->ast
+                                     {:push      '[{:gene :local, :idx 0}
+                                                   {:gene :let}
+                                                    [{:gene :lit, :type {:type int?}, :val 1}
+                                                    {:gene :local, :idx 1}
+                                                    {:gene :var, :name +}
+                                                    {:gene :apply}]
+                                                    ]
+                                      :locals    ['in1]
+                                      :ret-type  {:type 'int?}
+                                      :type-env  (assoc lib/type-env 
+                                                        'in1 {:type 'int?})
+                                      :dealiases lib/dealiases})) 
+        _ (is (= 'int? (:type type)))
+        _ (when verbose (println "REAL-AST: " ast))
+        form (a/ast->form ast)
+        _ (when verbose (println "FORM: " form))
+        func (eval `(fn [~'in1] ~form))]
+    (is (= (func 3) 4))))
+
+(deftest simple-let
+  (let [{::c/keys [ast type]} (:ast (c/push->ast
+                                     {:push      '[{:gene :lit, :type {:type int?}, :val 3}
+                                                   {:gene :let}
+                                                   [{:gene :lit, :type {:type int?}, :val 1}
+                                                    {:gene :local, :idx 0}
+                                                    {:gene :var, :name +}
+                                                    {:gene :apply}]]
+                                      :locals    []
+                                      :ret-type  {:type 'int?}
+                                      :type-env  lib/type-env
+                                      :dealiases lib/dealiases}))
+        _ (is (= 'int? (:type type)))
+        _ (when verbose (println "REAL-AST: " ast))
+        form (a/ast->form ast)
+        _ (when verbose (println "FORM: " form))
+        func (eval `(fn [] ~form))]
+    (is (= (func ) 4))))
+ 

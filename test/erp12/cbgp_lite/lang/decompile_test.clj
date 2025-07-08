@@ -1337,4 +1337,12 @@
   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((comp str dec +) 5 65)))
                                {:type 'string?})
          "69")))
-  
+
+  ;; macros
+(de/decompile-ast (ana.jvm/analyze '(and true false)))
+
+(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2
+                                                                      y 6] (+ y x))))
+                      {:type 'int?} true)
+       5))
+
