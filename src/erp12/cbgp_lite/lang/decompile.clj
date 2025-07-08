@@ -283,7 +283,7 @@
               :default `str/join}
    'str {1 'str
          2 `lib/concat'
-         :default `str'}
+         :default 'str}
    'str/split {1 `lib/split-str-on-ws
                2 `lib/split-str
                :default `lib/split-str}
@@ -318,7 +318,7 @@
 
 (def type-specific-aliasing
   [
-   'remove ; `lib/remove' `lib/remove-element
+   ;'remove ; `lib/remove' `lib/remove-element
    'assoc  ; 'assoc `lib/safe-assoc-nth
   ])
 
@@ -469,7 +469,7 @@
 
                          :else (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast % task) args)
-           decompiled-args (apply concat (reverse raw-decompiled-args))
+           decompiled-args (flatten (reverse raw-decompiled-args))
            ]
        (concat decompiled-args
                (cond
@@ -507,7 +507,7 @@
        #_(do (println "locals: " locals)
              (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types [`lib/s-var] :ret-type return-type}))
              (println "body: " (vec decompiled-body))) 
-       (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} (vec decompiled-body))) ; [] not maintained --> see var/invoke/static-call flatten
+       (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} decompiled-body {:gene :close})) ; [] not maintained --> see var/invoke/static-call flatten
      ; [!] check s-var arg-type formatting
        
        (= op :def)
@@ -540,10 +540,27 @@
 
   (decompile-ast (ana.jvm/analyze '(and true false)))
   (compile-debugging (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) {:type :vector :child {:type 'int?}})
+  
+  (compile-debugging '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 2 3 3 0]}
+                       {:arg-types [{:sym s-19195, :type :s-var}], :gene :fn, :ret-type erp12.cbgp-lite.lang.lib/BOOLEAN}
+                       {:gene :local, :idx 0}
+                       {:gene :var, :name zero?}
+                       {:gene :apply}
+                       {:gene :close}
+                       {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+                       {:gene :apply}) 
+                     
+                     {:type :vector :child {:type 'int?}})
   ; flatten in :if op
   (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
   (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
   (decompile-ast (ana.jvm/analyze '(+ ((partial + 2) 3) 10)))
+
+  (decompile-ast
+   (ana.jvm/analyze
+    '(defn first-negative-sum-index [v]
+       (first (keep-indexed (fn [i _] (when (neg? (reduce + (subvec v 0 (inc i)))) i)) v))))
+   )
 
   ; ok change invoke handling
   ; 1. look in :fn
@@ -559,6 +576,7 @@
   (log/set-min-level! :trace)
 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1]))) {:type :vector :child {:type 'int?}})
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(mapv #(+ % 1) [0 2 1 1]))) {:type :vector :child {:type 'int?}})
 
   (compile-debugging2 (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1])))
                       {:ret-type {:type :vector :child {:type 'int?}}} [] true)
