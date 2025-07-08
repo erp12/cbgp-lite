@@ -4,7 +4,8 @@
             [erp12.cbgp-lite.lang.compile :as co]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.plushy :as pl]
-            [erp12.cbgp-lite.task :as tsk]))
+            [erp12.cbgp-lite.task :as tsk]
+            [taoensso.timbre :as log]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;; Compilation testing
@@ -332,7 +333,7 @@
    ])
 
 (def ground-type-alias-map
-  {"nil" `lib/NIL
+  {nil `lib/s-var
    "boolean" `lib/BOOLEAN
   ;;  'number `lib/INT
   ;;  'number `lib/DOUBLE
@@ -468,7 +469,8 @@
 
                          :else (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast % task) args)
-           decompiled-args (flatten (reverse raw-decompiled-args))]
+           decompiled-args (apply concat (reverse raw-decompiled-args))
+           ]
        (concat decompiled-args
                (cond
                  (= (ast-fn-name :op) :invoke)
@@ -479,7 +481,7 @@
                  
                  :else 
                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                         {:gene :apply}))))
+                       {:gene :apply}))))
 
     ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -501,27 +503,28 @@
      (= op :fn)
      (let [locals (map :form (-> (first (-> ast :methods)) :params)) ; diff way to reach into :methods [] ?
            decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body))
-           return-type (get ground-type-alias-map (.getName (-> ast :return-tag)))]
+           return-type (get ground-type-alias-map (.getName (-> ast :return-tag)) (lib/s-var (gensym "s-")))]
        #_(do (println "locals: " locals)
-           (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types ["filler"] :ret-type return-type})))
-       (conj () (vec decompiled-body) {:gene :fn :arg-types [lib/s-var] :ret-type return-type})) ; [] not maintained
-     
-     
-     (= op :def)
-     (decompile-ast (-> ast
-                        :init
-                        :expr
-                        :methods
-                        first
-                        :body)
-                    task)
+             (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types [`lib/s-var] :ret-type return-type}))
+             (println "body: " (vec decompiled-body))) 
+       (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} (vec decompiled-body))) ; [] not maintained --> see var/invoke/static-call flatten
+     ; [!] check s-var arg-type formatting
+       
+       (= op :def)
+       (decompile-ast (-> ast
+                          :init
+                          :expr
+                          :methods
+                          first
+                          :body)
+                      task)
 
-     :else
-     (do
-       (println "not handled yet AST op:" op)
-       (println "failing AST: \n" ast)
-       (println "---------------------------")
-       nil))))
+       :else
+       (do
+         (println "not handled yet AST op:" op)
+         (println "failing AST: \n" ast)
+         (println "---------------------------")
+         nil))))
 
 (comment
   (:fn (ana.jvm/analyze '((comp inc +) 3 3 3)))
@@ -536,19 +539,31 @@
   (decompile-ast (ana.jvm/analyze '((partial + 1) 3)))
 
   (decompile-ast (ana.jvm/analyze '(and true false)))
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) {:type :vector :child {:type 'int?}})
+  ; flatten in :if op
   (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
+  (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
   (decompile-ast (ana.jvm/analyze '(+ ((partial + 2) 3) 10)))
-  
+
   ; ok change invoke handling
   ; 1. look in :fn
   ; (prev, grabbed form; new, grab var)
   ; if there is an invoke binding, do whole process again
   ; 2. call get-fn-name on the :fn subtree
-
-    ; try :op :binding :form <var ID> --> {:gene :local :idx <var ID>}
+  
+  ; try :op :binding :form <var ID> --> {:gene :local :idx <var ID>}
   ; get these locals from :params, and pass
+  (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1])))
 
-  (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
+  
+  (log/set-min-level! :trace)
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1]))) {:type :vector :child {:type 'int?}})
+
+  (compile-debugging2 (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1])))
+                      {:ret-type {:type :vector :child {:type 'int?}}} [] true)
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1)))) {:type 'int?})
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
