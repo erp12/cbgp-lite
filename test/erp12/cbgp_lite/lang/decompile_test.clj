@@ -794,16 +794,15 @@
            {:gene :var, :name erp12.cbgp-lite.lang.lib/concat'}
            {:gene :apply})))
 
-  ; does not work until conj-vec and conj-set are implemented
-  #_(is (= (de/decompile-ast (ana.jvm/analyze '(conj [] 5)))
-           '({:gene :lit :val 5 :type {:type 'int?}}
+  (is (= (de/decompile-ast (ana.jvm/analyze '(conj [] 5)))
+           '({:gene :lit :val 5 :type {:type int?}}
              {:gene :lit, :type {:child {:sym T, :type :s-var}, :type :vector}, :val []}
-             {:gene :var :name `lib/conj-vec}
+             {:gene :var :name erp12.cbgp-lite.lang.lib/conj'}
              {:gene :apply})))
-  #_(is (= (de/decompile-ast (ana.jvm/analyze '(conj #{} 5)))
-           '({:gene :lit :val 5 :type {:type 'int?}}
+  (is (= (de/decompile-ast (ana.jvm/analyze '(conj #{} 5)))
+           '({:gene :lit :val 5 :type {:type int?}}
              {:gene :lit, :type {:child {:sym T, :type :s-var}, :type :set}, :val #{}}
-             {:gene :var :name `lib/conj-set}
+             {:gene :var :name erp12.cbgp-lite.lang.lib/conj'}
              {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(assoc {} "a" 10)))
@@ -908,9 +907,7 @@
            {:gene :lit, :type {:type int?}, :val 10}
            {:gene :lit, :type {:child {:type double?}, :type :vector}, :val [1.0 2.0 3.0]}
            {:gene :var, :name nth-or-else}
-           {:gene :apply})))
-
-
+           {:gene :apply}))))
 
 (deftest decompile-recompile-collections-test
   ;; empty collections 
@@ -1247,4 +1244,39 @@
                                 ["hello" 10])
          15)))
   
+  (deftest decompile-anonymous-functions-test
+    ; broken b/c mismatched s-var names
+    #_(is (partial= (de/decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
+           '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 2 3 3 0]}
+             {:arg-types [{:sym T, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+             {:gene :local, :idx 0}
+             {:gene :var, :name zero?}
+             {:gene :apply}
+             {:gene :close}
+             {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+             {:gene :apply})))
+    #_(is (partial= (de/decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
+           '({:arg-types [{:sym T, :type :s-var}], :gene :fn, :ret-type {:sym T, :type :s-var}}
+             ({:gene :lit, :type {:type int?}, :val 1} {:gene :local, :idx 0} {:gene :var, :name +} {:gene :apply})
+             {:gene :close})))
+    #_(is (=  '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 2]} 
+              {:arg-types [{:sym T, :type :s-var}], :gene :fn, :ret-type {:sym T, :type :s-var}}
+              {:gene :lit, :type {:type int?}, :val 1}
+              {:gene :local, :idx 0}
+              {:gene :var, :name +}
+              {:gene :apply}
+              {:gene :close}
+              {:gene :var, :name mapv}
+              {:gene :apply}
+              {:gene :apply})
+            (de/decompile-ast (ana.jvm/analyze '((mapv (fn [x] (+ x 1)) [0 1 2])))))) 
+    )
   
+  (deftest decompile-recompile-anonymous-functions-test
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) 
+                              {:type :vector :child {:type 'int?}})
+           [2 3 3]))
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((mapv (fn [x] (+ x 1)) [0 1 2])))) 
+                              {:type :vector :child {:type 'int?}})
+           [1 2 3]))
+    )

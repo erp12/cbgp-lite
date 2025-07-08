@@ -160,7 +160,11 @@
    'zero-double?])
 
 (def work-without-change
-  [;; Common/Misc
+  [;; FP
+   'comp
+   'partial
+   
+   ;; Common/Misc
    'not
    'not=
    'if
@@ -230,7 +234,7 @@
    'toLowerCase  `lib/char-lower
    
    ;; Collections
-   ; `lib/->map --> into {}
+   ; `lib/->map --> in Clojure: into {}
    'concat `lib/concat'
    'conj `lib/conj'
    'rest `lib/rest'
@@ -239,8 +243,6 @@
    'indexOf `lib/index-of
    'index-of `lib/index-of
    'filter `lib/filter'
-   'remove `lib/remove'
-   ; `lib/remove-element --> type-specific
    'mapcat `lib/mapcat'
 
    ;; Text/Vec
@@ -254,7 +256,6 @@
 
    ;; Vector
    ; `lib/occurrences-of (doesn't exist in clojure?)
-   ; 'safe-assoc-nth (typed; assoc on a vec)
    'map-indexed `lib/mapv-indexed
    'distinct `lib/distinctv
    'sort-by `lib/sortv-by
@@ -314,19 +315,17 @@
          :default `lib/safe-nth}
    'get {2 'get
          3 'get-or-else
-         :default 'get}})
+         :default 'get}
+   'do {2 'do2
+        3 'do3
+        :default 'do2}})
 
 (def type-specific-aliasing
-  [
-   ;'remove ; `lib/remove' `lib/remove-element
-   'assoc  ; 'assoc `lib/safe-assoc-nth
-  ])
+  #{'remove
+    'assoc})
 
 (def special-case-aliasing
-  [;; FP
-   'comp
-   'partial
-
+  [
    ;; Boolean
    ; `lib/and (macro)
    ; `lib/or (macro)
@@ -368,7 +367,7 @@
 (defn get-fn-symbol
   "Finds the CBGP function name for this ast-fn-name"
   [ast-fn-name tag args task]
-  ;; (println "First Task: " task ast-fn-name)
+  (println "First Task: " task ast-fn-name)
   (cond
     ;; arity-specific functions
     (contains? ast-arity-aliasing ast-fn-name)
@@ -379,17 +378,17 @@
       fn-symbol)
 
     ;; arg-type-specific functions
-    ; [!] does NOT work yet
     (contains? type-specific-aliasing ast-fn-name)
-    (println "Type-specfic-aliasing not implemented yet!")
-    #_(cond
-      (if (= 'remove ast-fn-name) ; and first arg is a vector or string 
-        "`lib/remove-element"
-        "`lib/remove'")
-      (if (= 'assoc ast-fn-name) ; and first arg is a vector
-        "`lib/safe-assoc-nth"
-        "'assoc"
-        ))
+    (cond
+      (= 'remove ast-fn-name)
+      (if (= :set (:type (first args))) 
+        `lib/remove-element
+        `lib/remove')
+      
+      (= 'assoc ast-fn-name)
+      (if (= :vector (:type (first args)))
+        `lib/safe-assoc-nth
+        'assoc))
 
     ;; main aliasing
     (contains? ast-aliasing ast-fn-name)
@@ -469,8 +468,7 @@
 
                          :else (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast % task) args)
-           decompiled-args (flatten (reverse raw-decompiled-args))
-           ]
+           decompiled-args (flatten (reverse raw-decompiled-args))]
        (concat decompiled-args
                (cond
                  (= (ast-fn-name :op) :invoke)
@@ -501,12 +499,9 @@
 
     ;; Handle anonymous function abstraction
      (= op :fn)
-     (let [locals (map :form (-> (first (-> ast :methods)) :params)) ; diff way to reach into :methods [] ?
+     (let [locals (map :form (-> (first (-> ast :methods)) :params)) ; [!] diff way to reach into :methods [] ?
            decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body))
            return-type (get ground-type-alias-map (.getName (-> ast :return-tag)) (lib/s-var (gensym "s-")))]
-       #_(do (println "locals: " locals)
-             (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types [`lib/s-var] :ret-type return-type}))
-             (println "body: " (vec decompiled-body))) 
        (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} decompiled-body {:gene :close}))
        
        (= op :def)
@@ -526,15 +521,28 @@
          nil))))
 
 (comment
-
   ;; works 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) {:type :vector :child {:type 'int?}})
   (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
   (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
   (decompile-ast (ana.jvm/analyze '(+ ((partial + 2) 3) 10)))
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(vec (remove #{\!} "hi!")))) {:type :vector :child {:type 'char?}}) 
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(assoc {\a 4 \b 5} \c 6)))
+                     {:type :map-of :key {:type 'char?} :value {:type 'int?}})
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(assoc [0 2 3] 0 6)))
+                     {:type :vector :child {:type 'int?}})
 
   ;; doesn't work (WIP)
-  (decompile-ast (ana.jvm/analyze '(and true false)))
+  (decompile-ast (ana.jvm/analyze '(and 0 1)))
+  
+  ; and AST composition:
+  ; :op :let
+  ; :children [:bindings :body]
+  ; :bindings [{ <children/locals> }]
+  ; :body {:op :if :children [:test :then :else]}
+  ; --> :test {:name and... :op :local} *binds 'and' to 'true' cond? (first truthy value)
+  ; --> :then {:op :const :val false}
+  ; --> :else {:name and... :op :local} *does same as else?
 
   ;; testing
   (log/set-min-level! :trace) 
