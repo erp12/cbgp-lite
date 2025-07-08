@@ -4,7 +4,8 @@
             [erp12.cbgp-lite.lang.compile :as co]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.plushy :as pl]
-            [erp12.cbgp-lite.task :as tsk]))
+            [erp12.cbgp-lite.task :as tsk]
+            [taoensso.timbre :as log]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;; Compilation testing
@@ -25,7 +26,7 @@
          func (ast/form->fn [] form)]
      (func))))
 
-(defn compile-debugging2
+(defn compile-debugging2 
   ([genome task]
    (compile-debugging2 genome task []))
 
@@ -38,13 +39,13 @@
          _ (when verbose (println "PLUSHY:" genome))
          push (pl/plushy->push genome)
          _ (when verbose (println "PUSH:" push))
-         ast (::co/ast (co/push->ast
+         ast (::co/ast (:ast (co/push->ast
                         (assoc
                          enhanced-task
                          :locals locals
                          :push push
                          :type-env (merge (:type-env enhanced-task)
-                                          lib/type-env))))
+                                          lib/type-env)))))
          _ (when verbose (println "AST:" ast))
          form (ast/ast->form ast)
          _ (when verbose (println "FORM:" form))
@@ -195,7 +196,7 @@
    'min `lib/min'
 
    ;; Numeric
-   'add '+
+   'add '+ 
    'multiply '*
    'quotient 'quot
    'divide '/
@@ -214,7 +215,7 @@
    'log10 `lib/safe-log10
    'ceil `lib/ceil
    'floor `lib/floor
-   'isZero 'zero-int?
+   'isZero 'zero?
 
    ;; Text
    'charCast `lib/int->char
@@ -274,15 +275,15 @@
    'vals `lib/vals-vec})
 
 (def ast-arity-aliasing
-  {'sub {1 'neg
-         2 '-
-         :default '-}
+  {'minus {1 `lib/neg
+           2 '-
+           :default '-}
    'str/join {1 `str/join
               2 'str-join-sep
               :default `str/join}
    'str {1 'str
-         2 `lib/concat-str
-         :default `lib/concat-str}
+         2 `lib/concat'
+         :default `str'}
    'str/split {1 `lib/split-str-on-ws
                2 `lib/split-str
                :default `lib/split-str}
@@ -330,6 +331,16 @@
    ; `lib/and (macro)
    ; `lib/or (macro)
    ])
+
+(def ground-type-alias-map
+  {nil `lib/s-var
+   "boolean" `lib/BOOLEAN
+  ;;  'number `lib/INT
+  ;;  'number `lib/DOUBLE
+   "character" `lib/CHAR
+   "string" `lib/STRING
+   "symbol" `lib/KEYWORD
+   })
 
 (defn find-local
   "Takes a map or vec and recursively looks through it to find a map
@@ -441,18 +452,36 @@
      (= :local op)
      (list {:gene :local
             :idx (:arg-id ast)})
-
-    ;; Handle static method or invoke
+     
+    ;; Handle static method or invoke or var
      (or (= op :static-call)
-         (= op :invoke))
-     (let [ast-fn-name (if (= op :static-call)
+         (= op :invoke)
+         (= op :var))
+     (let [ast-fn-name (cond
+                         (= op :static-call) ; catch static-call
                          (:method ast)
-                         (-> ast :fn :form))
+
+                         (= op :var) ; catch var (inside invoke)
+                         (symbol (-> ast :meta :name))
+                         
+                         (= (-> ast :fn :op) :var) ; catch var (regular func call)
+                         (-> ast :fn :form)
+
+                         :else (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast % task) args)
-           decompiled-args (flatten (reverse raw-decompiled-args))]
+           decompiled-args (apply concat (reverse raw-decompiled-args))
+           ]
        (concat decompiled-args
-               (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                     {:gene :apply})))
+               (cond
+                 (= (ast-fn-name :op) :invoke)
+                 (concat (decompile-ast ast-fn-name task) (list {:gene :apply}))
+                 
+                 (= op :var) 
+                 (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
+                 
+                 :else 
+                 (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
+                       {:gene :apply}))))
 
     ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -472,21 +501,70 @@
 
     ;; Handle anonymous function abstraction
      (= op :fn)
-     nil
+     (let [locals (map :form (-> (first (-> ast :methods)) :params)) ; diff way to reach into :methods [] ?
+           decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body))
+           return-type (get ground-type-alias-map (.getName (-> ast :return-tag)) (lib/s-var (gensym "s-")))]
+       #_(do (println "locals: " locals)
+             (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types [`lib/s-var] :ret-type return-type}))
+             (println "body: " (vec decompiled-body))) 
+       (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} (vec decompiled-body))) ; [] not maintained --> see var/invoke/static-call flatten
+     ; [!] check s-var arg-type formatting
+       
+       (= op :def)
+       (decompile-ast (-> ast
+                          :init
+                          :expr
+                          :methods
+                          first
+                          :body)
+                      task)
 
-     (= op :def)
-     (decompile-ast (-> ast
-                        :init
-                        :expr
-                        :methods
-                        first
-                        :body)
-                    task)
+       :else
+       (do
+         (println "not handled yet AST op:" op)
+         (println "failing AST: \n" ast)
+         (println "---------------------------")
+         nil))))
 
-     :else
-     (do
-       (println "not handled yet AST op:" op)
-       nil))))
+(comment
+  (:fn (ana.jvm/analyze '((comp inc +) 3 3 3)))
+  ; :args has the comp function's args (3 3 3)
+  ; :fn has the comp function
+  
+  (decompile-ast (ana.jvm/analyze '(concat [1 2 3] [0])))
+  ; in above case, can do -> ast :fn :form
+  ; not the case for comp...
+  
+  (decompile-ast (ana.jvm/analyze '((comp inc +) 3 3 3)))
+  (decompile-ast (ana.jvm/analyze '((partial + 1) 3)))
+
+  (decompile-ast (ana.jvm/analyze '(and true false)))
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) {:type :vector :child {:type 'int?}})
+  ; flatten in :if op
+  (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
+  (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
+  (decompile-ast (ana.jvm/analyze '(+ ((partial + 2) 3) 10)))
+
+  ; ok change invoke handling
+  ; 1. look in :fn
+  ; (prev, grabbed form; new, grab var)
+  ; if there is an invoke binding, do whole process again
+  ; 2. call get-fn-name on the :fn subtree
+  
+  ; try :op :binding :form <var ID> --> {:gene :local :idx <var ID>}
+  ; get these locals from :params, and pass
+  (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1])))
+
+  
+  (log/set-min-level! :trace)
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1]))) {:type :vector :child {:type 'int?}})
+
+  (compile-debugging2 (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1])))
+                      {:ret-type {:type :vector :child {:type 'int?}}} [] true)
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1)))) {:type 'int?})
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Testing
@@ -538,4 +616,3 @@
 
   (ana.jvm/analyze 'count)
   )
-

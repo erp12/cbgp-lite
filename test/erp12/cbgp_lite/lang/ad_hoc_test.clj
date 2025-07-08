@@ -670,7 +670,7 @@
           func (eval `(fn [] ~form))
           _ (when verbose (println "FUNC:" func))]
       (is (= [1.1 2.2 3.3 4.4 5.5] (func)))))
-  (testing "Conact String"
+  (testing "Concat String"
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push [{:gene :lit :val "College" :type {:type 'string?}}
                                                {:gene :lit :val "Hamilton " :type {:type 'string?}}
@@ -1499,3 +1499,21 @@
           _ (when verbose (println "FORM: " form))
           func (eval `(fn [~'in1 ~'in2] ~form))]
       (is (= {0 42 1 2999 2 108 3 42} (func 3 42))))))
+
+(deftest anon-func-test
+  (let [{::c/keys [ast type]} (:ast (c/push->ast
+                                      {:push      [{:gene :lit, :type {:child {:type 'int?}, :type :vector}, :val [0 2 1 1]}
+                                                    {:arg-types [{:sym 's-39761, :type :s-var}], :gene :fn, :ret-type {:sym 's-39760, :type :s-var}}
+                                                    [{:gene :lit, :type {:type 'int?}, :val 1} {:gene :local, :idx 0} {:gene :var, :name '+} {:gene :apply}]
+                                                    {:gene :var, :name 'mapv}
+                                                    {:gene :apply}]
+                                       :locals    []
+                                       :ret-type  {:type :vector :child {:type 'int?}}
+                                       :type-env  lib/type-env
+                                       :dealiases lib/dealiases}))
+         _ (is (= :map-of (:type type)))
+         _ (when verbose (println "REAL-AST: " ast))
+         form (a/ast->form ast)
+         _ (when verbose (println "FORM: " form))
+         func (eval `(fn [~'in1 ~'in2] ~form))]
+     (is (= {0 42 1 2999 2 108 3 42} (func 3 42)))))
