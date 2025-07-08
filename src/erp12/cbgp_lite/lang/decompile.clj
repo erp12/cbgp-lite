@@ -438,7 +438,8 @@
 (defn decompile-ast
   "Decompiles AST into a CBGP genome."
   ([ast] (decompile-ast ast {}))
-  ([{:keys [op val tag args children] :as ast} task]
+  ([ast task] (decompile-ast ast task {}))
+  ([{:keys [op val tag args children] :as ast} task locals]
   ;;  (println "Decomp Task: " task)
    (cond
     ;; Handle constants
@@ -449,9 +450,13 @@
 
      ;; Handle locals
      (= :local op)
-     (list {:gene :local
-            :idx (:arg-id ast)})
-     
+     (do 
+       (println "locals: " locals) 
+       (println "name: " (:name ast))
+
+       (list {:gene :local
+            :idx (get locals (:name ast))}))
+
     ;; Handle static method or invoke or var
      (or (= op :static-call)
          (= op :invoke)
@@ -462,22 +467,22 @@
 
                          (= op :var) ; catch var (inside invoke)
                          (symbol (-> ast :meta :name))
-                         
+
                          (= (-> ast :fn :op) :var) ; catch var (regular func call)
                          (-> ast :fn :form)
 
                          :else (-> ast :fn)) ; catch nested invoke 
-           raw-decompiled-args (map #(decompile-ast % task) args)
+           raw-decompiled-args (map #(decompile-ast % task locals) args)
            decompiled-args (flatten (reverse raw-decompiled-args))]
        (concat decompiled-args
                (cond
                  (= (ast-fn-name :op) :invoke)
-                 (concat (decompile-ast ast-fn-name task) (list {:gene :apply}))
-                 
-                 (= op :var) 
+                 (concat (decompile-ast ast-fn-name task locals) (list {:gene :apply}))
+
+                 (= op :var)
                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
-                 
-                 :else 
+
+                 :else
                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
                        {:gene :apply}))))
 
@@ -491,34 +496,64 @@
     ;; Handle if
      (= op :if)
      (let [ast-fn-name 'if
-           raw-decompiled-args (map #(decompile-ast % task) (map ast children))
+           raw-decompiled-args (map #(decompile-ast % task locals) (map ast children))
            decompiled-args (flatten (reverse raw-decompiled-args))]
        (concat decompiled-args
                (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
                      {:gene :apply})))
 
+     ;; Handle let
+    ;;  (= op :let) 
+    ;;    (let [ _ (println "local-name: " (map :name (:bindings ast))) 
+    ;;          new-locals (apply merge (map (fn [local-name] 
+    ;;                        (if (not (contains? locals local-name))
+    ;;                          (assoc locals local-name (count locals)))) (map :name (:bindings ast))))
+    ;;          _ (println "new locals: " new-locals) 
+    ;;          decompiled-body (decompile-ast (:body ast) task new-locals)]
+    ;;      (flatten (list {:gene :let} decompiled-body {:gene :close})))
+     
+     (= op :let)
+       (let [_ (println "local-name: " (map :name (:bindings ast)))
+             [new-locals _]
+             (reduce
+              (fn [[running-locals idx] local-name]
+                (if (contains? running-locals local-name)
+                  [running-locals idx]
+                  [(assoc running-locals local-name idx) (inc idx)]))
+              [locals (count locals)]
+              (map :name (:bindings ast)))
+             _ (println "new locals: " new-locals)
+             decompiled-body (decompile-ast (:body ast) task new-locals)
+             locals-vals (map #(decompile-ast (:init %) task new-locals) (:bindings ast))]
+         (flatten (list locals-vals {:gene :let} decompiled-body {:gene :close})))
+
+
     ;; Handle anonymous function abstraction
      (= op :fn)
-     (let [locals (map :form (-> (first (-> ast :methods)) :params)) ; [!] diff way to reach into :methods [] ?
-           decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body))
+     (let [;; locals (map :form (-> (first (-> ast :methods)) :params)) ; diff way to reach into :methods [] ?
+           decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body) task locals)
            return-type (get ground-type-alias-map (.getName (-> ast :return-tag)) (lib/s-var (gensym "s-")))]
+       #_(do (println "locals: " locals)
+             (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types [`lib/s-var] :ret-type return-type}))
+             (println "body: " (vec decompiled-body)))
        (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} decompiled-body {:gene :close}))
-       
-       (= op :def)
-       (decompile-ast (-> ast
-                          :init
-                          :expr
-                          :methods
-                          first
-                          :body)
-                      task)
 
-       :else
-       (do
-         (println "not handled yet AST op:" op)
-         (println "failing AST: \n" ast)
-         (println "---------------------------")
-         nil))))
+     (= op :def)
+     (decompile-ast (-> ast
+                        :init
+                        :expr
+                        :methods
+                        first
+                        :body)
+                    task
+                    locals)
+
+     :else
+     (do
+       (println "not handled yet AST op:" op)
+       (println "failing AST: \n" ast)
+       (println "---------------------------")
+       nil))))
 
 (comment
   ;; works 
@@ -598,3 +633,7 @@
 
   (ana.jvm/analyze 'count)
   )
+
+
+(pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x 2
+                                                           y 3] (+ x y)))))
