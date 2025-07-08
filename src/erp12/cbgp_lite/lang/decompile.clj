@@ -282,7 +282,7 @@
               :default `str/join}
    'str {1 'str
          2 `lib/concat'
-         :default `lib/concat'}
+         :default 'str}
    'str/split {1 `lib/split-str-on-ws
                2 `lib/split-str
                :default `lib/split-str}
@@ -461,7 +461,7 @@
                          (:method ast)
 
                          (= op :var) ; catch var (inside invoke)
-                         (-> ast :meta :name)
+                         (symbol (-> ast :meta :name))
                          
                          (= (-> ast :fn :op) :var) ; catch var (regular func call)
                          (-> ast :fn :form)

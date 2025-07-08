@@ -910,7 +910,69 @@
            {:gene :var, :name nth-or-else}
            {:gene :apply})))
 
+;; partial and comp
+  (is (= (de/decompile-ast (ana.jvm/analyze '((partial * 100) 5)))
+         '({:gene :lit, :type {:type int?}, :val 5}
+           {:gene :lit, :type {:type int?}, :val 100}
+           {:gene :var, :name *}
+           {:gene :var, :name partial}
+           {:gene :apply}
+           {:gene :apply})))
 
+  (is (= (de/decompile-ast (ana.jvm/analyze '((partial assoc {\a 1 \b 2 \c 3}) \z 42)))
+         '({:gene :lit, :type {:type int?}, :val 42}
+           {:gene :lit :val \z :type {:type char?}}
+           {:gene :lit :val {\a 1 \b 2 \c 3} :type {:type :map-of :key {:type char?} :value {:type int?}}}
+           {:gene :var :name assoc}
+           {:gene :var :name partial}
+           {:gene :apply}
+           {:gene :apply})))
+
+  (is (= (de/decompile-ast (ana.jvm/analyze '((partial assoc {\a 1 \b 2 \c 3} \z) 42)))
+         '({:gene :lit, :type {:type int?}, :val 42}
+           {:gene :lit :val \z :type {:type char?}}
+           {:gene :lit :val {\a 1 \b 2 \c 3} :type {:type :map-of :key {:type char?} :value {:type int?}}}
+           {:gene :var :name assoc}
+           {:gene :var :name partial}
+           {:gene :apply}
+           {:gene :apply})))
+  (is (= (de/decompile-ast (ana.jvm/analyze '((partial assoc {0 42 1 2999 2 108} 3) 42)))
+         '({:gene :lit, :type {:type int?}, :val 42}
+           {:gene :lit, :type {:type int?}, :val 3}
+           {:gene :lit :val {0 42 1 2999 2 108} :type {:type :map-of :key {:type int?} :value {:type int?}}}
+           {:gene :var :name assoc}
+           {:gene :var :name partial}
+           {:gene :apply}
+           {:gene :apply})))
+
+  (is (= (de/decompile-ast (ana.jvm/analyze '((comp dec +) 5 100)))
+         '({:gene :lit, :type {:type int?}, :val 100}
+           {:gene :lit, :type {:type int?}, :val 5}
+           {:gene :var :name +}
+           {:gene :var :name dec}
+           {:gene :var :name comp}
+           {:gene :apply}
+           {:gene :apply})))
+
+  (is (= (de/decompile-ast (ana.jvm/analyze '((comp dec dec +) 100 45)))
+         '({:gene :lit, :type {:type int?}, :val 45}
+           {:gene :lit, :type {:type int?}, :val 100} 
+           {:gene :var :name +}
+           {:gene :var :name dec}
+           {:gene :var :name dec}
+           {:gene :var :name comp}
+           {:gene :apply}
+           {:gene :apply})))
+
+  (is (= (de/decompile-ast (ana.jvm/analyze '((comp + -) 5 65 100)))
+         '({:gene :lit, :type {:type int?}, :val 100}
+           {:gene :lit, :type {:type int?}, :val 65}
+           {:gene :lit, :type {:type int?}, :val 5}
+           {:gene :var :name -}
+           {:gene :var :name +}
+           {:gene :var :name comp}
+           {:gene :apply}
+           {:gene :apply}))))
 
 (deftest decompile-recompile-collections-test
   ;; empty collections 
@@ -1246,5 +1308,33 @@
                                  :ret-type {:type 'int?}}
                                 ["hello" 10])
          15)))
+
+(deftest compile-partial-and-comp
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((partial assoc {\a 1 \b 2 \c 3}) \z 42)))
+                               {:type :map-of, :key {:type 'char?}, :value {:type 'int?}})
+         {\a 1, \b 2, \c 3, \z 42}))
   
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((partial assoc {0 42 1 2999 2 108} 3) 42)))
+                               {:type :map-of, :key {:type 'int?}, :value {:type 'int?}})
+         {0 42, 1 2999, 2 108, 3 42}))
+  
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((partial assoc {\a 1 \b 2 \c 3} \z) 42)))
+                               {:type :map-of, :key {:type 'char?}, :value {:type 'int?}})
+         {\a 1, \b 2, \c 3, \z 42}))
+
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((partial * 100) 5)))
+                               {:type 'int?})
+         500))
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((comp dec +) 5 100)))
+                               {:type 'int?})
+         104)) 
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((comp dec dec +) 5 100)))
+                               {:type 'int?})
+         103)) 
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((comp + -) 5 65 100)))
+                               {:type 'int?})
+         -30))
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((comp str dec +) 5 65)))
+                               {:type 'string?})
+         "69")))
   

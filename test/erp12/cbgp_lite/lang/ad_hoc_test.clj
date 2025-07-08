@@ -1477,7 +1477,7 @@
       (is (= {\a 1 \b 2 \c 3 \z 42} (func 42)))))
   
   ; target form: ((partial test3 param1 param2) param3)
-  ;          eg. ((partial assoc {:a 1 :b 2 :c 3} :z) 42)
+  ;          eg. ((partial assoc {0 42 1 2999 2 108} 3) 42)
   (testing "partial2-fn3-test-B"
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push      [{:gene :local :idx 1}
