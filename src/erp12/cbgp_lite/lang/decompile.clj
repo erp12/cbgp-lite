@@ -283,7 +283,7 @@
               :default `str/join}
    'str {1 'str
          2 `lib/concat'
-         :default `str'}
+         :default 'str}
    'str/split {1 `lib/split-str-on-ws
                2 `lib/split-str
                :default `lib/split-str}
@@ -318,7 +318,7 @@
 
 (def type-specific-aliasing
   [
-   'remove ; `lib/remove' `lib/remove-element
+   ;'remove ; `lib/remove' `lib/remove-element
    'assoc  ; 'assoc `lib/safe-assoc-nth
   ])
 
@@ -334,12 +334,12 @@
 
 (def ground-type-alias-map
   {nil `lib/s-var
-   "boolean" `lib/BOOLEAN
+   "boolean" {:type 'boolean?}
   ;;  'number `lib/INT
   ;;  'number `lib/DOUBLE
-   "character" `lib/CHAR
-   "string" `lib/STRING
-   "symbol" `lib/KEYWORD
+   "character" {:type 'char?}
+   "string" {:type 'string?}
+   "symbol" {:type 'symbol?}
    })
 
 (defn find-local
@@ -469,7 +469,7 @@
 
                          :else (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast % task) args)
-           decompiled-args (apply concat (reverse raw-decompiled-args))
+           decompiled-args (flatten (reverse raw-decompiled-args))
            ]
        (concat decompiled-args
                (cond
@@ -507,8 +507,7 @@
        #_(do (println "locals: " locals)
              (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types [`lib/s-var] :ret-type return-type}))
              (println "body: " (vec decompiled-body))) 
-       (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} (vec decompiled-body))) ; [] not maintained --> see var/invoke/static-call flatten
-     ; [!] check s-var arg-type formatting
+       (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} decompiled-body {:gene :close}))
        
        (= op :def)
        (decompile-ast (-> ast
@@ -527,43 +526,18 @@
          nil))))
 
 (comment
-  (:fn (ana.jvm/analyze '((comp inc +) 3 3 3)))
-  ; :args has the comp function's args (3 3 3)
-  ; :fn has the comp function
-  
-  (decompile-ast (ana.jvm/analyze '(concat [1 2 3] [0])))
-  ; in above case, can do -> ast :fn :form
-  ; not the case for comp...
-  
-  (decompile-ast (ana.jvm/analyze '((comp inc +) 3 3 3)))
-  (decompile-ast (ana.jvm/analyze '((partial + 1) 3)))
 
-  (decompile-ast (ana.jvm/analyze '(and true false)))
+  ;; works 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) {:type :vector :child {:type 'int?}})
-  ; flatten in :if op
   (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
   (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
   (decompile-ast (ana.jvm/analyze '(+ ((partial + 2) 3) 10)))
 
-  ; ok change invoke handling
-  ; 1. look in :fn
-  ; (prev, grabbed form; new, grab var)
-  ; if there is an invoke binding, do whole process again
-  ; 2. call get-fn-name on the :fn subtree
-  
-  ; try :op :binding :form <var ID> --> {:gene :local :idx <var ID>}
-  ; get these locals from :params, and pass
-  (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1])))
+  ;; doesn't work (WIP)
+  (decompile-ast (ana.jvm/analyze '(and true false)))
 
-  
-  (log/set-min-level! :trace)
-
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1]))) {:type :vector :child {:type 'int?}})
-
-  (compile-debugging2 (decompile-ast (ana.jvm/analyze '(mapv (fn [x] (+ x 1)) [0 2 1 1])))
-                      {:ret-type {:type :vector :child {:type 'int?}}} [] true)
-
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1)))) {:type 'int?})
+  ;; testing
+  (log/set-min-level! :trace) 
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
