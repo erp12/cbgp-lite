@@ -1341,10 +1341,33 @@
 (de/decompile-ast (ana.jvm/analyze '(and true false)))
 
 (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2
-                                                                      y 6] (+ y x))))
-                      {:type 'int?} true)
-       5))
+                                                                      y 6
+                                                                     v 56
+                                                                       ] (+ y x))))
+                      {:type 'int?} )
+       8))
 
+(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2
+                                                                       y 6
+                                                                       v 56] (+ y v x))))
+                             {:type 'int?})
+       64))
+
+(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2
+                                                                       y 6] (+ y x))))
+                             {:type 'int?})
+       8))
+
+(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 1
+                                                                       y (inc [z] (+ x z))]
+                                                                   (y 10))))
+                             {:type 'int?})
+       8))
+
+
+(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(apply (fn [z] (+ 2 z)) [2 3])))
+                             {:type 'int?})
+       8))
   
   (deftest decompile-anonymous-functions-test
     ; broken b/c mismatched s-var names

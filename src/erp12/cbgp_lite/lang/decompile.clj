@@ -450,12 +450,12 @@
 
      ;; Handle locals
      (= :local op)
-     (do 
-       (println "locals: " locals) 
+     (do
+       (println "locals: " locals)
        (println "name: " (:name ast))
 
        (list {:gene :local
-            :idx (get locals (:name ast))}))
+              :idx (get locals (:name ast))}))
 
     ;; Handle static method or invoke or var
      (or (= op :static-call)
@@ -502,7 +502,21 @@
                (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
                      {:gene :apply})))
 
-     ;; Handle let
+    ;; Handle let
+     (= op :let)
+     (let [[final-locals init-forms]
+           (reduce
+            (fn [[running-locals forms] {:keys [name init]}]
+              (let [idx (count running-locals)
+                    updated-locals (assoc running-locals name idx)
+                    decompiled-init (decompile-ast init task updated-locals)]
+                [updated-locals (conj forms decompiled-init {:gene :let})]))
+            [locals []]
+            (:bindings ast))
+             ;; decompile body using all the updated locals
+           decompiled-body (decompile-ast (:body ast) task final-locals)]
+       (flatten (concat init-forms decompiled-body (repeat (count (:bindings ast)) {:gene :close}))))
+    ;; ;; old code!!
     ;;  (= op :let) 
     ;;    (let [ _ (println "local-name: " (map :name (:bindings ast))) 
     ;;          new-locals (apply merge (map (fn [local-name] 
@@ -511,32 +525,51 @@
     ;;          _ (println "new locals: " new-locals) 
     ;;          decompiled-body (decompile-ast (:body ast) task new-locals)]
     ;;      (flatten (list {:gene :let} decompiled-body {:gene :close})))
-     
-     (= op :let)
-       (let [_ (println "local-name: " (map :name (:bindings ast)))
-             [new-locals _]
-             (reduce
-              (fn [[running-locals idx] local-name]
-                (if (contains? running-locals local-name)
-                  [running-locals idx]
-                  [(assoc running-locals local-name idx) (inc idx)]))
-              [locals (count locals)]
-              (map :name (:bindings ast)))
-             _ (println "new locals: " new-locals)
-             decompiled-body (decompile-ast (:body ast) task new-locals)
-             locals-vals (map #(decompile-ast (:init %) task new-locals) (:bindings ast))]
-         (flatten (list locals-vals {:gene :let} decompiled-body {:gene :close})))
 
+    ;;  (= op :let)
+    ;;    (let [_ (println "local-name: " (map :name (:bindings ast)))
+    ;;          [new-locals _]
+    ;;          (reduce
+    ;;           (fn [[running-locals idx] local-name]
+    ;;             (if (contains? running-locals local-name)
+    ;;               [running-locals idx]
+    ;;               [(assoc running-locals local-name idx) (inc idx)]))
+    ;;           [locals (count locals)]
+    ;;           (map :name (:bindings ast)))
+    ;;          _ (println "new locals: " new-locals)
+    ;;          decompiled-body (decompile-ast (:body ast) task new-locals)
+    ;;          locals-vals (map #(decompile-ast (:init %) task new-locals) (:bindings ast))]
+    ;;      (flatten (list locals-vals {:gene :let} decompiled-body {:gene :close})))
 
-    ;; Handle anonymous function abstraction
+     ;; Handle anonymous function abstraction
      (= op :fn)
-     (let [;; locals (map :form (-> (first (-> ast :methods)) :params)) ; diff way to reach into :methods [] ?
-           decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body) task locals)
-           return-type (get ground-type-alias-map (.getName (-> ast :return-tag)) (lib/s-var (gensym "s-")))]
-       #_(do (println "locals: " locals)
-             (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types [`lib/s-var] :ret-type return-type}))
-             (println "body: " (vec decompiled-body)))
+     (let [method         (first (:methods ast))
+           param-names    (map :name (:params method))
+           [updated-locals _]
+           (reduce
+            (fn [[running-locals idx] param-name]
+              (if (contains? running-locals param-name)
+                [running-locals idx]
+                [(assoc running-locals param-name idx) (inc idx)]))
+            [locals 0]
+            param-names)
+           decompiled-body (decompile-ast (:body method) task updated-locals)
+      ;; Resolve the return type or generate a fresh one
+           return-type (get ground-type-alias-map
+                            (.getName (:return-tag ast))
+                            (lib/s-var (gensym "s-")))]
        (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} decompiled-body {:gene :close}))
+    
+    ;; ;; old code!!
+    ;; ;; Handle anonymous function abstraction
+    ;;  (= op :fn)
+    ;;  (let [;; locals (map :form (-> (first (-> ast :methods)) :params)) ; diff way to reach into :methods [] ?
+    ;;        decompiled-body (decompile-ast (-> (first (-> ast :methods)) :body) task locals)
+    ;;        return-type (get ground-type-alias-map (.getName (-> ast :return-tag)) (lib/s-var (gensym "s-")))]
+    ;;    #_(do (println "locals: " locals)
+    ;;          (println ":(  : " (conj () (vec decompiled-body) {:gene :fn :arg-types [`lib/s-var] :ret-type return-type}))
+    ;;          (println "body: " (vec decompiled-body)))
+    ;;    (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} decompiled-body {:gene :close}))
 
      (= op :def)
      (decompile-ast (-> ast
