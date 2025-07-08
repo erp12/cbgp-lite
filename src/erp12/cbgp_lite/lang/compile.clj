@@ -639,7 +639,3 @@
                                 :state     (assoc state :apply-it (:applied push-unit))})))))))
 
 
-
-(rest "helllerrrr")
-(type (rest [55 66 77]))
-

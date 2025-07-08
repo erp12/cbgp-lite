@@ -1515,5 +1515,25 @@
          _ (when verbose (println "REAL-AST: " ast))
          form (a/ast->form ast)
          _ (when verbose (println "FORM: " form))
-         func (eval `(fn [~'in1 ~'in2] ~form))]
-     (is (= {0 42 1 2999 2 108 3 42} (func 3 42)))))
+         func (eval `(fn [] ~form))]
+     (is (= "result: " (func)))))
+
+(deftest anon-func-test2
+  (let [{::c/keys [ast type]} (:ast (c/push->ast
+                                     {:push      [{:gene :lit, :type {:child {:type 'int?}, :type :vector}, :val [0 2 3 3 0]}
+                                                  {:arg-types [{:sym 's-33438, :type :s-var}], :gene :fn, :ret-type erp12.cbgp-lite.lang.lib/BOOLEAN}
+                                                  [{:gene :local, :idx 0}
+                                                  {:gene :var, :name 'zero?}
+                                                  {:gene :apply}]
+                                                  {:gene :var, :name `erp12.cbgp-lite.lang.lib/remove'};`lib/remove'}
+                                                  {:gene :apply}]
+                                      :locals    []
+                                      :ret-type  {:type :vector :child {:type 'int?}}
+                                      :type-env  lib/type-env
+                                      :dealiases lib/dealiases}))
+        _ (is (= :map-of (:type type)))
+        _ (when verbose (println "REAL-AST: " ast))
+        form (a/ast->form ast)
+        _ (when verbose (println "FORM: " form))
+        func (eval `(fn [] ~form))]
+    (is (= "result: " (func)))))
