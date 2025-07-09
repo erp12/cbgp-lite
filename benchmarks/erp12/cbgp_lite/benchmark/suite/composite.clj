@@ -182,9 +182,9 @@
       {:description    (str "Given a map from 'T to ints and two 'T that are "
                             "keys of the map, look up the values associated with those keys "
                             "in the map and return their sum.")
-       :input->type    {'input1 {:type :map-of, :key {:type 'T}, :value {:type 'int?}}
-                        'input2 {:type 'T}
-                        'input3 {:type 'T}}
+       :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}
+                        'input2 {:type :s-var :sym 'T}
+                        'input3 {:type :s-var :sym 'T}}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean? 'string? 'char? 'double?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
@@ -275,8 +275,8 @@
       "count-true"
       {:description    (str "Given a vector of T and a predicate T => bool, return the "
                             "count of the number of elements in T that make the predicate true.")
-       :input->type    {'input1 {:type :vector :child {:type 'T}}
-                        'input2 (lib/unary-pred {:type 'T})}
+       :input->type    {'input1 {:type :vector :child {:type :s-var :sym 'T}}
+                        'input2 (lib/unary-pred {:type :s-var :sym 'T})}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
@@ -293,8 +293,8 @@
       "first-index-of-true"
       {:description    (str "Given a vector of T and a predicate T => bool, return the "
                             "first index in the vector where the predicate is true.")
-       :input->type    {'input1 {:type :vector :child {:type 'T}}
-                        'input2 (lib/unary-pred {:type 'T})}
+       :input->type    {'input1 {:type :vector :child {:type :s-var :sym 'T}}
+                        'input2 (lib/unary-pred {:type :s-var :sym 'T})}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean?}
        :extra-genes    [{:gene :lit, :val -1, :type {:type 'int?}}
@@ -341,10 +341,10 @@
                             "type, T , and two instance of type T representing a lower and "
                             "upper bound, filter the set to the elements that fall "
                             "between two bounds (inclusively).")
-       :input->type    {'input1 {:type :set :child {:type 'T}}
-                        'input2 {:type 'T}
-                        'input3 {:type 'T}}
-       :ret-type       {:type :set :child {:type 'T}}
+       :input->type    {'input1 {:type :set :child {:type :s-var :sym 'T :typeclasses #{:comparable}}}
+                        'input2 {:type :s-var :sym 'T :typeclasses #{:comparable}}
+                        'input3 {:type :s-var :sym 'T :typeclasses #{:comparable}}}
+       :ret-type       {:type :set :child {:type :s-var :sym 'T :typeclasses #{:comparable}}}
        :other-type-ctors    #{'boolean?}
        :extra-genes    []
        :case-generator (let [generators [(bu/string-generator 10)
@@ -457,8 +457,8 @@
 
       "min-key"
       {:description    "Given map of {key => int}, return the key with the min value."
-       :input->type    {'input1 {:type :map-of, :key {:type 'T}, :value {:type 'int?}}}
-       :ret-type       {:type 'T}
+       :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}}
+       :ret-type       {:type :s-var :sym 'T}
        :other-type-ctors    #{'boolean? 'int?}
        :extra-genes    []
        :case-generator (let [generators [(bu/string-generator 10)
