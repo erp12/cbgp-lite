@@ -460,6 +460,7 @@
        :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}}
        :ret-type       {:type :s-var :sym 'T}
        :other-type-ctors    #{'boolean? 'int?}
+       
        :extra-genes    []
        :case-generator (let [generators [(bu/string-generator 10)
                                          bu/rand-char
