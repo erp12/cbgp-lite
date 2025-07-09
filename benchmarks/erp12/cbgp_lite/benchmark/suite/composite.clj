@@ -169,7 +169,7 @@
                         'input2 {:type 'string?}
                         'input3 {:type 'string?}}
        :ret-type       {:type 'int?}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor #{'boolean?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit-generator,
                          :fn   (bu/string-generator 21),
@@ -186,7 +186,7 @@
                         'input2 {:type 'T}
                         'input3 {:type 'T}}
        :ret-type       {:type 'int?}
-       :other-types    [{:type 'boolean?} {:type 'string?} {:type 'char?} {:type 'double?}]
+       :other-type-ctor    #{'boolean? 'string? 'char? 'double?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
        :case-generator (let [key-generators [(bu/string-generator 10)
                                              (bu/int-generator 1000)
@@ -204,7 +204,7 @@
       {:description    "Given 2D vector of ints (i.e. vector of vector of ints), return sum of all ints."
        :input->type    {'input1 {:type :vector :child {:type :vector :child {:type 'int?}}}}
        :ret-type       {:type 'int?}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor    #{'boolean?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
        :case-generator (fn sum-2D-gen []
                          (let [rows (inc (rand-int 10))
@@ -221,7 +221,7 @@
                             "that corresponds to the same length.")
        :input->type    {'input1 {:type 'int?}}
        :ret-type       {:type :tuple, :children [{:type 'int?} {:type 'int?}]}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor    #{'boolean?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val 100, :type {:type 'int?}}]
        :case-generator (fn centimeters-to-meters-gen []
@@ -239,7 +239,7 @@
        :input->type    {'input1 {:type :set :child {:type 'int?}}
                         'input2 {:type :set :child {:type 'int?}}}
        :ret-type       {:type :set :child {:type 'int?}}
-       :other-types    [{:type 'boolean?} {:type 'int?}]
+       :other-type-ctor    #{'boolean? 'int?}
        :extra-genes    [{:gene :lit, :val #{}, :type {:type :set :child {:type 'int?}}}]
        :case-generator (fn set-symmetric-difference-gen
                          []
@@ -259,7 +259,7 @@
        :input->type    {'input1 {:type 'int?}
                         'input2 (lib/unary-transform {:type 'int?})}
        :ret-type       {:type 'int?}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor    #{'boolean?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val true, :type {:type 'boolean?}}
                         {:gene :lit, :val false, :type {:type 'boolean?}}]
@@ -278,7 +278,7 @@
        :input->type    {'input1 {:type :vector :child {:type 'T}}
                         'input2 (lib/unary-pred {:type 'T})}
        :ret-type       {:type 'int?}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor    #{'boolean?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val true, :type {:type 'boolean?}}
                         {:gene :lit, :val false, :type {:type 'boolean?}}]
@@ -296,7 +296,7 @@
        :input->type    {'input1 {:type :vector :child {:type 'T}}
                         'input2 (lib/unary-pred {:type 'T})}
        :ret-type       {:type 'int?}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor    #{'boolean?}
        :extra-genes    [{:gene :lit, :val -1, :type {:type 'int?}}
                         {:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val true, :type {:type 'boolean?}}
@@ -322,7 +322,7 @@
        :input->type    {'input1 {:type :set :child {:type 'int?}}
                         'input2 {:type :set :child {:type 'int?}}}
        :ret-type       {:type :set :child {:type :tuple, :children [{:type 'int?} {:type 'int?}]}}
-       :other-types    [{:type 'boolean?} {:type 'int?}]
+       :other-type-ctor    #{'boolean? 'int?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
        :case-generator (let [set-generator (fn [] (set (rand-vector 0 21 #(rand-int 100))))]
                          (fn cartesian-product-gen
@@ -345,7 +345,7 @@
                         'input2 {:type 'T}
                         'input3 {:type 'T}}
        :ret-type       {:type :set :child {:type 'T}}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor    #{'boolean?}
        :extra-genes    []
        :case-generator (let [generators [(bu/string-generator 10)
                                          bu/rand-char
@@ -371,7 +371,7 @@
        :input->type    {'input1 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}
                         'input2 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}}
        :ret-type       {:type 'double?}
-       :other-types    []
+       :other-type-ctor    #{}
        :extra-genes    []
        :case-generator (fn area-of-rectangle-gen
                          []
@@ -394,7 +394,7 @@
        :input->type    {'input1 {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}
                         'input2  {:type :vector :child {:type 'string?}}}
        :ret-type       {:type 'int?}
-       :other-types    [{:type 'string?} {:type 'boolean?}]
+       :other-type-ctor    #{'boolean? 'string?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
        :case-generator (fn sum-vector-vals-gen []
                          (let [the-map (first (:inputs (sum-2-vals-case-generator (bu/string-generator 10))))
@@ -410,7 +410,7 @@
        :input->type    {'input1 {:type :set :child {:type :set :child {:type 'int?}}}
                         'input2  {:type 'int?}}
        :ret-type       {:type :set :child {:type :set :child {:type 'int?}}}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor    #{'boolean?}
        :extra-genes    [{:gene :lit-generator, :fn (bu/int-generator 100), :type {:type 'int?}}
                         {:gene :lit, :val true, :type {:type 'boolean?}}
                         {:gene :lit, :val false, :type {:type 'boolean?}}
@@ -439,7 +439,7 @@
                                  {:type :tuple, :children [{:type 'string?} {:type 'int?}]}}
                         'input2 {:type 'string?}}
        :ret-type       {:type 'int?}
-       :other-types    [{:type 'boolean?}]
+       :other-type-ctor    #{'boolean?}
        :extra-genes    [{:gene :lit, :val true, :type {:type 'boolean?}}
                         {:gene :lit, :val false, :type {:type 'boolean?}}]
        :case-generator (fn time-sheet-gen []
@@ -459,7 +459,7 @@
       {:description    "Given map of {key => int}, return the key with the min value."
        :input->type    {'input1 {:type :map-of, :key {:type 'T}, :value {:type 'int?}}}
        :ret-type       {:type 'T}
-       :other-types    [{:type 'int?} {:type 'boolean?}]
+       :other-type-ctor    #{'boolean? 'int?}
        :extra-genes    []
        :case-generator (let [generators [(bu/string-generator 10)
                                          bu/rand-char
@@ -490,7 +490,7 @@
        :input->type    {'input1 {:type 'string?}
                         'input2 (lib/unary-transform {:type 'char?})}
        :ret-type       {:type 'string?}
-       :other-types    [{:type 'boolean?} {:type 'char?} {:type 'int?}]
+       :other-type-ctor    #{'boolean? 'int? 'char?}
        :extra-genes    [{:gene :lit, :val "", :type {:type 'string?}}]
        :case-generator (fn simple-encryption-gen []
                          (let [available-chars (vec (concat [\newline \tab] (map char (range 32 127))))
@@ -524,7 +524,7 @@
                                  {:type :map-of, :key {:type 'string?}, :value {:type 'int?}}}
                         'input2 {:type 'string?}}
        :ret-type       {:type :vector :child {:type 'int?}}
-       :other-types    [{:type 'boolean?} {:type 'int?}]
+       :other-type-ctor    #{'boolean? 'int?}
        :extra-genes    [{:gene :lit, :val [], :type {:type :vector :child {:type 'int?}}}]
        :case-generator (fn get-vals-of-key-gen
                          []
@@ -537,12 +537,12 @@
                            {:inputs [the-maps the-key]
                             :output output}))
        :loss-fns       [lev/distance]}
-      
+
       "count-vector-then-add-10"
       {:description    "Given a vector, count it, and return that plus 10"
        :input->type    {'input1 {:type :vector :child {:type 'int?}}}
        :ret-type       {:type 'int?}
-       :other-types    []
+       :other-type-ctor    #{}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val 10, :type {:type 'int?}}
                         {:gene :lit, :val ["hi" "there"], :type {:type :vector :child {:type 'string?}}}]
@@ -551,13 +551,13 @@
                            {:inputs [coll]
                             :output (+ 10 (count coll))}))
        :loss-fns       [bu/absolute-distance]}
-      
+
       "count-map-and-string-and-sum"
       {:description    "Given a vector, count it, and return that plus 10"
        :input->type    {'input1 {:type :map-of, :key {:type 'int?}, :value {:type 'boolean?}}
                         'input2 {:type 'string?}}
        :ret-type       {:type 'int?}
-       :other-types    []
+       :other-type-ctor    #{}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val ["hi" "there"], :type {:type :vector :child {:type 'string?}}}]
        :case-generator (fn count-true-gen []
@@ -574,7 +574,7 @@
                                         :sym 'c
                                         :typeclasses #{:countable}}}}
        :ret-type       {:type 'int?}
-       :other-types    []
+       :other-type-ctor    #{}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                         {:gene :lit, :val 10, :type {:type 'int?}}]
        :case-generator (fn count-true-gen []
