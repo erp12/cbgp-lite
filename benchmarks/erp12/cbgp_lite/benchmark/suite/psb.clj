@@ -681,11 +681,11 @@
 
    ; "wallis-pi"
    ; "word-stats"
-
+      
       "x-word-lines" {:input->type {'input1 {:type 'string?}
                                     'input2 {:type 'int?}}
                       :ret-type {:type 'string?}
-                      :other-type-ctors [{:type 'boolean?} {:type 'char?}]
+                      :other-type-ctors #{'boolean? 'char?}
                       ;; @todo What anonymous function signatures should x-word-lines support?
                       :extra-genes [{:gene :lit
                                      :val \newline
@@ -719,11 +719,11 @@
       ;;;;;;;;;;;;;;;;;;;
       ;; PSB2 Problems ;;
       ;;;;;;;;;;;;;;;;;;;
-
+      
       "basement" {:input->type {'input1 {:type :vector
                                          :child {:type 'int?}}}
                   :ret-type {:type 'int?}
-                  :other-type-ctors [{:type 'boolean?}]
+                  :other-type-ctors #{'boolean?}
                   :extra-genes [{:gene :lit
                                  :val []
                                  :type {:type :vector
@@ -746,7 +746,7 @@
                                       'input2 {:type 'double?}
                                       'input3 {:type 'int?}}
                         :ret-type {:type 'double?}
-                        :other-type-ctors [{:type 'boolean?}]
+                        :other-type-ctors #{'boolean?}
                         :extra-genes [{:gene :lit
                                        :val 0.0
                                        :type {:type 'double?}}
@@ -807,7 +807,7 @@
 
       "camel-case" {:input->type {'input1 {:type 'string?}}
                     :ret-type {:type 'string?}
-                    :other-type-ctors [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+                    :other-type-ctors #{'int? 'boolean? 'char?}
                     :extra-genes [{:gene :lit
                                    :val \-
                                    :type {:type 'char?}}
@@ -823,7 +823,7 @@
                     :loss-fns [lev/distance]}
 
 ;;  "coin-sums" ;; NEEDS MULTIPLE OUTPUTS
-
+      
       "cut-vector" {:input->type {'input1 {:type :vector
                                            :child {:type 'int?}}}
                     :ret-type {:type :tuple
@@ -832,7 +832,7 @@
                                           {:type :vector
                                            :child {:type 'int?}}]}
                     :out-key [:output1 :output2]
-                    :other-type-ctors [{:type 'int?} {:type 'boolean?}]
+                    :other-type-ctors #{'int? 'boolean?}
                     :extra-genes [{:gene :lit
                                    :val 0
                                    :type {:type 'int?}}
@@ -851,7 +851,7 @@
       "dice-game" {:input->type {'input1 {:type 'int?}
                                  'input2 {:type 'int?}}
                    :ret-type {:type 'double?}
-                   :other-type-ctors [{:type 'boolean?}]
+                   :other-type-ctors #{'boolean?}
                    :extra-genes [{:gene :lit
                                   :val 0.0
                                   :type {:type 'double?}}
@@ -866,7 +866,7 @@
                    :ret-type {:type :tuple
                               :children [{:type 'int?} {:type 'int?}]}
                    :out-key [:output1 :output2]
-                   :other-type-ctors [{:type 'boolean?}]
+                   :other-type-ctors #{'boolean?}
                    :extra-genes [{:gene :lit
                                   :val -1
                                   :type {:type 'int?}}
@@ -887,7 +887,7 @@
 
       "fizz-buzz" {:input->type {'input1 {:type 'int?}}
                    :ret-type {:type 'string?}
-                   :other-type-ctors [{:type 'boolean?}]
+                   :other-type-ctors #{'boolean?}
                    :extra-genes [{:gene :lit
                                   :val "Fizz"
                                   :type {:type 'string?}}
@@ -911,7 +911,7 @@
       "fuel-cost" {:input->type {'input1 {:type :vector
                                           :child {:type 'int?}}}
                    :ret-type {:type 'int?}
-                   :other-type-ctors [{:type 'boolean?}]
+                   :other-type-ctors #{'boolean?}
                    :extra-genes [{:gene :lit-generator
                                   :fn (bu/int-generator 1000)
                                   :type {:type 'int?}}
@@ -963,7 +963,7 @@
       "gcd" {:input->type {'input1 {:type 'int?}
                            'input2 {:type 'int?}}
              :ret-type {:type 'int?}
-             :other-type-ctors [{:type 'boolean?}]
+             :other-type-ctors #{'boolean?}
              :extra-genes [{:gene :lit-generator
                             :fn (bu/int-generator 10)
                             :type {:type 'int?}}]
@@ -973,7 +973,7 @@
                                             'input2 {:type 'string?}}
                               :ret-type {:type :vector
                                          :child {:type 'int?}}
-                              :other-type-ctors [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+                              :other-type-ctors #{'int? 'boolean? 'char?}
                               :extra-genes [{:gene :lit
                                              :val []
                                              :type {:type :vector
@@ -994,7 +994,7 @@
                                         :child {:type 'int?}}}
                  :ret-type {:type :vector
                             :child {:type 'int?}}
-                 :other-type-ctors [{:type 'int?} {:type 'boolean?}]
+                 :other-type-ctors #{'int? 'boolean?}
                  :extra-genes [{:gene :lit
                                 :val []
                                 :type {:type :vector
@@ -1009,7 +1009,7 @@
       "luhn" {:input->type {'input1 {:type :vector
                                      :child {:type 'int?}}}
               :ret-type {:type 'int?}
-              :other-type-ctors [{:type 'boolean?}]
+              :other-type-ctors #{'boolean?}
               :extra-genes [{:gene :lit
                              :val 0
                              :type {:type 'int?}}
@@ -1028,10 +1028,10 @@
               :loss-fns [bu/absolute-distance]}
 
    ;;  "mastermind" ;; NEEDS MULTIPLE OUTPUTS
-
+      
       "middle-character" {:input->type {'input1 {:type 'string?}}
                           :ret-type {:type 'string?}
-                          :other-type-ctors [{:type 'int?} {:type 'boolean?} {:type 'char?}]
+                          :other-type-ctors #{'int? 'boolean? 'char}
                           :extra-genes [{:gene :lit
                                          :val ""
                                          :type {:type 'string?}}
@@ -1051,7 +1051,7 @@
 
       "paired-digits" {:input->type {'input1 {:type 'string?}}
                        :ret-type {:type 'int?}
-                       :other-type-ctors [{:type 'boolean?} {:type 'char?}]
+                       :other-type-ctors #{'boolean? 'char?}
                        :extra-genes [{:gene :lit
                                       :val 0
                                       :type {:type 'int?}}
@@ -1068,7 +1068,7 @@
                                      'input2 {:type :vector
                                               :child {:type 'double?}}}
                        :ret-type {:type 'double?}
-                       :other-type-ctors [{:type 'boolean?} {:type 'int?}]
+                       :other-type-ctors #{'boolean? 'int?}
                        :extra-genes [{:gene :lit
                                       :val 0.0
                                       :type {:type 'double?}}
@@ -1085,7 +1085,7 @@
                                 'input3 {:type 'double?}
                                 'input4 {:type 'double?}}
                   :ret-type {:type 'double?}
-                  :other-type-ctors [{:type 'boolean?}]
+                  :other-type-ctors #{'boolean?}
                   :extra-genes [{:gene :lit
                                  :val 0
                                  :type {:type 'int?}}
@@ -1108,7 +1108,7 @@
 
       "solve-boolean" {:input->type {'input1 {:type 'string?}}
                        :ret-type {:type 'boolean?}
-                       :other-type-ctors [{:type 'int?} {:type 'char?}]
+                       :other-type-ctors #{'int? 'char?}
                        :extra-genes [{:gene :lit
                                       :val true
                                       :type {:type 'boolean?}}
@@ -1131,7 +1131,7 @@
 
       "spin-words" {:input->type {'input1 {:type 'string?}}
                     :ret-type {:type 'string?}
-                    :other-type-ctors [{:type 'int?} {:type 'char?} {:type 'boolean?}]
+                    :other-type-ctors #{'int? 'char? 'boolean?}
                     :extra-genes [{:gene :lit
                                    :val 4
                                    :type {:type 'int?}}
@@ -1151,7 +1151,7 @@
 
       "square-digits" {:input->type {'input1 {:type 'int?}}
                        :ret-type {:type 'string?}
-                       :other-type-ctors [{:type 'char?} {:type 'boolean?}]
+                       :other-type-ctors #{'char? 'boolean?}
                        :extra-genes [{:gene :lit
                                       :val ""
                                       :type {:type 'string?}}
@@ -1173,7 +1173,7 @@
                                            'input2 {:type 'string?}
                                            'input3 {:type 'string?}}
                              :ret-type {:type 'string?}
-                             :other-type-ctors [{:type 'int?} {:type 'char?} {:type 'boolean?}]
+                             :other-type-ctors #{'int? 'char? 'boolean?}
                              :extra-genes [{:gene :lit
                                             :val ""
                                             :type {:type 'string?}}
@@ -1184,7 +1184,7 @@
 
       "twitter" {:input->type {'input1 {:type 'string?}}
                  :ret-type {:type 'string?}
-                 :other-type-ctors [{:type 'int?} {:type 'char?} {:type 'boolean?}]
+                 :other-type-ctors #{'int? 'char? 'boolean?}
                  :extra-genes [{:gene :lit
                                 :val 0
                                 :type {:type 'int?}}
@@ -1210,7 +1210,7 @@
                                        'input2 {:type :vector
                                                 :child {:type 'double?}}}
                          :ret-type {:type 'double?}
-                         :other-type-ctors [{:type 'boolean?} {:type 'int?}]
+                         :other-type-ctors #{'boolean? 'int?}
                          :extra-genes [{:gene :lit
                                         :val []
                                         :type {:type :vector

@@ -670,7 +670,7 @@
           func (eval `(fn [] ~form))
           _ (when verbose (println "FUNC:" func))]
       (is (= [1.1 2.2 3.3 4.4 5.5] (func)))))
-  (testing "Conact String"
+  (testing "Concat String"
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push [{:gene :lit :val "College" :type {:type 'string?}}
                                                {:gene :lit :val "Hamilton " :type {:type 'string?}}
