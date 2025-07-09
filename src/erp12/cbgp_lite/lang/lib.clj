@@ -3,7 +3,6 @@
   (:require [clojure.core :as core]
             [clojure.set :as set]
             [clojure.string :as str]
-            [clojure.string :as string]
             [erp12.cbgp-lite.lang.schema :as schema]))
 
 ;; @todo What do do about nil?
@@ -875,7 +874,7 @@
     range2            erp12.cbgp-lite.lang.lib/rangev
     range3            erp12.cbgp-lite.lang.lib/rangev
     right             second
-    str-join-sep      clojure.string/join})
+    str-join-sep      str/join})
 
 (def macros
   #{'if 'do2 'do3})
@@ -906,8 +905,3 @@
                    (not (empty? (filter #(check-type-for-type-ctors % type-ctors)
                                         (:alternatives typ)))))))
        (into {})))
-
-
-
-
-(apply str (concat "" "\t"))
