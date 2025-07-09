@@ -241,7 +241,7 @@
 (defn concat'
   [coll1 coll2]
   (if (string? coll1)
-    (reduce str (concat coll1 coll2))
+    (apply str (concat coll1 coll2))
     ((comp vec concat) coll1 coll2)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -335,13 +335,13 @@
 (defn rest'
   [coll]
   (if (string? coll)
-    (reduce str (rest coll))
+    (apply str (rest coll))
     ((comp vec rest) coll)))
 
 (defn butlast'
   [coll]
   (if (string? coll)
-    (reduce str (butlast coll))
+    (apply str (butlast coll))
     ((comp vec butlast) coll)))
 
 (defn replace'
@@ -362,13 +362,13 @@
 (defn take'
   [num coll]
   (if (string? coll)
-    (reduce str (take num coll))
+    (apply str (take num coll))
     (into (empty coll) (take num coll))))
 
 (defn reverse'
   [coll]
   (if (string? coll)
-    (reduce str (reverse coll))
+    (apply str (reverse coll))
     (vec (reverse coll))))
 
 (defn sort'
@@ -906,3 +906,8 @@
                    (not (empty? (filter #(check-type-for-type-ctors % type-ctors)
                                         (:alternatives typ)))))))
        (into {})))
+
+
+
+
+(apply str (concat "" "\t"))
