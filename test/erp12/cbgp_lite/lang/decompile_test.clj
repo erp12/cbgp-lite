@@ -1338,36 +1338,101 @@
          "69")))
 
   ;; macros
-(de/decompile-ast (ana.jvm/analyze '(and true false)))
 
-(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2
-                                                                      y 6
-                                                                     v 56
-                                                                       ] (+ y x))))
-                      {:type 'int?} )
-       8))
+;; let
+(deftest decompile-recompile-let-tests
+  (testing "simple lets"
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2 y 6 v 56] (+ y x))))
+                                 {:type 'int?})
+           8))
 
-(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2
-                                                                       y 6
-                                                                       v 56] (+ y v x))))
-                             {:type 'int?})
-       64))
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2 y 6 v 56] (+ y v x))))
+                                 {:type 'int?})
+           64))
 
-(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2
-                                                                       y 6] (+ y x))))
-                             {:type 'int?})
-       8))
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 2 y 6] (+ y x))))
+                                 {:type 'int?})
+           8))
 
-(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 1
-                                                                       y (inc [z] (+ x z))]
-                                                                   (y 10))))
-                             {:type 'int?})
-       8))
+    ; works
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 1
+                                                                           y (+ 2 3)]
+                                                                       (+ x y))))
+                                 {:type 'int?})
+           6)))
 
+  (testing "anonymous function lets"
+    ; works
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
+                                                                           y (fn [z] (* z 8))]
+                                                                       (y x))))
+                                 {:type 'int?})
+           32))
 
-(is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(apply (fn [z] (+ 2 z)) [2 3])))
-                             {:type 'int?})
-       8))
+    ;; multi-fn series
+    ; broken
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (remove (fn [test] (zero? test)) [0 1 3 2 1 1])
+                                                                           y (fn [z] (* z 8))]
+                                                                       (mapv y x))))
+                                 {:type :vector :child {:type 'int?}})
+           [0 24 16]))
+
+    ; broken
+    ; fn works for x, but not y
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (count (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1]))
+                                                                           y (count (remove (fn [y2] (zero? y2)) [0 0 1 2 3 3]))]
+                                                                       (+ x y))))
+                                 {:type 'int?})
+           9))
+
+    ; broken
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
+                                                                           y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])]
+                                                                       (+ (count y) x))))
+                                 {:type 'int?})
+           9))
+
+    ; works
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1 0 0])
+                                                                           y 4]
+                                                                       (+ (count x) y))))
+                                 {:type 'int?})
+           9)))
+
+  (testing "nested anonymous function lets"
+    ;; nested fn (mapv) series
+    ; broken
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x [0 1 2 3]
+                                                                           y (fn [z] (* z 8))]
+                                                                       (mapv y x))))
+                                 {:type :vector :child {:type 'int?}})
+           [0 8 16 24]))
+
+    ; broken
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x [2 3]
+                                                                           y (fn [z] (mapv #(* % 8) z))]
+                                                                       (y x))))
+                                 {:type :vector :child {:type 'int?}} true)
+           [16 24]))
+
+    ; broken
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (fn [z] (mapv #(* % 8) z))
+                                                                           y [2 3]]
+                                                                       (x y))))
+                                 {:type :vector :child {:type 'int?}} true)
+           [16 24]))
+
+    ;; move below tests after nested fn works
+    ; works
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x [2 3]
+                                                                           y (fn [z] (mapv inc z))]
+                                                                       (y x))))
+                                 {:type :vector :child {:type 'int?}} true)
+           [16 24]))
+    ; works
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(mapv (fn [z] (+ 2 z)) [2 3])))
+                                 {:type :vector :child {:type 'int?}})
+           [4 5]))))
   
   (deftest decompile-anonymous-functions-test
     ; broken b/c mismatched s-var names
