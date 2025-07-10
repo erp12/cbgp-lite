@@ -354,9 +354,10 @@
 
 (defn replace'
   [coll target replacement]
-  (if (string? coll)
+  (if
+    (string? coll)
     (str/replace coll target replacement)
-    (replace {target replacement} coll)))
+    (vec (replace {target replacement} coll))))
 
 (defn replace-first'
   [coll target replacement]

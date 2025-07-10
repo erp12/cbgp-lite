@@ -248,8 +248,8 @@
 ;; Loss Function Utils
 
 (defn tap-nodes
-  [f tree]
-  (w/walk (partial tap-nodes f) identity (f tree)))
+  [f tree] 
+    (w/walk (partial tap-nodes f) identity (f tree)))
 
 (defn has-nil?
   [x]
