@@ -491,7 +491,7 @@
        :input->type    {'input1 {:type 'string?}
                         'input2 (lib/unary-transform {:type 'char?})}
        :ret-type       {:type 'string?}
-       :other-type-ctors    #{'boolean? 'int? 'char?}
+       :other-type-ctors    #{'boolean? 'int? 'char? :vector}
        :extra-genes    [{:gene :lit, :val "", :type {:type 'string?}}]
        :case-generator (fn simple-encryption-gen []
                          (let [available-chars (vec (concat [\newline \tab] (map char (range 32 127))))
