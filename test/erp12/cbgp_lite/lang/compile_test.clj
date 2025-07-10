@@ -996,12 +996,13 @@
 (deftest broken-let
   ;; (* 2 (let [x 'in1] (+ x 3)))
   (let [{::c/keys [ast type]} (:ast (c/push->ast {:push '[{:gene :lit :val 3 :type {:type int?}}
-                                                          {:gene :lit :val 5 :type {:type int?}}
                                                           {:gene :let}
-                                                          [{:gene :local, :idx 0}
-                                                           {:gene :local, :idx 1}
-                                                           {:gene :var, :name +}
-                                                           {:gene :apply}]]
+                                                          [{:gene :lit :val 5 :type {:type int?}}
+                                                           {:gene :let}
+                                                           [{:gene :local, :idx 0}
+                                                            {:gene :local, :idx 1}
+                                                            {:gene :var, :name +}
+                                                            {:gene :apply}]]]
                                                   :locals []
                                                   :ret-type {:type 'int?}
                                                   :type-env lib/type-env
@@ -1013,51 +1014,59 @@
         _ (println "\n ast: " ast)]
     (is (= (func) 8))))
 
-(deftest nested-let-contstants-test
-  ;; (* 2 (let [x 'in1] (+ x 3)))
-  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :lit :val 7 :type {:type 'int?}}
-                                                         {:gene :let}
-                                                         [{:gene :lit :val 9 :type {:type 'int?}}
-                                                         {:gene :let}
-                                                         [{:gene :local :idx 0}
-                                                          {:gene :local :idx 1}
-                                                          {:gene :var :name '+}
-                                                          {:gene :apply}]]]
+; broken
+(deftest nested-let-binding-test
+  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      '[{:gene :lit, :type {:type int?}, :val 4}
+                                                               {:gene :let}
+                                                               [{:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
+                                                                {:arg-types [{:sym s-44793, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+                                                                [{:gene :local, :idx 1}
+                                                                 {:gene :var, :name zero?}
+                                                                 {:gene :apply}]
+                                                                {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+                                                                {:gene :apply}
+                                                                {:gene :let}
+                                                                [{:gene :local, :idx 0}
+                                                                 {:gene :local, :idx 1}
+                                                                 {:gene :var, :name count}
+                                                                 {:gene :apply}
+                                                                 {:gene :var, :name +}
+                                                                 {:gene :apply}]]]
+                                                
+                                                  ;(let [x [2 3]] (let [y ] (y x))) 
+                                                  :locals    []
+                                                  :ret-type  {:type 'int?} ;{:type :vector :child {:type 'int?}}
+                                                  :type-env  lib/type-env
+                                                  :dealiases lib/dealiases}))
+        _ (is (= {:type type} :vector)) 
+        _ (println "\n AST: " ast)
+        form (a/ast->form ast)
+        _ (println "FORM: " form)
+        func (eval `(fn [] ~form))]
+    (is (= (func) 0))
+    (is (= (func) 8))
+    (is (= (func) 2))))
+
+(deftest and-test
+  ;; (and 0 1)
+  (if (and true false) "hello!" "bye!") 
+  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :lit :val "not this one!" :type {:type 'string?}}
+                                                         {:gene :lit :val "bye!" :type {:type 'string?}}
+                                                         {:gene :lit :val "hello!" :type {:type 'string?}}
+                                                         ;{:gene :lit :val 0 :type {:type 'int?}}
+                                                         ;{:gene :lit :val 1 :type {:type 'int?}}
+                                                         {:gene :lit :val true :type {:type 'boolean?}}
+                                                         {:gene :lit :val false :type {:type 'boolean?}}
+                                                         {:gene :var :name `lib/and}
+                                                         {:gene :var :name 'if}
+                                                         ]
                                                   :locals []
-                                                  :ret-type {:type 'int?}
+                                                  :ret-type {:type 'string?}
                                                   :type-env lib/type-env
                                                   :dealiases lib/dealiases}))
-        _ (is (= 'int? (:type type)))
+        _ (is (= 'string? (:type type)))
+        _ (println "\n AST: " ast)
         form (a/ast->form ast)
+         _ (println "FORM: " form)
         func (eval `(fn [] ~form))]
-    (is (= (func) 16))))
-
-
-(deftest let-binding-test
-  ;; Square and then double the input.
-  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      [{:gene :local :idx 0}
-                                                              {:gene :local :idx 0}
-                                                              {:gene :var :name '*}
-                                                              {:gene :apply}
-                                                              {:gene :let}
-                                                              [{:gene :local :idx 1}
-                                                               {:gene :local :idx 1}
-                                                               {:gene :var :name '+}
-                                                               {:gene :apply}]]
-                                                  :locals    ['in1]
-                                                  :ret-type  {:type 'int?}
-                                                  :type-env  (assoc lib/type-env
-                                                                    'in1 {:type 'int?})
-                                                  :dealiases lib/dealiases}))
-        _ (is (= type {:type 'int? :typeclasses #{:number}}))
-        form (a/ast->form ast)
-
-        ;; _ (is
-        ;;    #_{:clj-kondo/ignore [:unresolved-symbol]}
-        ;;    (matches? (let [?v (* in1 in1)]
-        ;;                (+ ?v ?v))
-        ;;              form))
-        func (eval `(fn [~'in1] ~form))]
-    (is (= (func 0) 0))
-    (is (= (func 2) 8))
-    (is (= (func -1) 2))))
+    (is (= (func) "does this work?"))))
