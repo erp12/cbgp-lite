@@ -3,7 +3,6 @@
   (:require [clojure.core :as core]
             [clojure.set :as set]
             [clojure.string :as str]
-            [clojure.string :as string]
             [erp12.cbgp-lite.lang.schema :as schema]))
 
 ;; @todo What do do about nil?
@@ -80,6 +79,13 @@
   [x]
   (Math/tan x))
 
+(defn abs'
+  "Returns absolute value, coercing to bigint if necessary."
+  [x]
+  (if (neg? x)
+    (-' x)
+    x))
+
 ;; We've decided to make safe-pow => pow, and have it test arguments
 ;; to see if they're integers (if so, cast to long) or not (return double)
 ;; We could instead just leave int-pow and double-pow as monomorphized and,
@@ -90,7 +96,12 @@
   (let [result (Math/pow x y)]
     (cond
       (or (NaN? result) (infinite? result))
-      (throw (ex-info "Pow resulting in undefined value." {:base x :exponent y}))
+      (cond
+        (zero? x) 0
+        (neg? x) (recur (abs' x) y)
+        :else (throw (ex-info (str "Pow resulting in undefined value. x = "
+                                   x " y = " y)
+                              {:base x :exponent y})))
 
       (and (integer? x) (integer? y))
       (long result)
@@ -527,9 +538,9 @@
    '+                  (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
    '-                  (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
    '*                  (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
-   'quot               (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
-   '/                  (scheme (fn-of [(s-var 'a) (s-var 'a)] DOUBLE) {'a #{:number}})
-   'mod                (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
+   `safe-quot          (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
+   `safe-div           (scheme (fn-of [(s-var 'a) (s-var 'a)] DOUBLE) {'a #{:number}})
+   `safe-mod           (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
    'inc                (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
    'dec                (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
    `neg                (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
@@ -872,7 +883,7 @@
     range2            erp12.cbgp-lite.lang.lib/rangev
     range3            erp12.cbgp-lite.lang.lib/rangev
     right             second
-    str-join-sep      clojure.string/join})
+    str-join-sep      str/join})
 
 (def macros
   #{'if 'do2 'do3})
@@ -892,14 +903,12 @@
 
 (defn lib-for-type-ctors
   "Filters type-env to include all functions that have all of their types in type-ctors.
-   This does ??? on overloaded types"
+   Run on each alternative if overloaded; if any return true, include this instruction"
   [type-ctors]
   (->> type-env
        (filter (fn [[_ typ]]
                  (if (not= :overloaded (:type typ))
                    (check-type-for-type-ctors typ type-ctors)
-                   ;; Run on each alternative if overloaded; if any return true,
-                   ;; include this instruction
                    (not (empty? (filter #(check-type-for-type-ctors % type-ctors)
                                         (:alternatives typ)))))))
        (into {})))

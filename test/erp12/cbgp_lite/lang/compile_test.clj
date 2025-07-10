@@ -795,34 +795,6 @@
     (is (= (func 1000) "same"))
     (is (= (func 2000) "different"))))
 
-(deftest let-binding-test
-  ;; Square and then double the input.
-  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      [{:gene :local :idx 0}
-                                                              {:gene :local :idx 0}
-                                                              {:gene :var :name '*}
-                                                              {:gene :apply}
-                                                              {:gene :let}
-                                                              [{:gene :local :idx 1}
-                                                               {:gene :local :idx 1}
-                                                               {:gene :var :name '+}
-                                                               {:gene :apply}]]
-                                                  :locals    ['in1]
-                                                  :ret-type  {:type 'int?}
-                                                  :type-env  (assoc lib/type-env
-                                                                    'in1 {:type 'int?})
-                                                  :dealiases lib/dealiases}))
-        _ (is (= type {:type 'int? :typeclasses #{:number}}))
-        form (a/ast->form ast)
-        _ (is
-           #_{:clj-kondo/ignore [:unresolved-symbol]}
-           (matches? (let [?v (* in1 in1)]
-                       (+ ?v ?v))
-                     form))
-        func (eval `(fn [~'in1] ~form))]
-    (is (= (func 0) 0))
-    (is (= (func 2) 8))
-    (is (= (func -1) 2))))
-
 (deftest hof-with-anonymous-fn-test
   ;; Map `inc` over the elements of a vector
   (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      [{:gene :lit :val [1 2 3] :type {:type :vector :child {:type 'int?}}}
@@ -981,3 +953,111 @@
         func (eval `(fn [~'x ~'y] ~form))]
     (is (= 1 (func 0 1)))
     (is (= "that" (func "this" "that")))))
+
+;; let testing
+(deftest let-test-1-input
+  ;; let [x] (+ x 3)
+ (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :local :idx 0}
+                                                        {:gene :let}
+                                                        [{:gene :local :idx 1}
+                                                         {:gene :lit :val 3 :type {:type 'int?}}
+                                                         {:gene :var :name '+}
+                                                         {:gene :apply}]]
+                                                 :locals ['in1]
+                                                 :ret-type {:type 'int?} 
+                                                 :type-env (assoc lib/type-env 
+                                                                  'in1 {:type 'int?})
+                                                 :dealiases lib/dealiases})) 
+        _ (is (= 'int? (:type type)))
+       form (a/ast->form ast)
+       func (eval `(fn [~'in1] ~form))]
+   (is (= (func 6) 9))))
+
+(deftest let-test-2-inputs
+  ;; (* 2 (let [x 'in1] (+ x 3)))
+  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :local :idx 0}
+                                                         {:gene :local :idx 1}
+                                                         {:gene :let}
+                                                         [{:gene :local :idx 2}
+                                                          {:gene :local :idx 3}
+                                                          {:gene :var :name '+}
+                                                          {:gene :apply}]] 
+                                                  :locals ['in1 'in2]
+                                                  :ret-type {:type 'int?}
+                                                  :type-env (assoc lib/type-env
+                                                                   'in1 {:type 'int?}
+                                                                   'in2 {:type 'int?})
+                                                  :dealiases lib/dealiases}))
+        _ (is (= 'int? (:type type)))
+        form (a/ast->form ast)
+        func (eval `(fn [~'in1 ~'in2] ~form))]
+    (is (= (func 23 7) 30))))
+
+(deftest broken-let
+  ;; (* 2 (let [x 'in1] (+ x 3)))
+  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push '[{:gene :lit :val 3 :type {:type int?}}
+                                                          {:gene :lit :val 5 :type {:type int?}}
+                                                          {:gene :let}
+                                                          [{:gene :local, :idx 0}
+                                                           {:gene :local, :idx 1}
+                                                           {:gene :var, :name +}
+                                                           {:gene :apply}]]
+                                                  :locals []
+                                                  :ret-type {:type 'int?}
+                                                  :type-env lib/type-env
+                                                  :dealiases lib/dealiases}))
+        _ (is (= 'int? (:type type)))
+        form (a/ast->form ast)
+        func (eval `(fn [] ~form))
+        _ (println "\n form: " form)
+        _ (println "\n ast: " ast)]
+    (is (= (func) 8))))
+
+(deftest nested-let-contstants-test
+  ;; (* 2 (let [x 'in1] (+ x 3)))
+  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :lit :val 7 :type {:type 'int?}}
+                                                         {:gene :let}
+                                                         [{:gene :lit :val 9 :type {:type 'int?}}
+                                                         {:gene :let}
+                                                         [{:gene :local :idx 0}
+                                                          {:gene :local :idx 1}
+                                                          {:gene :var :name '+}
+                                                          {:gene :apply}]]]
+                                                  :locals []
+                                                  :ret-type {:type 'int?}
+                                                  :type-env lib/type-env
+                                                  :dealiases lib/dealiases}))
+        _ (is (= 'int? (:type type)))
+        form (a/ast->form ast)
+        func (eval `(fn [] ~form))]
+    (is (= (func) 16))))
+
+
+(deftest let-binding-test
+  ;; Square and then double the input.
+  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      [{:gene :local :idx 0}
+                                                              {:gene :local :idx 0}
+                                                              {:gene :var :name '*}
+                                                              {:gene :apply}
+                                                              {:gene :let}
+                                                              [{:gene :local :idx 1}
+                                                               {:gene :local :idx 1}
+                                                               {:gene :var :name '+}
+                                                               {:gene :apply}]]
+                                                  :locals    ['in1]
+                                                  :ret-type  {:type 'int?}
+                                                  :type-env  (assoc lib/type-env
+                                                                    'in1 {:type 'int?})
+                                                  :dealiases lib/dealiases}))
+        _ (is (= type {:type 'int? :typeclasses #{:number}}))
+        form (a/ast->form ast)
+
+        ;; _ (is
+        ;;    #_{:clj-kondo/ignore [:unresolved-symbol]}
+        ;;    (matches? (let [?v (* in1 in1)]
+        ;;                (+ ?v ?v))
+        ;;              form))
+        func (eval `(fn [~'in1] ~form))]
+    (is (= (func 0) 0))
+    (is (= (func 2) 8))
+    (is (= (func -1) 2))))

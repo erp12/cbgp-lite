@@ -460,6 +460,7 @@
        :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}}
        :ret-type       {:type :s-var :sym 'T}
        :other-type-ctors    #{'boolean? 'int?}
+       
        :extra-genes    []
        :case-generator (let [generators [(bu/string-generator 10)
                                          bu/rand-char
@@ -490,7 +491,7 @@
        :input->type    {'input1 {:type 'string?}
                         'input2 (lib/unary-transform {:type 'char?})}
        :ret-type       {:type 'string?}
-       :other-type-ctors    #{'boolean? 'int? 'char?}
+       :other-type-ctors    #{'boolean? 'int? 'char? :vector :map-of :set :tuple}
        :extra-genes    [{:gene :lit, :val "", :type {:type 'string?}}]
        :case-generator (fn simple-encryption-gen []
                          (let [available-chars (vec (concat [\newline \tab] (map char (range 32 127))))
