@@ -318,6 +318,23 @@
           _ (when verbose (println "FORM: " form))
           func (eval `(fn [] ~form))]
       (is (= "Hell" (func)))))
+  (testing "Butlast String With input"
+    (let [{::c/keys [ast type]} (:ast (c/push->ast
+                                       {:push      [{:gene :local :idx 0}
+                                                    {:gene :var :name `lib/butlast'}
+                                                    {:gene :apply}]
+                                        :locals    ['in1]
+                                        :ret-type  {:type 'string?}
+                                        :type-env  (assoc lib/type-env
+                                                          'in1 {:type 'string?})
+                                        :dealiases lib/dealiases}))
+          _ (is (= type {:type 'string?}))
+          _ (when verbose (println "REAL-AST: " ast))
+          form (a/ast->form ast)
+          _ (when verbose (println "FORM: " form))
+          func (eval `(fn [~'in1] ~form))]
+      (is (= "Hell" (func "Hello")))))
+
   (testing "Butlast Set (not applied)"
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push      [{:gene :lit :val 42 :type {:type 'int?}}

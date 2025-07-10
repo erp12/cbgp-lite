@@ -37,13 +37,13 @@
         {expected-output :output expected-stdout :std-out} case]
     (->> (conj
            ;; Compute loss values on returned value
-          (mapv (fn [lf]
+          (mapv (fn [lf] 
                   (if (or (nil? actual-output) (instance? Exception actual-output))
                     penalty
                     (lf actual-output expected-output)))
                 loss-fns)
            ;; Compute loss on printed output using string edit distance.
-          (when (contains? case :std-out)
+          (when (contains? case :std-out) 
             (if (nil? actual-stdout)
               penalty
               (lev/distance actual-stdout expected-stdout))))
@@ -148,7 +148,11 @@
                        (catch Exception e
                          (throw (ex-info "Failed to evaluate Clojure form."
                                          {:code form}
-                                         e))))]
+                                         e))))] 
+      (when (:exception evaluation)
+        (println "; BUG Exception in following program:" (.getMessage (:exception evaluation)))
+        (println form)
+        (println))
       (merge {:push push
               :code form
               :func func

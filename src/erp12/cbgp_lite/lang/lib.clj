@@ -319,12 +319,9 @@
 ;;     (safe-subs coll start end)
 ;;     (safe-subvec coll start end)))
 
-
 (comment
-  
-  (safe-sub-coll "Hamilton" 0 3)
-  
-  )
+
+  (safe-sub-coll "Hamilton" 0 3))
 
 (defn map2v
   [expr coll1 coll2]
@@ -705,7 +702,7 @@
                                                       (vector-of (s-var 'b))))
                                        (scheme (fn-of [(fn-of [CHAR] (vector-of (s-var 'a))) ; mapcat-str
                                                        STRING]
-                                                      (vector-of (s-var 'a))))]} 
+                                                      (vector-of (s-var 'a))))]}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Text/Vec
@@ -716,7 +713,7 @@
                        :alternatives [(scheme (fn-of [(vector-of (s-var 'a)) ; vec
                                                       (s-var 'a)
                                                       (s-var 'a)]
-                                                     (vector-of (s-var 'a)))) 
+                                                     (vector-of (s-var 'a))))
                                       (fn-of [STRING CHAR CHAR] STRING) ; char
                                       (fn-of [STRING STRING STRING] STRING)]} ; str
    `replace-first'    {:type :overloaded
@@ -910,4 +907,31 @@
 
 
 
-(apply str (concat "" "\t"))
+
+(defn reduce'
+  [function coll]
+  (try
+    (reduce function coll)
+    (catch Exception _
+      coll)))
+
+(comment
+  (reduce' set/difference #{})
+  (reduce' + [])
+
+  (def input1 "Hello")
+  (def input2 (fn [x]
+                (if (= \l x)
+                  \g
+                  x)))
+  (str (take'
+        (dec (count input1))
+        (str (str (str ""
+                       (input2 (first (butlast' input1)))))
+             (input2 (first (butlast'
+                             (rest' input1))))))
+       (input2 (last input1)))
+
+  ('mapv (lib-for-type-ctors #{'boolean? 'char? 'string? 'int? :=>}))
+  (Math/pow 2 -0)
+  )

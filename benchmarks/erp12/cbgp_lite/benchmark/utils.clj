@@ -294,7 +294,7 @@
                         actual))
         (*' 1000 (abs (- (count expected) (count actual)))))))
 
-;; @todo move to ga-clj.
+;; @todo move to .
 (defn jaccard-similarity-loss
   "this = (1 - Jaccard similarity coefficent), since we want lower to be better
    https://en.wikipedia.org/wiki/Jaccard_index "
