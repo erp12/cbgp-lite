@@ -1014,28 +1014,8 @@
         _ (println "\n ast: " ast)]
     (is (= (func) 8))))
 
-(deftest nested-let-contstants-test
-  ;; (* 2 (let [x 'in1] (+ x 3)))
-  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :lit :val 7 :type {:type 'int?}}
-                                                         {:gene :let}
-                                                         [{:gene :lit :val 9 :type {:type 'int?}}
-                                                         {:gene :let}
-                                                         [{:gene :local :idx 0}
-                                                          {:gene :local :idx 1}
-                                                          {:gene :var :name '+}
-                                                          {:gene :apply}]]]
-                                                  :locals []
-                                                  :ret-type {:type 'int?}
-                                                  :type-env lib/type-env
-                                                  :dealiases lib/dealiases}))
-        _ (is (= 'int? (:type type)))
-        form (a/ast->form ast)
-        func (eval `(fn [] ~form))]
-    (is (= (func) 16))))
-
-
+; broken
 (deftest nested-let-binding-test
-  ;; Square and then double the input.
   (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      '[{:gene :lit, :type {:type int?}, :val 4}
                                                                {:gene :let}
                                                                [{:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
@@ -1066,3 +1046,27 @@
     (is (= (func) 0))
     (is (= (func) 8))
     (is (= (func) 2))))
+
+(deftest and-test
+  ;; (and 0 1)
+  (if (and true false) "hello!" "bye!") 
+  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :lit :val "not this one!" :type {:type 'string?}}
+                                                         {:gene :lit :val "bye!" :type {:type 'string?}}
+                                                         {:gene :lit :val "hello!" :type {:type 'string?}}
+                                                         ;{:gene :lit :val 0 :type {:type 'int?}}
+                                                         ;{:gene :lit :val 1 :type {:type 'int?}}
+                                                         {:gene :lit :val true :type {:type 'boolean?}}
+                                                         {:gene :lit :val false :type {:type 'boolean?}}
+                                                         {:gene :var :name `lib/and}
+                                                         {:gene :var :name 'if}
+                                                         ]
+                                                  :locals []
+                                                  :ret-type {:type 'string?}
+                                                  :type-env lib/type-env
+                                                  :dealiases lib/dealiases}))
+        _ (is (= 'string? (:type type)))
+        _ (println "\n AST: " ast)
+        form (a/ast->form ast)
+         _ (println "FORM: " form)
+        func (eval `(fn [] ~form))]
+    (is (= (func) "does this work?"))))

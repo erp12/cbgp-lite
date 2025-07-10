@@ -459,7 +459,7 @@
      (= :local op)
      (let [local_val (get locals (:name ast) 0)
            _ (println "locals: " locals)
-           _ (println "name: " (:name ast))
+           _ (println "name: " (:name ast) " and type: " (type (:name ast)))
            _ (println "gene: " {:gene :local :idx local_val}) ]
        (list {:gene :local :idx local_val}))
 
@@ -619,6 +619,10 @@
   ; --> :test {:name and... :op :local} *binds 'and' to 'true' cond? (first truthy value)
   ; --> :then {:op :const :val false}
   ; --> :else {:name and... :op :local} *does same as else?
+
+  ; accessing "and"
+  (ana.jvm/analyze '(and true true))
+  (ana.jvm/analyze '(or true true))
 
 
 
