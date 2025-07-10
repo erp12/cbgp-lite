@@ -82,18 +82,18 @@ if suite == "psb":
 elif suite == "composite":
     problems = [
                 ### Composite
-                # "area-of-rectangle",
+                 "area-of-rectangle",
                 # "centimeters-to-meters",
                 # "count-true",
                 # "filter-bounds",
                 # "first-index-of-true",
                 # "get-vals-of-key",
-                #"max-applied-fn",
-                #"min-key",
+                "max-applied-fn",
+                "min-key",
                 # "set-cartesian-product",
                 # "set-symmetric-difference",
                 # "sets-with-element",
-                "simple-encryption",
+                # "simple-encryption",
                 # "sum-2-vals",
                 # "sum-2-vals-polymorphic",
                 # "sum-2D",
