@@ -3,7 +3,7 @@
             [clojure.tools.analyzer.jvm :as ana.jvm]
             [erp12.cbgp-lite.lang.decompile :as de]
             [erp12.cbgp-lite.lang.lib :as lib]))
-
+ 
 ;; To test only this file:
 ;; clj -X:test :only erp12.cbgp-lite.lang.decompile-test 
 
@@ -127,15 +127,15 @@
            {:gene :lit, :type {:type int?}, :val 3}
            {:gene :var, :name *}
            {:gene :apply})))
-  (is (= (de/decompile-ast (ana.jvm/analyze '(/ 3 4)))
+  (is (= (de/decompile-ast (ana.jvm/analyze '(`lib/safe-div 3 4)))
          '({:gene :lit, :type {:type int?}, :val 4}
            {:gene :lit, :type {:type int?}, :val 3}
-           {:gene :var, :name /}
+           {:gene :var, :name `lib/safe-div}
            {:gene :apply})))
-  (is (= (de/decompile-ast (ana.jvm/analyze '(/ 3.5 7.0)))
+  (is (= (de/decompile-ast (ana.jvm/analyze '(`lib/safe-div 3.5 7.0)))
          '({:gene :lit, :type {:type double?}, :val 7.0}
            {:gene :lit, :type {:type double?}, :val 3.5}
-           {:gene :var, :name /}
+           {:gene :var, :name `lib/safe-div}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(* 3.2 4.4)))
@@ -146,12 +146,12 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(quot 80 7)))
          '({:gene :lit, :type {:type int?}, :val 7}
            {:gene :lit, :type {:type int?}, :val 80}
-           {:gene :var, :name quot}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-quot}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(quot 80.3 7.8)))
          '({:gene :lit, :type {:type double?}, :val 7.8}
            {:gene :lit, :type {:type double?}, :val 80.3}
-           {:gene :var, :name quot}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-quot}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(+ 22.2 33.3)))
@@ -392,11 +392,11 @@
            {:gene :lit, :type {:type int?}, :val 3}
            {:gene :lit, :type {:type int?}, :val 2}
            {:gene :lit, :type {:type int?}, :val 1}
-           {:gene :var, :name /}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-div}
            {:gene :apply}
-           {:gene :var, :name /}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-div}
            {:gene :apply}
-           {:gene :var, :name /}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-div}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(+ 1.1 2.2 3.3 4.4)))
@@ -469,11 +469,11 @@
            {:gene :lit, :type {:type double?}, :val 3.3}
            {:gene :lit, :type {:type double?}, :val 2.2}
            {:gene :lit, :type {:type double?}, :val 1.1}
-           {:gene :var, :name /}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-div}
            {:gene :apply}
-           {:gene :var, :name /}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-div}
            {:gene :apply}
-           {:gene :var, :name /}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-div}
            {:gene :apply})))
 
 ;;inc and dec
@@ -561,7 +561,7 @@
   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(quot 80.3 7.8)))
                                {:type 'double?})
          10.0))
-  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(/ 3 4)))
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(/ 3 4))) 
                                {:type 'double?})
          3/4))
   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(/ 3.5 7.0)))
@@ -718,7 +718,7 @@
                                {:type 'int?})
          10))
   ;;doesn't work
-;;   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(/ 1 2 3 4)))
+;;   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(lib/safe-div 1 2 3 4)))
 ;;                                {:type 'double?})
 ;;          1/24))
 
@@ -729,11 +729,11 @@
 ;;   (de/compile-debugging '({:gene :lit, :type {:type int?}, :val 3}
 ;;                         {:gene :lit, :type {:type int?}, :val 2}
 ;;                         {:gene :lit, :type {:type int?}, :val 1}
-;;                         {:gene :var, :name /}
+;;                         {:gene :var, :name `lib/safe-div}
 ;;                         {:gene :apply}
-;;                         {:gene :var, :name /}
+;;                         {:gene :var, :name `lib/safe-div}
 ;;                         {:gene :apply}
-;;                         {:gene :var, :name /}
+;;                         {:gene :var, :name `lib/safe-div}
 ;;                         {:gene :apply})
 ;;                       {:type 'int?}) 
 

@@ -546,9 +546,9 @@
    `safe-mod           (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
    'inc                (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
    'dec                (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
-   `neg                (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
+    `neg                (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
    'abs                (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
-   `pow                (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
+    `pow                (scheme (fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) {'a #{:number}})
    `square             (scheme (fn-of [(s-var 'a)] (s-var 'a)) {'a #{:number}})
    `int-ceil           (fn-of [DOUBLE] INT)
    `int-floor          (fn-of [DOUBLE] INT)
@@ -862,7 +862,8 @@
    'do2                (scheme (fn-of [NIL (s-var 'a)] (s-var 'a)))
    'do3                (scheme (fn-of [NIL NIL (s-var 'a)] (s-var 'a)))
    'print              (scheme (fn-of [(s-var 'a)] NIL))
-   'println            (scheme (fn-of [(s-var 'a)] NIL))})
+   'println            (scheme (fn-of [(s-var 'a)] NIL))
+   })
 
 (def dealiases
   '{->map1            hash-map

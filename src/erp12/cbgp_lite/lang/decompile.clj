@@ -198,8 +198,8 @@
    ;; Numeric
    'add '+ 
    'multiply '*
-   'quotient 'quot
-   'divide '/
+   'quotient `lib/safe-quot
+   'divide `lib/safe-div
    'pow `lib/pow
    ; square (skip)
    'intCast 'int
