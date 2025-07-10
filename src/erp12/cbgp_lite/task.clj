@@ -23,7 +23,7 @@
                              :input {:type :cat
                                      :children (vec (vals input->type))}
                              :output ret-type})
-       (set/union (set other-type-ctors))
+       (set/union (set other-type-ctors) #{:vector :map-of :set :tuple})
        (remove #{:cat :s-var :scheme})
        (set)))
 

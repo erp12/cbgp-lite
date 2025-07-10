@@ -22,6 +22,7 @@
   (try
     (with-out-and-stdout (apply func args))
     (catch Exception e
+      ;(println "TMH1" (.getMessage e))
       {:output e :std-out nil})))
 
 (defn errors-for-case
@@ -149,6 +150,10 @@
                          (throw (ex-info "Failed to evaluate Clojure form."
                                          {:code form}
                                          e))))]
+      #_(when (:exception evaluation)
+        (println "BUG Exception in following program:" (.getMessage (:exception evaluation)))
+        (println form)
+        (println))
       (merge {:push push
               :code form
               :func func

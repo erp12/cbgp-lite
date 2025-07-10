@@ -1,16 +1,16 @@
 import os
 
 # Which benchmark suite. Options: "psb", "composite"
-suite = "psb"
+suite = "composite"
 
 # Used to identify runs in qstat. Change to make easy to identify
 qstat_suffix = "-ad-hoc"
 
 # Your email address for receiving alerts
-email = "odennen@hamilton.edu"
+email = "inahon@hamilton.edu"
 
 # Directory to hold results for each problem. Change for each set of runs
-basedir = "/usr/local/research/compsci/helmuth/odennen/Results/ad-hoc-polymorphism/"
+basedir = "/usr/local/research/compsci/helmuth/inahon/Results/ad-hoc-polymorphism/"
 
 # Directory where input data either can be found or will be downloaded.
 # Can either be local (default) or global (will use less HDD if multiple projects use it)
@@ -82,23 +82,23 @@ if suite == "psb":
 elif suite == "composite":
     problems = [
                 ### Composite
-                "area-of-rectangle",
-                "centimeters-to-meters",
-                "count-true",
-                "filter-bounds",
-                "first-index-of-true",
-                "get-vals-of-key",
-                "max-applied-fn",
-                "min-key",
-                "set-cartesian-product",
-                "set-symmetric-difference",
-                "sets-with-element",
+                # "area-of-rectangle",
+                # "centimeters-to-meters",
+                # "count-true",
+                # "filter-bounds",
+                # "first-index-of-true",
+                # "get-vals-of-key",
+                #"max-applied-fn",
+                #"min-key",
+                # "set-cartesian-product",
+                # "set-symmetric-difference",
+                # "sets-with-element",
                 "simple-encryption",
-                "sum-2-vals",
-                "sum-2-vals-polymorphic",
-                "sum-2D",
-                "sum-vector-vals",
-                "time-sheet"
+                # "sum-2-vals",
+                # "sum-2-vals-polymorphic",
+                # "sum-2D",
+                # "sum-vector-vals",
+                 #"time-sheet"
                 ]
 
 ### You shouldn't need to change anything below here, unless you add another
