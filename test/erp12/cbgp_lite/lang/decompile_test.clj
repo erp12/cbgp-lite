@@ -127,15 +127,15 @@
            {:gene :lit, :type {:type int?}, :val 3}
            {:gene :var, :name *}
            {:gene :apply})))
-  (is (= (de/decompile-ast (ana.jvm/analyze '(`lib/safe-div 3 4)))
+  (is (= (de/decompile-ast (ana.jvm/analyze '(/ 3 4)))
          '({:gene :lit, :type {:type int?}, :val 4}
            {:gene :lit, :type {:type int?}, :val 3}
-           {:gene :var, :name `lib/safe-div}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-div}
            {:gene :apply})))
-  (is (= (de/decompile-ast (ana.jvm/analyze '(`lib/safe-div 3.5 7.0)))
+  (is (= (de/decompile-ast (ana.jvm/analyze '(/ 3.5 7.0)))
          '({:gene :lit, :type {:type double?}, :val 7.0}
            {:gene :lit, :type {:type double?}, :val 3.5}
-           {:gene :var, :name `lib/safe-div}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-div}
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(* 3.2 4.4)))
@@ -1265,7 +1265,7 @@
                                                    :ret-type {:type 'int?}})
                                 {:input->type {'input1 {:type 'string?}}
                                  :ret-type {:type 'int?}}
-                                ["hello"])
+                                ["hello"]) 
          5))
 
   (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ input1 input2)))
@@ -1305,7 +1305,7 @@
                                 {:input->type {'input1 {:type 'string?}
                                                'input2 {:type 'int?}}
                                  :ret-type {:type 'int?}}
-                                ["hello" 10])
+                                ["hello" 10]) 
          15)))
 
 (deftest compile-partial-and-comp

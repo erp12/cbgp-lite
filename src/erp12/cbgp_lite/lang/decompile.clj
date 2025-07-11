@@ -437,16 +437,9 @@
                        ast)))))
 
 (defn decompile-ast
-  "Decompiles AST into a CBGP genome."
   ([ast] (decompile-ast ast {}))
   ([ast task] (decompile-ast ast task {}))
   ([{:keys [op val tag args children] :as ast} task locals] 
-   (println "--------------------------")
-   (println "[DECOMPILE INFO]")
-   (println "-> AST: " "<removed for length>");ast )
-   (println "-> TASK: " task)
-   (println "-> LOCALS: " locals)
-   (println "-> CURR OP: " op "\n")
    
    (cond
     ;; Handle constants
@@ -457,11 +450,9 @@
 
      ;; Handle locals
      (= :local op)
-     (let [local_val (get locals (:name ast) 0)
-           _ (println "locals: " locals)
-           _ (println "name: " (:name ast) " and type: " (type (:name ast)))
-           _ (println "gene: " {:gene :local :idx local_val}) ]
+     (let [local_val (get locals (:name ast) 0) ]
        (list {:gene :local :idx local_val}))
+
 
 ;; Handle static method or invoke or var
      (or (= op :static-call)
@@ -469,52 +460,41 @@
          (= op :var))
      (let [ast-fn-name (cond
                          (= op :static-call) ; catch static-call
-                         (do (println "PART 1: static call reached")
-                             (:method ast))
+                         (:method ast)
 
                          (= op :var) ; catch var (inside invoke)
-                         (do (println "PART 1: invoke var reached")
-                             (symbol (-> ast :meta :name)))
+                         
+                             (symbol (-> ast :meta :name))
 
                          (= (-> ast :fn :op) :var) ; catch var (regular func call)
-                         (do (println "PART 1: var reached")
-                             (-> ast :fn :form))
+                       
+                             (-> ast :fn :form)
 
                          :else
-                         (do (println "PART 1: else reached") (-> ast :fn))) ; catch nested invoke 
-           _ (println "FUNC - starting arg decomp...")
+                          (-> ast :fn)); catch nested invoke 
+     
+      
            raw-decompiled-args (map #(decompile-ast % task locals) args)
-           _ (println "FUNC - finished arg decomp...")
-           decompiled-args (flatten (reverse raw-decompiled-args))
-           
-            _ (println "FUNC - locals: " locals)]
+         
+           decompiled-args (flatten (reverse raw-decompiled-args))]
+     
        (concat decompiled-args
                (cond
-                 (= (ast-fn-name :op) :invoke)
-                 (do (println "PART 2 <invoke> REACHED: ")
-                     (println "FUNC - gene: <decomp call> " {:gene :apply}) 
-                     (concat (decompile-ast ast-fn-name task locals) (list {:gene :apply})))
+                 (= (ast-fn-name :op) :invoke) 
+                     (concat (decompile-ast ast-fn-name task locals) (list {:gene :apply}))
 
-                 (= (ast-fn-name :op) :local)
-                 (do (println "PART 2 <local> REACHED: ")
-                     (println "FUNC - gene: <decomp call> " {:gene :apply}) 
-                     (concat (decompile-ast ast-fn-name task locals) (list {:gene :apply})))
+                 (= (ast-fn-name :op) :local) 
+                     (concat (decompile-ast ast-fn-name task locals) (list {:gene :apply}))
                  
-                 (= (ast-fn-name :op) :fn)
-                 (do (println "PART 2 <fnl> REACHED: ")
-                     (println "FUNC - gene: <decomp call> " {:gene :apply})
-                     (concat (decompile-ast ast-fn-name task locals) (list {:gene :apply})))
+                 (= (ast-fn-name :op) :fn) 
+                     (concat (decompile-ast ast-fn-name task locals) (list {:gene :apply}))
 
-                 (= op :var)
-                 (do (println "PART 2 <var> REACHED: ")
-                     (println "FUNC - gene: " {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}) 
-                     (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}))
+                 (= op :var) 
+                     (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
 
-                 :else
-                 (do (println "PART 2 <else> REACHED: ")
-                     (println "FUNC - gene: " {:gene :var :name (get-fn-symbol ast-fn-name tag args task)} {:gene :apply})
+                 :else 
                      (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                           {:gene :apply})))))
+                           {:gene :apply}))))
 
     ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -549,24 +529,59 @@
            _ (println "LET - finished arg decomp...")]
        (flatten (concat init-forms decompiled-body (repeat (count (:bindings ast)) {:gene :close}))))
 
-     ;; Handle anonymous function abstraction
+     
      (= op :fn)
-     (let [param-names    (map :name (:params (first (:methods ast))))
-           [updated-locals _] (reduce
-                               (fn [[running-locals idx] param-name]
-                                 (if (contains? running-locals param-name)
-                                   [running-locals idx]
-                                   [(assoc running-locals param-name idx) (inc idx)]))
-                               [locals (count locals)]
-                               param-names)
-           _ (println "FN - started arg decomp...")
-           decompiled-body (decompile-ast (:body (first (:methods ast))) task updated-locals)
-           _ (println "FN - finished arg decomp...")
-      ;; Resolve the return type or generate a fresh one
-           return-type (if (nil? (:return-tag ast)) 
-                         (lib/s-var (gensym "s-"))
-                         (get ground-type-alias-map (.getName (:return-tag ast)) (lib/s-var (gensym "s-"))))]
-       (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} decompiled-body {:gene :close}))
+     (let [method        (first (:methods ast))
+           param-nodes   (:params method)
+     
+           ;; Handle param-nodes robustly
+           ;; Some analyzer versions may use :local-symbol or :form instead of :name
+           param-names   (mapv (fn [param]
+                                 (or (:name param)
+                                     (:local-symbol param)
+                                     (:form param))) ; fallbacks
+                               param-nodes)
+     
+           ;; zip names to indices
+           updated-locals (zipmap param-names (range))
+     
+           _ (println "Decompiling function with locals:" updated-locals)
+     
+           decompiled-body (decompile-ast (:body method) task updated-locals)
+     
+           _ (println "Decompiled function body:" decompiled-body)
+     
+           arg-types   (mapv (constantly (lib/s-var (gensym "s-"))) param-names)
+     
+           return-type (if-let [ret-tag (:return-tag ast)]
+                         (get ground-type-alias-map (.getName ret-tag) (lib/s-var (gensym "s-")))
+                         (lib/s-var (gensym "s-")))]
+     
+       (list {:gene :fn
+              :arg-types arg-types
+              :ret-type return-type}
+             decompiled-body
+             {:gene :close}))
+
+
+     ;; Handle anonymous function abstraction
+    ;;  (= op :fn)
+    ;;  (let [param-names    (map :name (:params (first (:methods ast))))
+    ;;        [updated-locals _] (reduce
+    ;;                            (fn [[running-locals idx] param-name]
+    ;;                              (if (contains? running-locals param-name)
+    ;;                                [running-locals idx]
+    ;;                                [(assoc running-locals param-name idx) (inc idx)]))
+    ;;                            [locals (count locals)]
+    ;;                            param-names)
+    ;;        _ (println "FN - started arg decomp...")
+    ;;        decompiled-body (decompile-ast (:body (first (:methods ast))) task updated-locals)
+    ;;        _ (println "FN - finished arg decomp...")
+    ;;   ;; Resolve the return type or generate a fresh one
+    ;;        return-type (if (nil? (:return-tag ast)) 
+    ;;                      (lib/s-var (gensym "s-"))
+    ;;                      (get ground-type-alias-map (.getName (:return-tag ast)) (lib/s-var (gensym "s-"))))]
+    ;;    (list {:gene :fn :arg-types [(lib/s-var (gensym "s-"))] :ret-type return-type} decompiled-body {:gene :close}))
 
      (= op :def)
      (decompile-ast (-> ast
@@ -591,7 +606,7 @@
 (comment
   ; works -- make tests
   (compile-debugging (decompile-ast (ana.jvm/analyze '(nth [1.0 2.0 3.0 5.0] 3 4.04)))
-                     {:type 'double?}) 
+                     {:type 'double?})
   (compile-debugging (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) {:type :vector :child {:type 'int?}})
   (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
   (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
@@ -604,10 +619,10 @@
 
 ;;;; THESE DON'T WORK 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(< 4 5 8)))
-                    {:type 'boolean?}) ; no multi-arity for comparison funcs
-  
+                     {:type 'boolean?}) ; no multi-arity for comparison funcs
+
   (compile-debugging (decompile-ast (ana.jvm/analyze '(or true false)))
-                     {:type 'boolean?}) 
+                     {:type 'boolean?})
   (compile-debugging (decompile-ast (ana.jvm/analyze '(and 0 1))) {:type 'boolean?})
   (decompile-ast (ana.jvm/analyze '(and 0 1)))
 
@@ -624,38 +639,35 @@
   (ana.jvm/analyze '(and true true))
   (ana.jvm/analyze '(or true true))
 
-
-
-
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; LET/FN TESTING
 
   ;; testing llm code
   ; should eval to 25
   (decompile-ast (ana.jvm/analyze '((defn combine-fns [a b c]
-                                       (let [x (#(* % 2) a)
-                                             y (#(+ % 10) b)
-                                             z (#(- % 2) c)]
-                                         (+ x y z))) -1 10 9)))
-  
+                                      (let [x (#(* % 2) a)
+                                            y (#(+ % 10) b)
+                                            z (#(- % 2) c)]
+                                        (+ x y z))) -1 10 9)))
+
   (decompile-ast (ana.jvm/analyze '((fn [a b c]
                                       (let [x (#(* % 2) a)
                                             y (#(+ % 10) b)
                                             z (#(- % 2) c)]
                                         (+ x y z))) -1 10 9)))
-  
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b c] 
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b c]
                                                          (let [x (#(* % 2) a)
                                                                y (#(+ % 10) b)
                                                                z (#(- % 2) c)]
                                                            (+ x y z))) -1 10 9))) {:type 'int?} true)
-  
+
   ;; testing
   (log/set-min-level! :trace)
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [2 3]
                                                             y (fn [z] (mapv (* % 8) z))]
                                                         (y x))))
-                     {:type :vector :child {:type 'int?}} 
+                     {:type :vector :child {:type 'int?}}
                      true)
 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [2 3]
@@ -664,41 +676,43 @@
                      {:type :vector :child {:type 'int?}} true)
 
   ; in :asts (#:erp12.cbgp-lite.lang.compile
-  '{:ast {:op :let, 
-         :bindings [{:op :binding, :name v-43673, :init {:op :const, :val [2 3]}}], 
-         :body {:op :let, 
-                :bindings [{:op :binding, :name v-43688, :init {:op :fn, 
-                                                                :methods [{:op :fn-method, 
-                                                                           :params [], 
-                                                                           :body {:op :invoke, 
-                                                                                  :fn {:op :var, :var mapv}, 
-                                                                                  :args [{:op :var, :var inc} {:op :local, :name v-43673}]}}]}}], 
-                :body {:op :invoke, :fn {:op :local, :name v-43688}, :args []}}}, 
-   :type {:type :vector, :child {:type int?, :typeclasses #{:number}}}}
-  
+  '{:ast {:op :let,
+          :bindings [{:op :binding, :name v-43673, :init {:op :const, :val [2 3]}}],
+          :body {:op :let,
+                 :bindings [{:op :binding, :name v-43688, :init {:op :fn,
+                                                                 :methods [{:op :fn-method,
+                                                                            :params [],
+                                                                            :body {:op :invoke,
+                                                                                   :fn {:op :var, :var mapv},
+                                                                                   :args [{:op :var, :var inc} {:op :local, :name v-43673}]}}]}}],
+                 :body {:op :invoke, :fn {:op :local, :name v-43688}, :args []}}},
+    :type {:type :vector, :child {:type int?, :typeclasses #{:number}}}}
+
   ; FORM: '(let [x [2 3] y (fn [z] (mapv inc z))] (y x))))
   ; in :asts
-  '{:ast {:op :let, 
-         :bindings [{:op :binding, :name v-43707, :init {:op :const, :val [2 3]}}], 
-         :body {:op :let, 
-                :bindings [{:op :binding, :name v-43721, :init {:op :fn, 
-                                                                :methods [{:op :fn-method, 
-                                                                           :params [], 
-                                                                           :body {:op :invoke, 
-                                                                                  :fn {:op :fn, 
-                                                                                       :methods [{:op :fn-method, 
-                                                                                                  :params [], 
-                                                                                                  :body {:op :var, :var *}}]}, 
-                                                                                  :args []}}]}}], 
-                :body {:op :invoke, :fn {:op :local, :name v-43721}, :args []}}}, 
-   :type {:type :=>, :input {:type :cat, :children [{:type :s-var, :sym s-43711, :typeclasses #{:number}} {:type :s-var, :sym s-43711, :typeclasses #{:number}}]}, :output {:type :s-var, :sym s-43711, :typeclasses #{:number}}}}
-  
-
+  '{:ast {:op :let,
+          :bindings [{:op :binding, :name v-43707, :init {:op :const, :val [2 3]}}],
+          :body {:op :let,
+                 :bindings [{:op :binding, :name v-43721, :init {:op :fn,
+                                                                 :methods [{:op :fn-method,
+                                                                            :params [],
+                                                                            :body {:op :invoke,
+                                                                                   :fn {:op :fn,
+                                                                                        :methods [{:op :fn-method,
+                                                                                                   :params [],
+                                                                                                   :body {:op :var, :var *}}]},
+                                                                                   :args []}}]}}],
+                 :body {:op :invoke, :fn {:op :local, :name v-43721}, :args []}}},
+    :type {:type :=>, :input {:type :cat, :children [{:type :s-var, :sym s-43711, :typeclasses #{:number}} {:type :s-var, :sym s-43711, :typeclasses #{:number}}]}, :output {:type :s-var, :sym s-43711, :typeclasses #{:number}}}}
 
   (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x [2 3]
                                                           y (fn [z] (mapv #(* % 8) z))]
                                                       (y x)))))
 
+    (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                            y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])]
+                                                        (+ (count y) x)))) {:type 'int?})
+  
   ; case 1.a: nested fn in first arg (works)
   (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])
                                                           y 4]
@@ -708,9 +722,6 @@
                                                           y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])]
                                                       (+ (count y) x)))))
 
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 4
-                                                            y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])]
-                                                        (+ (count y) x)))) {:type 'int?})
 
 ;; 1.a - working genome
   '[{:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
@@ -794,19 +805,17 @@
                         :init {:op :invoke
                                :fn {:op :var, :var erp12.cbgp-lite.lang.lib/remove'}
                                :args [{:methods [{:body {:args [{:name a-47773, :op :local}],
-                                                   :fn {:op :var, :var zero?},
-                                                   :op :invoke},
-                                            :op :fn-method,
-                                            :params [{:name a-47773, :op :binding}]}],
-                                 :op :fn} {:op :const, :val [0 1 3 2 1 1]}]
-                               }}],
+                                                         :fn {:op :var, :var zero?},
+                                                         :op :invoke},
+                                                  :op :fn-method,
+                                                  :params [{:name a-47773, :op :binding}]}],
+                                       :op :fn} {:op :const, :val [0 1 3 2 1 1]}]}}],
             :body {:op :invoke
                    :fn {:op :var, :var +},
                    :args [{:args [{:name v-47784, :op :local}],
                            :fn {:op :var, :var count},
-                           :op :invoke} {:name v-47771, :op :local}] 
-                   },
-            }},
+                           :op :invoke} {:name v-47771, :op :local}]}}}
+
     :type {:type int?, :typeclasses #{:number}}}
 
 ;; issues
