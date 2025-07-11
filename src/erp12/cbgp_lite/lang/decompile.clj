@@ -477,6 +477,7 @@
            ]
        (list {:gene :local :idx local_val}))
 
+
 ;; Handle static method or invoke or var
      (or (= op :static-call)
          (= op :invoke)
@@ -524,7 +525,7 @@
                  (do ;(println "PART 2 <else> REACHED: ")
                      ;(println "FUNC - gene: " {:gene :var :name (get-fn-symbol ast-fn-name tag args task)} {:gene :apply})
                      (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                           {:gene :apply})))))
+                           {:gene :apply}))))
 
 ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -560,6 +561,41 @@
            decompiled-body (decompile-ast* (:body ast) task locals)
            _ (println "LET - finished arg decomp...")]
        (flatten (concat init-forms decompiled-body (repeat (count (:bindings ast)) {:gene :close}))))
+
+     
+     (= op :fn)
+     (let [method        (first (:methods ast))
+           param-nodes   (:params method)
+     
+           ;; Handle param-nodes robustly
+           ;; Some analyzer versions may use :local-symbol or :form instead of :name
+           param-names   (mapv (fn [param]
+                                 (or (:name param)
+                                     (:local-symbol param)
+                                     (:form param))) ; fallbacks
+                               param-nodes)
+     
+           ;; zip names to indices
+           updated-locals (zipmap param-names (range))
+     
+           _ (println "Decompiling function with locals:" updated-locals)
+     
+           decompiled-body (decompile-ast (:body method) task updated-locals)
+     
+           _ (println "Decompiled function body:" decompiled-body)
+     
+           arg-types   (mapv (constantly (lib/s-var (gensym "s-"))) param-names)
+     
+           return-type (if-let [ret-tag (:return-tag ast)]
+                         (get ground-type-alias-map (.getName ret-tag) (lib/s-var (gensym "s-")))
+                         (lib/s-var (gensym "s-")))]
+     
+       (list {:gene :fn
+              :arg-types arg-types
+              :ret-type return-type}
+             decompiled-body
+             {:gene :close}))
+
 
 ;; Handle anonymous function abstraction
      (= op :fn)
@@ -615,7 +651,7 @@
 (comment
   ; works -- make tests
   (compile-debugging (decompile-ast (ana.jvm/analyze '(nth [1.0 2.0 3.0 5.0] 3 4.04)))
-                     {:type 'double?}) 
+                     {:type 'double?})
   (compile-debugging (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) {:type :vector :child {:type 'int?}})
   (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
   (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
@@ -635,7 +671,7 @@
                      {:type 'boolean?}) ; no multi-arity for comparison funcs
   
   (compile-debugging (decompile-ast (ana.jvm/analyze '(or true false)))
-                     {:type 'boolean?}) 
+                     {:type 'boolean?})
   (compile-debugging (decompile-ast (ana.jvm/analyze '(and 0 1))) {:type 'boolean?})
   (decompile-ast (ana.jvm/analyze '(and 0 1)))
 
@@ -671,19 +707,19 @@
                                             y (#(+ % 10) b)
                                             z (#(- % 2) c)]
                                         (+ x y z))) -1 10 9)))
-  
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b c] 
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b c]
                                                          (let [x (#(* % 2) a)
                                                                y (#(+ % 10) b)
                                                                z (#(- % 2) c)]
                                                            (+ x y z))) -1 10 9))) {:type 'int?} true)
-  
+
   ;; testing
   (log/set-min-level! :trace)
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [2 3]
                                                             y (fn [z] (mapv #(* % 8) z))]
                                                         (y x))))
-                     {:type :vector :child {:type 'int?}} 
+                     {:type :vector :child {:type 'int?}}
                      true)
 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [2 3]
@@ -727,6 +763,10 @@
                                                           y (fn [z] (mapv #(* % 8) z))]
                                                       (y x)))))
 
+    (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                            y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])]
+                                                        (+ (count y) x)))) {:type 'int?})
+  
   ; case 1.a: nested fn in first arg (works)
   (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])
                                                           y 4]
@@ -833,9 +873,8 @@
                    :fn {:op :var, :var +},
                    :args [{:args [{:name v-47784, :op :local}],
                            :fn {:op :var, :var count},
-                           :op :invoke} {:name v-47771, :op :local}] 
-                   },
-            }},
+                           :op :invoke} {:name v-47771, :op :local}]}}}
+
     :type {:type int?, :typeclasses #{:number}}}
 
 ;; issues

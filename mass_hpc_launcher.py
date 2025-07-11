@@ -87,18 +87,18 @@ elif suite == "composite":
                 # "count-true",
                 # "filter-bounds",
                 # "first-index-of-true",
-                # "get-vals-of-key",
-                #"max-applied-fn",
-                #"min-key",
+                "get-vals-of-key",
+                # "max-applied-fn",
+                "min-key",
                 # "set-cartesian-product",
                 # "set-symmetric-difference",
                 # "sets-with-element",
-                "simple-encryption",
+                # "simple-encryption",
                 # "sum-2-vals",
                 # "sum-2-vals-polymorphic",
                 # "sum-2D",
                 # "sum-vector-vals",
-                 #"time-sheet"
+                "time-sheet"
                 ]
 
 ### You shouldn't need to change anything below here, unless you add another

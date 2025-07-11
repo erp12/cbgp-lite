@@ -36,19 +36,19 @@
 
 (deftest schema-terms-test
   (testing "No Typeclasses"
-    (is (= #{:scheme :cat :=> :map-of :s-var} 
+    (is (= #{:scheme :cat :=> :map-of :s-var}
            (sch/schema-terms (get lib/type-env 'get))))
-    (is (= #{:cat :=> 'char? 'boolean?} 
+    (is (= #{:cat :=> 'char? 'boolean?}
            (sch/schema-terms (get lib/type-env `lib/digit?)))))
   (testing "Typeclasses"
     ;; Number
-    (is (= #{#{'int? 'double?} :cat :s-var :=> :scheme} 
+    (is (= #{#{'int? 'double?} :cat :s-var :=> :scheme}
            (sch/schema-terms (get lib/type-env '+))))
     ;; Comparable
     (is (= #{#{'int? 'double? 'char? 'string? 'boolean?} 'boolean? :cat :s-var :=> :scheme}
            (sch/schema-terms (get lib/type-env `lib/<'))))
     ;; Countable
-    (is (= #{#{:vector :map-of :set 'string?} :cat :s-var :=> :scheme 'int?} 
+    (is (= #{#{:vector :map-of :set 'string?} :cat :s-var :=> :scheme 'int?}
            (sch/schema-terms (get lib/type-env 'count))))
     ;; Indexable
     (is (= #{#{:vector 'string?} 'int? :cat :s-var :=> :scheme}
@@ -62,27 +62,26 @@
     ;; Stringable
     (is (= #{#{'char? 'string?} :vector 'string? :cat :s-var :=> :scheme}
            (sch/schema-terms (get lib/type-env `str/join)))))
-  
+
   (testing "Overloaded"
     ;; First, in lib order
     (is (= #{:=> :cat :s-var :scheme :vector}
-           (sch/schema-terms (first (:alternatives (get lib/type-env 'first))))))
-    (is (= #{:cat :=> 'char? 'string?}
            (sch/schema-terms (second (:alternatives (get lib/type-env 'first))))))
-    
+    (is (= #{:cat :=> 'char? 'string?}
+           (sch/schema-terms (first (:alternatives (get lib/type-env 'first))))))
+
     ;; in?, in lib order
     (is (= #{:=> :cat :s-var :scheme :vector 'boolean?}
-           (sch/schema-terms (first (:alternatives (get lib/type-env `lib/in?))))))
+           (sch/schema-terms (last (:alternatives (get lib/type-env `lib/in?))))))
     (is (= #{:=> :cat 'boolean? 'char? 'string?}
            (sch/schema-terms (second (:alternatives (get lib/type-env `lib/in?))))))
     (is (= #{:=> :cat 'boolean? 'string?}
-           (sch/schema-terms (last (:alternatives (get lib/type-env `lib/in?)))))) 
-    
+           (sch/schema-terms (first (:alternatives (get lib/type-env `lib/in?))))))
+
     ;; Reduce, in lib order
-    (is (= #{:=> :cat :s-var :scheme :vector}
+     (is (= #{:=> :cat :s-var :scheme :map-of :tuple}
            (sch/schema-terms (first (:alternatives (get lib/type-env 'reduce))))))
     (is (= #{:=> :cat :s-var :scheme :set}
            (sch/schema-terms (second (:alternatives (get lib/type-env 'reduce))))))
-    (is (= #{:=> :cat :s-var :scheme :map-of :tuple}
-           (sch/schema-terms (last (:alternatives (get lib/type-env 'reduce))))))
-    ))
+    (is (= #{:=> :cat :s-var :scheme :vector}
+           (sch/schema-terms (last (:alternatives (get lib/type-env 'reduce))))))))

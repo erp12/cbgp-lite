@@ -570,7 +570,8 @@
 
       "count-collection-then-add-10"
       {:description    (str "Given a countable thing, count it, and return that plus 10"
-                            "BROKEN BECAUSE RETURN TYPE SOMETIMES ISN'T INT")
+                            "BROKEN BECAUSE RETURN TYPE SOMETIMES ISN'T INT
+                             To fix this, probably would need an :overloaded as input type")
        :input->type    {'input1 {:type {:type :s-var
                                         :sym 'c
                                         :typeclasses #{:countable}}}}
@@ -582,7 +583,21 @@
                          (let [coll (rand-collection 0 50)]
                            {:inputs [coll]
                             :output (+ 10 (count coll))}))
-       :loss-fns       [bu/absolute-distance]}}
+       :loss-fns       [bu/absolute-distance]}
+      
+      "cause-crash"
+      {:description    "Given map of {key => int}, return the key with the min value."
+       :input->type    {'input1 {:type :s-var :sym 'T}}
+       :ret-type       {:type :s-var :sym 'T}
+       :other-type-ctors    #{'boolean? 'int? 'double? 'string? 'char?} 
+       :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
+                        {:gene :lit, :val 10, :type {:type 'int?}}]
+       :case-generator (fn []
+                         (let [x (rand-int 10000)]
+                           {:inputs [x]
+                            :output (inc x)}))
+       :loss-fns       [#(if (= %1 %2) 1 1)]}
+      }
 
 
       ;; This adds nil penalties to all loss functions

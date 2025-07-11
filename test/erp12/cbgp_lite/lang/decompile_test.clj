@@ -3,7 +3,7 @@
             [clojure.tools.analyzer.jvm :as ana.jvm]
             [erp12.cbgp-lite.lang.decompile :as de]
             [erp12.cbgp-lite.lang.lib :as lib]))
-
+ 
 ;; To test only this file:
 ;; clj -X:test :only erp12.cbgp-lite.lang.decompile-test 
 
@@ -561,7 +561,7 @@
   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(quot 80.3 7.8)))
                                {:type 'double?})
          10.0))
-  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(/ 3 4)))
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(/ 3 4))) 
                                {:type 'double?})
          3/4))
   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(/ 3.5 7.0)))
@@ -718,7 +718,7 @@
                                {:type 'int?})
          10))
   ;;doesn't work
-;;   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(/ 1 2 3 4)))
+;;   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(lib/safe-div 1 2 3 4)))
 ;;                                {:type 'double?})
 ;;          1/24))
 
@@ -729,11 +729,11 @@
 ;;   (de/compile-debugging '({:gene :lit, :type {:type int?}, :val 3}
 ;;                         {:gene :lit, :type {:type int?}, :val 2}
 ;;                         {:gene :lit, :type {:type int?}, :val 1}
-;;                         {:gene :var, :name /}
+;;                         {:gene :var, :name `lib/safe-div}
 ;;                         {:gene :apply}
-;;                         {:gene :var, :name /}
+;;                         {:gene :var, :name `lib/safe-div}
 ;;                         {:gene :apply}
-;;                         {:gene :var, :name /}
+;;                         {:gene :var, :name `lib/safe-div}
 ;;                         {:gene :apply})
 ;;                       {:type 'int?}) 
 
@@ -1268,6 +1268,7 @@
 ;;                                 ["hello"])
 ;;          5))
 
+<<<<<<< HEAD
 ;;   (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ input1 input2)))
 ;;                                                   {:input->type {'input1 {:type 'int?}
 ;;                                                                  'input2 {:type 'int?}}
@@ -1277,6 +1278,22 @@
 ;;                                  :ret-type {:type 'int?}}
 ;;                                 [9 10])
 ;;          19))
+=======
+  (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn local_double [input1] (- input1)))
+                                                  {:input->type {'input1 {:type 'double?}}
+                                                   :ret-type {:type 'double?}})
+                                {:input->type {'input1 {:type 'double?}}
+                                 :ret-type {:type 'double?}}
+                                [1.5])
+         -1.5))
+  (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn local_strint [input1] (count input1)))
+                                                  {:input->type {'input1 {:type 'string?}}
+                                                   :ret-type {:type 'int?}})
+                                {:input->type {'input1 {:type 'string?}}
+                                 :ret-type {:type 'int?}}
+                                ["hello"]) 
+         5))
+>>>>>>> inahon/llmgp/ad-hoc
 
 ;;   (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ (int input1) (int input2))))
 ;;                                                   {:input->type {'input1 {:type 'double?}
@@ -1298,6 +1315,7 @@
 ;;                                 [9.0 10])
 ;;          19))
 
+<<<<<<< HEAD
 ;;   (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ (count input1) input2)))
 ;;                                                   {:input->type {'input1 {:type 'string?}
 ;;                                                                  'input2 {:type 'int?}}
@@ -1308,6 +1326,27 @@
 ;;                                 ["hello" 10])
 ;;          15))
   )
+=======
+  (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ input2 (int input1))))
+                                                  {:input->type {'input1 {:type 'double?}
+                                                                 'input2 {:type 'int?}}
+                                                   :ret-type {:type 'int?}})
+                                {:input->type {'input1 {:type 'double?}
+                                               'input2 {:type 'int?}}
+                                 :ret-type {:type 'int?}}
+                                [9.0 10])
+         19))
+
+  (is (= (de/compile-debugging2 (de/decompile-ast (ana.jvm/analyze '(defn help [input1 input2] (+ (count input1) input2)))
+                                                  {:input->type {'input1 {:type 'string?}
+                                                                 'input2 {:type 'int?}}
+                                                   :ret-type {:type 'int?}})
+                                {:input->type {'input1 {:type 'string?}
+                                               'input2 {:type 'int?}}
+                                 :ret-type {:type 'int?}}
+                                ["hello" 10]) 
+         15)))
+>>>>>>> inahon/llmgp/ad-hoc
 
 (deftest compile-partial-and-comp
   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((partial assoc {\a 1 \b 2 \c 3}) \z 42)))

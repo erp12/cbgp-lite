@@ -300,7 +300,7 @@
                                                                   ::c/type (schema/instantiate (lib/type-env '*))}))
                                    :type-env  lib/type-env})))
     (is (partial= {:asts   (list {::c/ast  {:op   :invoke
-                                            :fn   {:op :var :var 'quot}
+                                            :fn   {:op :var :var `lib/safe-quot}
                                             :args [{:op :const :val 2.0}
                                                    {:op :const :val 3.0}]}
                                   ::c/type {:type 'double?}})
@@ -312,11 +312,11 @@
                                                                   ::c/type {:type 'double?}}
                                                                  {::c/ast  {:op :const :val 3.0}
                                                                   ::c/type {:type 'double?}}
-                                                                 {::c/ast  {:op :var :var 'quot}
-                                                                  ::c/type (schema/instantiate (lib/type-env 'quot))}))
+                                                                 {::c/ast  {:op :var :var `lib/safe-quot}
+                                                                  ::c/type (schema/instantiate (lib/type-env `lib/safe-quot))}))
                                    :type-env  lib/type-env})))
     (is (partial= {:asts   (list {::c/ast  {:op   :invoke
-                                            :fn   {:op :var :var '/}
+                                            :fn   {:op :var :var `lib/safe-div}
                                             :args [{:op :const :val 2.0}
                                                    {:op :const :val 2.0}]}
                                   ::c/type {:type 'double?}})
@@ -328,11 +328,11 @@
                                                                   ::c/type {:type 'double?}}
                                                                  {::c/ast  {:op :const :val 2.0}
                                                                   ::c/type {:type 'double?}}
-                                                                 {::c/ast  {:op :var :var '/}
-                                                                  ::c/type (schema/instantiate (lib/type-env '/))}))
+                                                                 {::c/ast  {:op :var :var `lib/safe-div}
+                                                                  ::c/type (schema/instantiate (lib/type-env `lib/safe-div))}))
                                    :type-env  lib/type-env})))
     (is (partial= {:asts   (list {::c/ast  {:op   :invoke
-                                            :fn   {:op :var :var '/}
+                                            :fn   {:op :var :var `lib/safe-div}
                                             :args [{:op :const :val 2}
                                                    {:op :const :val 3}]}
                                   ::c/type {:type 'double?}})
@@ -344,8 +344,8 @@
                                                                   ::c/type {:type 'int?}}
                                                                  {::c/ast  {:op :const :val 3}
                                                                   ::c/type {:type 'int?}}
-                                                                 {::c/ast  {:op :var :var '/}
-                                                                  ::c/type (schema/instantiate (lib/type-env '/))}))
+                                                                 {::c/ast  {:op :var :var `lib/safe-div}
+                                                                  ::c/type (schema/instantiate (lib/type-env `lib/safe-div))}))
                                    :type-env  lib/type-env})))
     (is (partial= {:asts   (list {::c/ast  {:op   :invoke
                                             :fn   {:op :var :var `lib/>'}
