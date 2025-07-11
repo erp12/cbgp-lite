@@ -1058,7 +1058,9 @@
                                                          {:gene :lit :val true :type {:type 'boolean?}}
                                                          {:gene :lit :val false :type {:type 'boolean?}}
                                                          {:gene :var :name `lib/and}
+                                                         {:gene :apply}
                                                          {:gene :var :name 'if}
+                                                         {:gene :apply}
                                                          ]
                                                   :locals []
                                                   :ret-type {:type 'string?}
