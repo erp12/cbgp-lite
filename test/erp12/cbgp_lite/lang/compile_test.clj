@@ -1038,23 +1038,18 @@
                                                   :ret-type  {:type 'int?} ;{:type :vector :child {:type 'int?}}
                                                   :type-env  lib/type-env
                                                   :dealiases lib/dealiases}))
-        _ (is (= {:type type} :vector)) 
+        _ (is (= type {:type 'int?, :typeclasses #{:number}})) 
         _ (println "\n AST: " ast)
         form (a/ast->form ast)
         _ (println "FORM: " form)
         func (eval `(fn [] ~form))]
-    (is (= (func) 0))
-    (is (= (func) 8))
-    (is (= (func) 2))))
+    (is (= (func) 9))))
 
 (deftest and-test
-  ;; (and 0 1)
-  (if (and true false) "hello!" "bye!") 
+  ; form: (if (and true false) "hello!" "bye!") 
   (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :lit :val "not this one!" :type {:type 'string?}}
                                                          {:gene :lit :val "bye!" :type {:type 'string?}}
                                                          {:gene :lit :val "hello!" :type {:type 'string?}}
-                                                         ;{:gene :lit :val 0 :type {:type 'int?}}
-                                                         ;{:gene :lit :val 1 :type {:type 'int?}}
                                                          {:gene :lit :val true :type {:type 'boolean?}}
                                                          {:gene :lit :val false :type {:type 'boolean?}}
                                                          {:gene :var :name `lib/and}
@@ -1071,4 +1066,4 @@
         form (a/ast->form ast)
          _ (println "FORM: " form)
         func (eval `(fn [] ~form))]
-    (is (= (func) "does this work?"))))
+    (is (= (func) "bye!"))))
