@@ -722,8 +722,8 @@
                        :alternatives [(scheme (fn-of [(vector-of (s-var 'a))] (vector-of (s-var 'a)))) ; reversev
                                       (unary-transform STRING)]} ; str/reverse
    `sort'             {:type :overloaded
-                       :alternatives [(scheme (fn-of [(vector-of (s-var 'e))] ; sortv
-                                                     (vector-of (s-var 'e))))
+                       :alternatives [(scheme (fn-of [(vector-of {:type :s-var :sym 'e :typeclasses #{:comparable}})] ; sortv
+                                                     (vector-of {:type :s-var :sym 'e :typeclasses #{:comparable}})))
                                       (unary-transform STRING)]} ; sort-str
    `safe-sub-coll     {:type :overloaded
                        :alternatives [(fn-of [STRING INT INT] STRING) ; safe-subs
@@ -747,13 +747,13 @@
    'range1             (scheme (fn-of [INT] (vector-of INT)))
    'range2             (scheme (fn-of [INT INT] (vector-of INT)))
    'range3             (scheme (fn-of [INT INT INT] (vector-of INT)))
-   `mapv-indexed       (scheme (fn-of [(fn-of [INT (s-var 'a)] (s-var 'b))
-                                       (vector-of (s-var 'a))]
+   `mapv-indexed       (scheme (fn-of [(fn-of [INT {:type :s-var :sym 'a :typeclasses #{:indexable}}] (s-var 'b))
+                                       (vector-of {:type :s-var :sym 'a :typeclasses #{:indexable}})]
                                       (vector-of (s-var 'b))))
    `distinctv          (scheme (fn-of [(vector-of (s-var 'e))]
                                       (vector-of (s-var 'e))))
-   `sortv-by           (scheme (fn-of [(fn-of [(s-var 'e)] (s-var 'k))
-                                       (vector-of (s-var 'e))]
+   `sortv-by           (scheme (fn-of [(fn-of [{:type :s-var :sym 'e :typeclasses #{:comparable}}] (s-var 'k))
+                                       (vector-of {:type :s-var :sym 'e :typeclasses #{:comparable}})]
                                       (vector-of (s-var 'e))))
    'group-by           (scheme (fn-of [(fn-of [(s-var 'e)] (s-var 'k))
                                        (vector-of (s-var 'e))]
@@ -923,4 +923,6 @@
 
   ('mapv (lib-for-type-ctors #{'boolean? 'char? 'string? 'int? :=>}))
   (Math/pow 2 -0)
+  
+  
   )
