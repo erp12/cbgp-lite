@@ -182,9 +182,9 @@
       {:description    (str "Given a map from 'T to ints and two 'T that are "
                             "keys of the map, look up the values associated with those keys "
                             "in the map and return their sum.")
-       :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}
-                        'input2 {:type :s-var :sym 'T}
-                        'input3 {:type :s-var :sym 'T}}
+       :input->type    {'input1 {:type :map-of, :key {:type :t-var :sym 'T}, :value {:type 'int?}}
+                        'input2 {:type :t-var :sym 'T}
+                        'input3 {:type :t-var :sym 'T}}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean? 'string? 'char? 'double?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
@@ -275,8 +275,8 @@
       "count-true"
       {:description    (str "Given a vector of T and a predicate T => bool, return the "
                             "count of the number of elements in T that make the predicate true.")
-       :input->type    {'input1 {:type :vector :child {:type :s-var :sym 'T}}
-                        'input2 (lib/unary-pred {:type :s-var :sym 'T})}
+       :input->type    {'input1 {:type :vector :child {:type :t-var :sym 'T}}
+                        'input2 (lib/unary-pred {:type :t-var :sym 'T})}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
@@ -293,8 +293,8 @@
       "first-index-of-true"
       {:description    (str "Given a vector of T and a predicate T => bool, return the "
                             "first index in the vector where the predicate is true.")
-       :input->type    {'input1 {:type :vector :child {:type :s-var :sym 'T}}
-                        'input2 (lib/unary-pred {:type :s-var :sym 'T})}
+       :input->type    {'input1 {:type :vector :child {:type :t-var :sym 'T}}
+                        'input2 (lib/unary-pred {:type :t-var :sym 'T})}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean?}
        :extra-genes    [{:gene :lit, :val -1, :type {:type 'int?}}
@@ -457,8 +457,8 @@
 
       "min-key"
       {:description    "Given map of {key => int}, return the key with the min value."
-       :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}}
-       :ret-type       {:type :s-var :sym 'T}
+       :input->type    {'input1 {:type :map-of, :key {:type :t-var :sym 'T}, :value {:type 'int?}}}
+       :ret-type       {:type :t-var :sym 'T}
        :other-type-ctors    #{'boolean? 'int?}
        
        :extra-genes    []
@@ -570,7 +570,8 @@
 
       "count-collection-then-add-10"
       {:description    (str "Given a countable thing, count it, and return that plus 10"
-                            "BROKEN BECAUSE RETURN TYPE SOMETIMES ISN'T INT")
+                            "BROKEN BECAUSE RETURN TYPE SOMETIMES ISN'T INT
+                             To fix this, probably would need an :overloaded as input type")
        :input->type    {'input1 {:type {:type :s-var
                                         :sym 'c
                                         :typeclasses #{:countable}}}}
@@ -582,7 +583,21 @@
                          (let [coll (rand-collection 0 50)]
                            {:inputs [coll]
                             :output (+ 10 (count coll))}))
-       :loss-fns       [bu/absolute-distance]}}
+       :loss-fns       [bu/absolute-distance]}
+      
+      "cause-crash"
+      {:description    "Given map of {key => int}, return the key with the min value."
+       :input->type    {'input1 {:type :s-var :sym 'T}}
+       :ret-type       {:type :s-var :sym 'T}
+       :other-type-ctors    #{'boolean? 'int? 'double? 'string? 'char?} 
+       :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
+                        {:gene :lit, :val 10, :type {:type 'int?}}]
+       :case-generator (fn []
+                         (let [x (rand-int 10000)]
+                           {:inputs [x]
+                            :output (inc x)}))
+       :loss-fns       [#(if (= %1 %2) 1 1)]}
+      }
 
 
       ;; This adds nil penalties to all loss functions

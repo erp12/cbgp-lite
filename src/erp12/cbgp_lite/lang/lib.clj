@@ -99,8 +99,7 @@
       (cond
         (zero? x) 0
         (neg? x) (recur (abs' x) y)
-        :else (throw (ex-info (str "Pow resulting in undefined value. x = "
-                                   x " y = " y)
+        :else (throw (ex-info "Pow resulting in undefined value."
                               {:base x :exponent y})))
 
       (and (integer? x) (integer? y))
@@ -225,6 +224,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Collections
+
 (defn filter'
   [pred coll]
   (let [filtered (filter pred coll)]
@@ -311,32 +311,10 @@
       (subs coll start end)
       (subvec coll start end))))
 
-;; (defn safe-subs
-;;   [s start end]
-;;   (let [start (min (count s) (max 0 start))
-;;         end (min (count s) (max start end))]
-;;     (subs s start end)))
-
-;; (defn safe-subvec
-;;   [vtr start end]
-;;   (let [start (min (count vtr) (max 0 start))
-;;         end (min (count vtr) (max start end))]
-;;     (subvec vtr start end)))
-
-;; ;;New safe-sub
-;; (defn safe-sub-coll
-;;   [coll start end]
-;;   (if (string? coll)
-;;     (safe-subs coll start end)
-;;     (safe-subvec coll start end)))
-
-(comment
-
-  (safe-sub-coll "Hamilton" 0 3))
-
 (defn map2v
   [expr coll1 coll2]
   (mapv expr coll1 coll2))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fixing LazySeqs
 
@@ -357,7 +335,7 @@
   (if
     (string? coll)
     (str/replace coll target replacement)
-    (vec (replace {target replacement} coll))))
+    (replace {target replacement} coll)))
 
 (defn replace-first'
   [coll target replacement]
@@ -385,6 +363,7 @@
   (if (string? coll)
     (str/join (sort coll))
     ((comp vec sort) coll)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Set
 
@@ -884,7 +863,7 @@
     range2            erp12.cbgp-lite.lang.lib/rangev
     range3            erp12.cbgp-lite.lang.lib/rangev
     right             second
-    str-join-sep      str/join})
+    str-join-sep      clojure.string/join})
 
 (def macros
   #{'if 'do2 'do3})
