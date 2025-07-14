@@ -440,7 +440,7 @@
 
 (defn add-to-locals-map
   [locals locals-to-add]
-  (map (fn [local-name] (if (nil? (get locals local-name))
+  (map (fn [local-name] (if (nil? (get @locals local-name))
                           (swap! locals assoc local-name (count @locals)))
          locals-to-add)))
 
@@ -500,27 +500,15 @@
        (concat decompiled-args
                (cond
                  (= (ast-fn-name :op) :invoke)
-                 (do ;(println "PART 2 <invoke> REACHED: ")
-                     ;(println "FUNC - gene: <decomp call> " {:gene :apply})
-                   (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply})))
+                   (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= (ast-fn-name :op) :local)
-                 (do ;(println "PART 2 <local> REACHED: ")
-                     ;(println "FUNC - gene: <decomp call> " {:gene :apply})
-                   (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply})))
+                   (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= (ast-fn-name :op) :fn)
-                 (do ;(println "PART 2 <fnl> REACHED: ")
-                     ;(println "FUNC - gene: <decomp call> " {:gene :apply})
-                   (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply})))
-
+                   (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= op :var)
-                 (do ;(println "PART 2 <var> REACHED: ")
-                     ;(println "FUNC - gene: " {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
-                   (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}))
-                 :else
-                 (do ;(println "PART 2 <else> REACHED: ")
-                     ;(println "FUNC - gene: " {:gene :var :name (get-fn-symbol ast-fn-name tag args task)} {:gene :apply})
-                   (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                         {:gene :apply})))))
+                   (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
+                 :else (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
+                         {:gene :apply}))))
 
 ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -544,9 +532,7 @@
            [final-locals init-forms]
            (reduce
             (fn [[running-locals forms] {:keys [name init]}]
-              (let [;idx (count running-locals)
-                    ;updated-locals (assoc running-locals name idx)
-                    _ (add-to-locals-map locals [name])
+              (let [_ (add-to-locals-map locals [name])
                     decompiled-init (decompile-ast* init task locals)]
                 [@locals (conj forms decompiled-init {:gene :let})]))
             [locals []]
@@ -562,9 +548,7 @@
      (= op :fn)
      (let [param-names (map :name (:params (first (:methods ast))))
            _ (add-to-locals-map locals param-names)
-          ;;  _ (println "FN - started arg decomp...")
            decompiled-body (decompile-ast* (:body (first (:methods ast))) task locals)
-          ;;  _ (println "FN - finished arg decomp...")
            arg-count (count (-> ast :methods first :params)) ; [!] any case w/ multiple :methods? 
            arg-types (vec (repeatedly arg-count #(lib/s-var (gensym "s-"))))
            return-type (if (nil? (:return-tag ast))
@@ -752,15 +736,94 @@
                                                             b (fn [y z] (* y z))
                                                             c 5]
                                                         (a (b c 10))))) {:type 'int?} true)
-  
+
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [v-18396 (fn [a-18393] (+ 2 a-18393))] (v-18396 5)))) {:type 'int?} true)
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [a (fn [x] (+ 2 x))
                                                             b (fn [y z] (- y z))
                                                             c (a 8)]
                                                         (a (b c 1))))) {:type 'int?} true)
-  (decompile-ast (ana.jvm/analyze '(let [a (fn [x] (+ 2 x))
-                                         c (a 8)]
-                                     (a c))))
+  (compile-debugging
+   (decompile-ast (ana.jvm/analyze '(let [z 2
+                                          a (fn [x] (+ 2 x))
+                                          c (a 8)]
+                                      (a c)))) {:type 'int?})
+
+  (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                          y ((fn [z] (+ 2 z)) 3)]
+                                                      (+ y x)))))
+  
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                            y ((fn [z] (+ 2 z)) 3)]
+                                                        (+ y x)))) {:type 'int?} true)
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                            y (fn [z] (- z 2))]
+                                                        (+ x (y 5))))) {:type 'int?})
+  
+    (compile-debugging '({:gene :lit, :type {:type int?}, :val 4}
+                         {:gene :let}
+                         {:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
+                         {:arg-types [{:sym s-20513, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+                         {:gene :local, :idx 1} ;; must be odd (to refer to the vector) can alos be 3, 5, 7 etc
+                         {:gene :var, :name zero?}
+                         {:gene :apply}
+                         {:gene :close}
+                         {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+                         {:gene :apply}
+                         {:gene :let}
+                         {:gene :local, :idx 0} ;; even number to refer to the int
+                         {:gene :local, :idx 1} ;; here need an odd number (to refer to the vector and be counted)
+                         {:gene :var, :name count}
+                         {:gene :apply}
+                         {:gene :var, :name +}
+                         {:gene :apply}
+                         {:gene :close}
+                         {:gene :close})
+ {:type 'int?} true)
+
+  '[{:gene :lit, :type {:type int?}, :val 4}
+    {:gene :let}
+    [{:gene :lit, :type {:type int?}, :val 3}
+     {:arg-types [{:sym s-43051, :type :s-var}], :gene :fn, :ret-type {:sym s-43052, :type :s-var}}
+     [{:gene :local, :idx 0}
+      {:gene :lit, :type {:type int?}, :val 2}
+      {:gene :var, :name +}
+      {:gene :apply}]
+     {:gene :apply}
+     {:gene :let}
+     [{:gene :local, :idx 2}
+      {:gene :local, :idx 1}
+      {:gene :var, :name +}
+      {:gene :apply}]]]
+
+  (compile-debugging [{:gene :lit :val 2 :type {:type 'int?}}
+                      {:gene :let} ; ^ let z = 2
+
+                      {:gene :fn
+                       :arg-types [{:type {:type 'int?}}]
+                       :ret-type {:type {:type 'int?}}}
+                      {:gene :local :idx 1}
+                      {:gene :lit :val 2 :type {:type 'int?}}
+                      {:gene :var :name '+}
+                      {:gene :apply}
+                      {:gene :close}
+                      {:gene :let} ; let a ^ 
+
+                      {:gene :lit :val 8 :type {:type 'int?}}
+                      {:gene :local :idx 1} ;; a
+                      {:gene :apply}
+                      {:gene :let} ; ^ let c = 2 
+
+                      {:gene :local :idx 2} ;; c
+                      {:gene :local :idx 1} ;; a
+                      {:gene :apply} ;; apply a
+                      {:gene :close}] {:type 'int?} true)
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [a (fn [x] (+ 2 x))
+                                                            c (a 8)]
+                                                        (a c)))) {:type 'int?} true)
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 1 y x] (+ x y)))) {:type 'int?})
 
   ; works -- make tests
   (compile-debugging (decompile-ast (ana.jvm/analyze '(nth [1.0 2.0 3.0 5.0] 3 4.04)))
@@ -780,7 +843,7 @@
 ;;;; THESE DON'T WORK 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(< 4 5 8)))
                      {:type 'boolean?}) ; no multi-arity for comparison funcs
-  
+
   (compile-debugging (decompile-ast (ana.jvm/analyze '(or true false)))
                      {:type 'boolean?})
   (compile-debugging (decompile-ast (ana.jvm/analyze '(and 0 1))) {:type 'boolean?})
@@ -794,7 +857,7 @@
   ; --> :test {:name and... :op :local} *binds 'and' to 'true' cond? (first truthy value)
   ; --> :then {:op :const :val false}
   ; --> :else {:name and... :op :local} *does same as else?
-  
+
   ; accessing "and"
   (decompile-ast (ana.jvm/analyze '(and true true)))
   (clojure.string/includes?
@@ -803,7 +866,7 @@
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; LET/FN TESTING
-  
+
   ;; testing llm code
   ; should eval to 25 (DONT RUN THE DEFN VERSION. until :def fixed)
   (decompile-ast (ana.jvm/analyze '((defn combine-fns [a b c]
@@ -1052,7 +1115,7 @@
 ;; issues
 ; -> local var id inconsistency (try 01?)
 ; -> local var id resolution
-  
+
   (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x 4
                                                           y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])]
                                                       (+ (count y) x)))))
