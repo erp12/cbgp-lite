@@ -7,7 +7,8 @@
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.lang.schema :as schema]
             [mb.hawk.core]
-            [meander.epsilon :as m])
+            [meander.epsilon :as m]
+            [erp12.cbgp-lite.search.plushy :as pl])
   (:import (java.io StringWriter)))
 
 (defmacro matches?
@@ -1014,7 +1015,30 @@
         _ (println "\n ast: " ast)]
     (is (= (func) 8))))
 
-; broken
+
+
+(deftest simple-fn-test
+  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      '[{:gene :lit, :type {:type int?}, :val 10}
+                                                               {:gene :lit, :type {:type int?}, :val -1}
+                                                               {:arg-types [{:sym s-42374, :type :s-var} {:sym s-42375, :type :s-var}], :gene :fn, :ret-type {:sym s-42373, :type :s-var}}
+                                                               [{:gene :local, :idx 1} 
+                                                                {:gene :local, :idx 0} 
+                                                                {:gene :var, :name +} 
+                                                                {:gene :apply}]
+                                                               {:gene :apply}]
+  
+                                                   :locals    []
+                                                   :ret-type  {:type 'int?}
+                                                   :type-env  lib/type-env
+                                                   :dealiases lib/dealiases}))
+         _ (is (= type {:type 'int?, :typeclasses #{:number}}))
+         _ (println "\n AST: " ast)
+         form (a/ast->form ast)
+         _ (println "FORM: " form)
+         func (eval `(fn [] ~form))]
+     (is (= (func) 9))))
+
+; works?
 (deftest nested-let-binding-test
   (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      '[{:gene :lit, :type {:type int?}, :val 4}
                                                                {:gene :let}
@@ -1067,3 +1091,5 @@
          _ (println "FORM: " form)
         func (eval `(fn [] ~form))]
     (is (= (func) "bye!"))))
+
+

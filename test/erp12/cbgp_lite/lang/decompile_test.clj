@@ -1407,7 +1407,6 @@
   (testing "nested anonymous function lets"
     ;; nested fn (mapv) series
     ; temp, moved from above
-    (type (remove (fn [test] (zero? test)) [0 0 3 2 1 0]))
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (remove (fn [test] (zero? test)) [0 0 3 2 1 0])
                                                                            y (fn [z] (* z 8))]
                                                                        (mapv y x))))
