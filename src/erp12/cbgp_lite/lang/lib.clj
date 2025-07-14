@@ -245,8 +245,12 @@
 
 (defn conj'
   [coll target]
-  (if (set? coll)
+  (cond 
+    (set? coll)
     ((comp set conj) coll target)
+    ;; (nil? coll)
+    ;; (throw (Exception. "Conj' called on nil"))
+    :else
     ((comp vec conj) coll target)))
 
 (defn concat'
@@ -332,8 +336,7 @@
 
 (defn replace'
   [coll target replacement]
-  (if
-    (string? coll)
+  (if (string? coll)
     (str/replace coll target replacement)
     (replace {target replacement} coll)))
 
@@ -893,36 +896,79 @@
                                         (:alternatives typ)))))))
        (into {})))
 
-
-
-
-
-(defn reduce'
-  [function coll]
-  (try
-    (reduce function coll)
-    (catch Exception _
-      coll)))
-
 (comment
-  (reduce' set/difference #{})
-  (reduce' + [])
+  (count (keys (lib-for-type-ctors #{boolean? :tuple int? :vector :=> :map-of :t-var :set})))
+  (count (keys (lib-for-type-ctors #{boolean? :tuple int? :vector :=> :map-of :set})))
 
-  (def input1 "Hello")
-  (def input2 (fn [x]
-                (if (= \l x)
-                  \g
-                  x)))
-  (str (take'
-        (dec (count input1))
-        (str (str (str ""
-                       (input2 (first (butlast' input1)))))
-             (input2 (first (butlast'
-                             (rest' input1))))))
-       (input2 (last input1)))
+  (let [input3 "t"]
+    (erp12.cbgp-lite.lang.lib/conj'
+     (last (erp12.cbgp-lite.lang.lib/rest' (mapv hash-set input3)))
+     input3))
+  (let [input3 "t"]
+    (erp12.cbgp-lite.lang.lib/conj'
+     (last (erp12.cbgp-lite.lang.lib/rest' (mapv hash-set '("t" "p" "l"))))
+     input3))
+  (let [input3 "t"]
+    (last (erp12.cbgp-lite.lang.lib/rest' (mapv hash-set input3))))
 
-  ('mapv (lib-for-type-ctors #{'boolean? 'char? 'string? 'int? :=>}))
-  (Math/pow 2 -0)
-  
-  
+  (rest' (mapv hash-set "t"))
+
+  (let [input1 #{"T:^,\\3_M]"
+                 "1`"
+                 "T"
+                 "u~'"
+                 "UY$DO&i@"
+                 ";_&"
+                 "X6"
+                 "D\nM"
+                 "\\i?$?"
+                 "UTn"
+                 "Mz"
+                 "af"
+                 "3YCcy"
+                 "<9t5"
+                 "y`wtdvW"
+                 ":fXC1D2["
+                 "~^"
+                 "-mV,"
+                 "?,JBCw"
+                 ":("
+                 "w6s?wbI}\t"}
+        input2 "`1,f"
+        input3 "h@b~\""]
+    (erp12.cbgp-lite.lang.lib/conj'
+     (first (erp12.cbgp-lite.lang.lib/rest'
+             (let [v-5521793 (erp12.cbgp-lite.lang.lib/butlast' (erp12.cbgp-lite.lang.lib/keys-vec
+                                                                 (hash-map input1 input2 input1
+                                                                           (erp12.cbgp-lite.lang.lib/in? input3 (erp12.cbgp-lite.lang.lib/max' input2 input3)))))]
+               v-5521793)))
+     input3))
+
+  (let [input1 #{"T:^,\\3_M]"
+                 "1`"
+                 "T"
+                 "u~'"
+                 "UY$DO&i@"
+                 ";_&"
+                 "X6"
+                 "D\nM"
+                 "\\i?$?"
+                 "UTn"
+                 "Mz"
+                 "af"
+                 "3YCcy"
+                 "<9t5"
+                 "y`wtdvW"
+                 ":fXC1D2["
+                 "~^"
+                 "-mV,"
+                 "?,JBCw"
+                 ":("
+                 "w6s?wbI}\t"}
+        input2 "`1,f"
+        input3 "h@b~\""]
+    (first (rest' (butlast' (keys-vec (hash-map input1 input2 input1
+                                                (erp12.cbgp-lite.lang.lib/in? input3 (erp12.cbgp-lite.lang.lib/max' input2 input3))))))))
   )
+               
+  

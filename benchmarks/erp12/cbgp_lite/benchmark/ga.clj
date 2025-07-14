@@ -60,7 +60,7 @@
   (when (:baked-in-apply-probability opts)
     (reset! c/baked-in-apply-probability (:baked-in-apply-probability opts)))
   (when (:backtracking opts)
-    (reset! c/backtracking (:backtracking opts))) 
+    (reset! c/backtracking (:backtracking opts)))
   (when type-counts-file
     (log/warn "Type counting enabled. This is slow!")
     (reset! c/collect-types? true)
@@ -77,7 +77,9 @@
                                         (assoc :cases (:train task))
                                         (dissoc :train :test)))
         {:keys [best result]} (ga/run {:population-size (:population-size config)
-                                       :genome-factory #(pl/random-plushy-genome opts)
+                                       :genome-factory (if (:source-gene opts)
+                                                         (fn [] (:source-gene opts))
+                                                        #(pl/random-plushy-genome opts))
                                        :pre-eval        (let [{:keys [downsample-rate train]} opts]
                                                           (fn [{:keys [step]}]
                                                             (log/info "STARTING" step)
@@ -189,5 +191,4 @@
     (prof/serve-ui 8080))
 
   (prof/serve-ui 8080)
-
   )

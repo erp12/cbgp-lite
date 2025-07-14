@@ -156,10 +156,10 @@
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
-                       (fn wrapped-loss [program-output correct-output]
-                         (if (bu/has-nil? program-output)
-                           penalty
-                           (loss-fn program-output correct-output))))]
+                       (fn wrapped-loss [program-output correct-output] 
+                           (if (bu/has-nil? program-output)
+                             penalty
+                             (loss-fn program-output correct-output))))]
     (update-vals
      {"sum-2-vals"
       {:description    (str "Given a map from strings to ints and two strings that are "
