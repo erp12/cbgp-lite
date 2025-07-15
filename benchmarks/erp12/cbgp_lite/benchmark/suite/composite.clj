@@ -159,7 +159,9 @@
                        (fn wrapped-loss [program-output correct-output] 
                            (if (bu/has-nil? program-output)
                              penalty
-                             (loss-fn program-output correct-output))))]
+                             (try (loss-fn program-output correct-output)
+                                  (catch Exception e (str "Loss-fn Exception:" (.getMessage e))
+                                         penalty)))))]
     (update-vals
      {"sum-2-vals"
       {:description    (str "Given a map from strings to ints and two strings that are "

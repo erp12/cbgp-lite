@@ -377,7 +377,8 @@
           fn-symbol (get arity-map
                          (count args)
                          (get arity-map :default))
-          _ (println "CHECKING " ast-fn-name " WITH ARITY " (count args))]
+          ;; _ (println "CHECKING " ast-fn-name " WITH ARITY " (count args))
+          ]
       fn-symbol)
 
     ;; arg-type-specific functions
@@ -449,11 +450,11 @@
   ([ast] (decompile-ast* ast {}))
   ([ast task] (decompile-ast* ast task {}))
   ([{:keys [op val tag args children] :as ast} task locals]
-   (println "--------------------------")
+   ;; (println "--------------------------")
   ;;  (println "[DECOMPILE INFO]")
   ;;  (println "-> AST: " "<removed for length>")
-  ;;  (println "-> TASK: " task)
-   (println "-> LOCALS: " @locals)
+  ;;  (println "-> TASK: " task) 
+   ;; (println "-> LOCALS: " @locals)
   ;;  (println "-> CURR OP: " op "\n")
    (cond
     ;; Handle constants
@@ -1170,4 +1171,7 @@
       {:gene :apply}
       {:gene :var, :name +}
       {:gene :apply}]]]
+  
+
+  (decompile-ast (ana.jvm/analyze '(+ 1 2)))
   )
