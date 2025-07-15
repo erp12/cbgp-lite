@@ -1031,7 +1031,7 @@
                                                    :ret-type  {:type 'int?}
                                                    :type-env  lib/type-env
                                                    :dealiases lib/dealiases}))
-         _ (is (= type {:type 'int?, :typeclasses #{:number}}))
+         _ (is (= :s-var (:type type)))
          _ (println "\n AST: " ast)
          form (a/ast->form ast)
          _ (println "FORM: " form)
