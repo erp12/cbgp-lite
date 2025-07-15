@@ -795,15 +795,15 @@
            {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(conj [] 5)))
-           '({:gene :lit :val 5 :type {:type int?}}
-             {:gene :lit, :type {:child {:sym T, :type :s-var}, :type :vector}, :val []}
-             {:gene :var :name erp12.cbgp-lite.lang.lib/conj'}
-             {:gene :apply})))
+         '({:gene :lit :val 5 :type {:type int?}}
+           {:gene :lit, :type {:child {:sym T, :type :s-var}, :type :vector}, :val []}
+           {:gene :var :name erp12.cbgp-lite.lang.lib/conj'}
+           {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(conj #{} 5)))
-           '({:gene :lit :val 5 :type {:type int?}}
-             {:gene :lit, :type {:child {:sym T, :type :s-var}, :type :set}, :val #{}}
-             {:gene :var :name erp12.cbgp-lite.lang.lib/conj'}
-             {:gene :apply})))
+         '({:gene :lit :val 5 :type {:type int?}}
+           {:gene :lit, :type {:child {:sym T, :type :s-var}, :type :set}, :val #{}}
+           {:gene :var :name erp12.cbgp-lite.lang.lib/conj'}
+           {:gene :apply})))
 
   (is (= (de/decompile-ast (ana.jvm/analyze '(assoc {} "a" 10)))
          '({:gene :lit, :type {:type int?}, :val 10}
@@ -1302,8 +1302,8 @@
                                                'input2 {:type 'int?}}
                                  :ret-type {:type 'int?}}
                                 ["hello" 10])
-         15))
-  )
+         15)))
+  
 
 (deftest compile-partial-and-comp
   (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((partial assoc {\a 1 \b 2 \c 3}) \z 42)))
@@ -1395,7 +1395,99 @@
                                                                            y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])]
                                                                        (+ (count y) x))))
                                  {:type 'int?})
+           9)) 
+    
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
+                                                                           y (count (remove (fn [y2] (zero? y2)) [0 0 1 2 3]))]
+                                                                      (+ y x))))
+                         {:type 'int?} true)
+         7))
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
+                                                                           y (fn [y2] (remove (fn [y3] (zero? y3)) y2))]
+                                                                       (+ (count (y [0 1 3 2 1 1 0 0])) x))))
+                             {:type 'int?} true)
+         9))
+    
+    (is (= (de/compile-debugging '({:gene :lit, :type {:type int?}, :val 4}
+                                   {:gene :let}
+
+                                   {:arg-types [{:sym s-43972, :type :s-var}], :gene :fn, :ret-type {:sym s-43973, :type :s-var}}
+                                   {:gene :local, :idx 1}
+                                   {:arg-types [{:sym s-43970, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+                                   {:gene :local, :idx 0}
+                                   {:gene :var, :name zero?}
+                                   {:gene :apply}
+                                   {:gene :close}
+                                   {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+                                   {:gene :apply}
+                                   {:gene :close}
+                                   {:gene :let}
+
+                                   {:gene :local, :idx 3}
+                                   {:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1 0 0]}
+                                   {:gene :local, :idx 2}
+                                   {:gene :apply}
+                                   {:gene :var, :name count}
+                                   {:gene :apply}
+                                   {:gene :var, :name +}
+                                   {:gene :apply}
+                                   {:gene :close}
+                                   {:gene :close}) {:type 'int?} true)
+                                  6))
+    
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
+                                                                           y ((fn [z] (+ 2 z)) 3)]
+                                                                      (+ y x))))
+                             {:type 'int?} true)
+         9)) 
+    
+        (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
+                                                                           y (fn [z] (+ 2 z))]
+                                                                       (+ (y 3) x))))
+                                 {:type 'int?} true)
+           9)) 
+    
+        (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
+                                                                           y ((fn [z] (+ 2 z)) 3)]
+                                                                       (+ y x))))
+                                 {:type 'int?} true)
+           9)) 
+    
+            (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [
+                                                                           y ((fn [z] (+ 2 z)) 3)
+                                                                                   x 4]
+                                                                       (+ y x))))
+                                 {:type 'int?} true)
+           9)) 
+    
+            (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
+                                                                                   w 3
+                                                                           y ((fn [z] (+ 2 z)) w)]
+                                                                       (+ y x))))
+                                 {:type 'int?} true)
+           9)) 
+    
+    (is (= (de/compile-debugging '({:gene :lit, :type {:type int?}, :val 4}
+                                   {:gene :let}
+
+                                   {:gene :lit, :type {:type int?}, :val 3}
+                                   {:arg-types [{:sym s-42894, :type :s-var}], :gene :fn, :ret-type {:sym s-42895, :type :s-var}}
+                                   {:gene :local, :idx 0}
+                                   {:gene :lit, :type {:type int?}, :val 2}
+                                   {:gene :var, :name +}
+                                   {:gene :apply}
+                                   {:gene :close}
+                                   {:gene :apply}
+                                   {:gene :let}
+
+                                   {:gene :local, :idx 2}
+                                   {:gene :local, :idx 1}
+                                   {:gene :var, :name +}
+                                   {:gene :apply}
+                                   {:gene :close}
+                                   {:gene :close}) {:type 'int?} true)
            9))
+    
 
     ; works
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1 0 0])
@@ -1414,11 +1506,11 @@
            [24 16 8]))
     ; broken
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x [3 2 1]
-                                                                           y (fn [z] (* z 8))
-                                                                           ]
+                                                                           y (fn [z] (* z 8))]
+                                                                           
                                                                        (mapv y x))))
                                  {:type :vector :child {:type 'int?}} true)
-           [24 16 8])) 
+           [24 16 8])))) 
 
     ; broken - uses nested fn
 ;;     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (vec (remove (fn [test] (zero? test)) [0 0 2 3]))
@@ -1433,24 +1525,24 @@
 ;;                                                                        (x y))))
 ;;                                  {:type :vector :child {:type 'int?}} true)
 ;;            [16 24]))
-    ))
+    
   
-  (deftest decompile-anonymous-functions-test
-    ; broken b/c mismatched s-var names
-    #_(is (partial= (de/decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
-           '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 2 3 3 0]}
-             {:arg-types [{:sym T, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
-             {:gene :local, :idx 0}
-             {:gene :var, :name zero?}
-             {:gene :apply}
-             {:gene :close}
-             {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
-             {:gene :apply})))
-    #_(is (partial= (de/decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
-           '({:arg-types [{:sym T, :type :s-var}], :gene :fn, :ret-type {:sym T, :type :s-var}}
-             ({:gene :lit, :type {:type int?}, :val 1} {:gene :local, :idx 0} {:gene :var, :name +} {:gene :apply})
-             {:gene :close})))
-    #_(is (=  '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 2]} 
+(deftest decompile-anonymous-functions-test
+  ; broken b/c mismatched s-var names
+  #_(is (partial= (de/decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
+         '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 2 3 3 0]}
+           {:arg-types [{:sym T, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+           {:gene :local, :idx 0}
+           {:gene :var, :name zero?}
+           {:gene :apply}
+           {:gene :close}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+           {:gene :apply})))
+  #_(is (partial= (de/decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
+         '({:arg-types [{:sym T, :type :s-var}], :gene :fn, :ret-type {:sym T, :type :s-var}}
+           ({:gene :lit, :type {:type int?}, :val 1} {:gene :local, :idx 0} {:gene :var, :name +} {:gene :apply})
+           {:gene :close})))
+  #_(is (=  '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 2]} 
               {:arg-types [{:sym T, :type :s-var}], :gene :fn, :ret-type {:sym T, :type :s-var}}
               {:gene :lit, :type {:type int?}, :val 1}
               {:gene :local, :idx 0}
@@ -1460,14 +1552,14 @@
               {:gene :var, :name mapv}
               {:gene :apply}
               {:gene :apply})
-            (de/decompile-ast (ana.jvm/analyze '((mapv (fn [x] (+ x 1)) [0 1 2])))))) 
-    )
+          (de/decompile-ast (ana.jvm/analyze '((mapv (fn [x] (+ x 1)) [0 1 2]))))))) 
+    
   
-  (deftest decompile-recompile-anonymous-functions-test
-    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) 
-                              {:type :vector :child {:type 'int?}})
-           [2 3 3]))
-    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((mapv (fn [x] (+ x 1)) [0 1 2])))) 
-                              {:type :vector :child {:type 'int?}})
-           [1 2 3]))
-    )
+(deftest decompile-recompile-anonymous-functions-test
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) 
+                            {:type :vector :child {:type 'int?}})
+         [2 3 3]))
+  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '((mapv (fn [x] (+ x 1)) [0 1 2])))) 
+                            {:type :vector :child {:type 'int?}})
+         [1 2 3])))
+    
