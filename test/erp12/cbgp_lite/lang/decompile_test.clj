@@ -1362,15 +1362,15 @@
                                                                            y (fn [z] (* z 8))]
                                                                        (y x))))
                                  {:type 'int?})
-           32)) 
+           32))
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x [2 3]
                                                                            y (fn [z] (mapv inc z))]
                                                                        (y x))))
                                  {:type :vector :child {:type 'int?}} true)
            [3 4]))
 
-    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(mapv (fn [z] 
-                                                                             (+ 2 z)) 
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(mapv (fn [z]
+                                                                             (+ 2 z))
                                                                            [2 3])))
                                  {:type :vector :child {:type 'int?}})
            [4 5]))
@@ -1390,14 +1390,52 @@
                                  {:type 'int?})
            9))
 
-    ; broken
+    ; works!
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])
+                                                                           x 44]
+                                                                       (+ (count y) y))))
+                                 {:type 'int?})
+           49))
+
+      ; broken
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
                                                                            y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])]
                                                                        (+ (count y) x))))
                                  {:type 'int?})
            9))
 
-    ; works
+    ;;working through issues 
+
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])
+                                                                           x 4
+                                                                           z 99999]
+                                                                       (+ (count y) (- x z)))))
+                                 {:type 'int?})
+           49))
+
+    (is (= (de/compile-debugging '({:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
+                                   {:arg-types [{:sym s-19316, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+                                   {:gene :local, :idx 0}
+                                   {:gene :var, :name zero?}
+                                   {:gene :apply}
+                                   {:gene :close}
+                                   {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+                                   {:gene :apply}
+                                   {:gene :let}
+                                   {:gene :lit, :type {:type int?}, :val 20}
+                                   {:gene :let}
+                                   {:gene :local, :idx 1}
+                                   {:gene :local, :idx 6}
+                                   {:gene :var, :name count}
+                                   {:gene :apply}
+                                   {:gene :var, :name +}
+                                   {:gene :apply}
+                                   {:gene :close}
+                                   {:gene :close})
+                                 {:type 'int?})
+           9))
+
+; works
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1 0 0])
                                                                            y 4]
                                                                        (+ (count x) y))))
@@ -1414,11 +1452,10 @@
            [24 16 8]))
     ; broken
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x [3 2 1]
-                                                                           y (fn [z] (* z 8))
-                                                                           ]
+                                                                           y (fn [z] (* z 8))]
                                                                        (mapv y x))))
                                  {:type :vector :child {:type 'int?}} true)
-           [24 16 8])) 
+           [24 16 8]))
 
     ; broken - uses nested fn
 ;;     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (vec (remove (fn [test] (zero? test)) [0 0 2 3]))
@@ -1426,7 +1463,7 @@
 ;;                                                                        (y x))))
 ;;                                  {:type :vector :child {:type 'int?}} true)
 ;;            [16 24]))
-    
+
     ; broken - uses nested fn
 ;;     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x (fn [z] (mapv #(* % 8) z))
 ;;                                                                            y [2 3]]
