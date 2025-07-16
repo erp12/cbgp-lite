@@ -442,7 +442,7 @@
   ([locals locals-to-add parity-offset] 
   (doseq [local-name locals-to-add]
     (if (nil? (get @locals local-name))
-      (swap! locals assoc local-name (- (count @locals) parity-offset)))) 
+      (swap! locals assoc local-name (- (count @locals) (+ 1 parity-offset))))) 
    ))
 
 (defn remove-from-locals-map
@@ -458,9 +458,10 @@
   ([{:keys [op val tag args children] :as ast} task locals]
   ;;  (println "--------------------------")
   ;;  (println "[DECOMPILE INFO]")
-  ;;  (println "-> AST: " "<removed for length>")
-  ;;  (println "-> TASK: " task)
+  ;; ;;  (println "-> AST: " "<removed for length>")
+  ;; ;;  (println "-> TASK: " task)
   ;;  (println "-> LOCALS: " @locals)
+  ;;  (println "-> OFFSET? " (get @locals :locals-parity-offset))
   ;;  (println "-> CURR OP: " op "\n")
    (cond
     ;; Handle constants
@@ -471,9 +472,11 @@
 
      ;; Handle locals
      (= :local op)
-     (let [_ (if (nil? (get @locals (:name ast)))
-               (swap! locals assoc (:name ast) (count @locals)))
+     (let [parity-offset (if (get @locals :locals-parity-offset) 1 0)
+           _ (if (nil? (get @locals (:name ast)))
+               (swap! locals assoc (:name ast) (- (count @locals) (+ 1 parity-offset))))
            local_val (get @locals (:name ast) 0) 
+           ; [!] change smth here?
            ]
        (list {:gene :local :idx local_val}))
 
@@ -483,13 +486,13 @@
          (= op :var))
      (let [ast-fn-name (cond
                          (= op :static-call) ; catch static-call
-                             (:method ast)
+                         (:method ast)
                          (= op :var) ; catch var (inside invoke)
-                             (symbol (-> ast :meta :name))
+                         (symbol (-> ast :meta :name))
                          (= (-> ast :fn :op) :var) ; catch var (regular func call)
-                             (-> ast :fn :form)
+                         (-> ast :fn :form)
                          :else 
-                             (-> ast :fn)) ; catch nested invoke 
+                         (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast* % task locals) args)
            decompiled-args (flatten (reverse raw-decompiled-args))
            ]
@@ -525,10 +528,11 @@
 ;; Handle let
      (= op :let)
      (let [;_ (println "LET - starting arg decomp...")
+           _ (swap! locals update :locals-parity-offset not)
            [final-locals init-forms]
            (reduce
             (fn [[running-locals forms] {:keys [name init]}]
-              (let [_ (add-to-locals-map locals [name]) 
+              (let [_ (add-to-locals-map locals [name]) ; [!] offset?
                     decompiled-init (decompile-ast* init task locals)]
                 [@locals (conj forms decompiled-init {:gene :let})]))
             [locals []]
@@ -540,9 +544,11 @@
 
 ;; Handle anonymous function abstraction
      (= op :fn)
-     (let [param-names (map :name (:params (first (:methods ast))))
-           parity-offset 1 
+     (let [param-names (map :name (:params (first (:methods ast)))) 
+           parity-offset (if (get @locals :locals-parity-offset) 1 0)
+           _ (println "FN - offset: " parity-offset " when locals empty is: " (empty? @locals)) 
            _ (add-to-locals-map locals param-names parity-offset)
+
            decompiled-body (decompile-ast* (:body (first (:methods ast))) task locals)
            arg-count (count (-> ast :methods first :params)) ; [!] any case w/ multiple :methods? 
            arg-types (vec (repeatedly arg-count #(lib/s-var (gensym "s-"))))
@@ -551,7 +557,7 @@
                          (get ground-type-alias-map (.getName (:return-tag ast)) (lib/s-var (gensym "s-"))))]
        (remove-from-locals-map locals param-names)
        (flatten (list {:gene :fn :arg-types arg-types :ret-type return-type} decompiled-body {:gene :close})))
-
+     
      (= op :def)
      (decompile-ast* (-> ast
                          :init
@@ -565,9 +571,9 @@
      ; handle do -- not working :Y
      (= op :do)
      (do (println "DO - not tested AST op")
-       (flatten (list (map #(decompile-ast* % task locals) (:statements ast))
-                      {:gene :var :name (get-fn-symbol 'do tag (:statements ast) task)}
-                      {:gene :apply})))
+         (flatten (list (map #(decompile-ast* % task locals) (:statements ast))
+                        {:gene :var :name (get-fn-symbol 'do tag (:statements ast) task)}
+                        {:gene :apply})))
 
      :else
      (do
@@ -577,11 +583,9 @@
        nil))))
 
 (defn decompile-ast
-  ([ast]
-   (let [locals-map (atom {})]
-      (decompile-ast* ast {} locals-map)))
+  ([ast] (decompile-ast ast {}))
   ([ast task]
-   (let [locals-map (atom {})]
+   (let [locals-map (atom {:locals-parity-offset false})]
      (decompile-ast* ast task locals-map)))
   ; [!] TO DO: make this work w/ verbose
   #_([ast task verbose]
@@ -670,7 +674,44 @@
                                                          (let [x (#(* % 2) a)
                                                                y (#(+ % 10) b)]
                                                            (+ x y))) -1 5))) {:type 'int?} true)
-;; testing
+  
+  ; broken
+  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b]
+                                                         (let [x (#(* % 2) a)]
+                                                           (+ x b))) -1 5))) {:type 'int?} true)
+  
+  ((fn [a b] (let [x ((fn [fn_x] (* fn_x 2)) a)] (+ x b))) -1 5)
+  
+  ; base (idx a = -1)
+  ((fn [a b] (let [x ((fn [fn_x] (* fn_x 2)) b)] (+ x a))) -1 5)
+
+  (compile-debugging '({:gene :lit, :type {:type int?}, :val 5}
+                       {:gene :lit, :type {:type int?}, :val -1}
+
+                       {:arg-types [{:sym s-43665, :type :s-var} {:sym s-43666, :type :s-var}],
+                        :gene :fn,
+                        :ret-type {:sym s-43667, :type :s-var}}
+                       {:gene :local, :idx 0} ; -1 | a --> let
+
+                       {:arg-types [{:sym s-43663, :type :s-var}], :gene :fn, :ret-type {:sym s-43664, :type :s-var}}
+                       {:gene :lit, :type {:type int?}, :val 2}
+                       {:gene :local, :idx 2} ; 2
+                       {:gene :var, :name *}
+                       {:gene :apply}
+                       {:gene :close}
+                       {:gene :apply}
+                       {:gene :let}
+
+                       {:gene :local, :idx 1} ; 0
+                       {:gene :local, :idx 2} ; 2
+                       {:gene :var, :name +}
+                       {:gene :apply}
+                       {:gene :close}
+                       {:gene :close}
+                       {:gene :apply})
+                     {:type 'int?} true)
+  
+  ;; testing
   (log/set-min-level! :trace)
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [2 3]
                                                             y (fn [z] (mapv #(* % 8) z))]
@@ -682,5 +723,21 @@
                                                             y (fn [z] (mapv inc z))]
                                                         (y x))))
                      {:type :vector :child {:type 'int?}} true)
+  
+    (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [3 0 2 0 1 0]
+                                                            y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))]
+                                                        (y x))))
+                     {:type :vector :child {:type 'int?}} true)
 
+  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b c]
+                                                       (let [x ((fn [x2] (* x2 2)) a) ; -2
+                                                             y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))
+                                                             w ((fn [w2] (- w2 -5)) b)] ; 8
+                                                         (+ x (count (y [3 0 2 0 1 0])) w))) -1 10 7))) {:type 'int?} true)
+  ((fn [a b c] 
+     (let [x ((fn [x2] (* x2 2)) a)] 
+       (let [y (fn [z] (mapv inc ((fn [z2] (erp12.cbgp-lite.lang.lib/conj' z2 4)) ((fn [z3] (erp12.cbgp-lite.lang.lib/remove' zero? z3)) z))))] 
+         (let [w ((fn [w2 w3] (- w2 w3)) b c)] 
+           (+ (+ x (count (y [3 0 2 0 1 0]))) w))))) -1 10 7)
+    (compile-debugging  {:type 'int?} true)
   )
