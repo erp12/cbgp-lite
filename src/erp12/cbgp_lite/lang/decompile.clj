@@ -19,8 +19,8 @@
          push (pl/plushy->push genome)
          _ (when verbose (println "PUSH:" push))
          ast (::co/ast (:ast (co/push->ast {:push push
-                                      :ret-type ret-type
-                                      :type-env lib/type-env})))
+                                            :ret-type ret-type
+                                            :type-env lib/type-env})))
          _ (when verbose (println "AST:" ast))
          form (ast/ast->form ast)
          _ (when verbose (println "FORM:" form))
@@ -41,12 +41,12 @@
          push (pl/plushy->push genome)
          _ (when verbose (println "PUSH:" push))
          ast (::co/ast (:ast (co/push->ast
-                        (assoc
-                         enhanced-task
-                         :locals locals
-                         :push push
-                         :type-env (merge (:type-env enhanced-task)
-                                          lib/type-env)))))
+                              (assoc
+                               enhanced-task
+                               :locals locals
+                               :push push
+                               :type-env (merge (:type-env enhanced-task)
+                                                lib/type-env)))))
          _ (when verbose (println "AST:" ast))
          form (ast/ast->form ast)
          _ (when verbose (println "FORM:" form))
@@ -328,11 +328,11 @@
     'assoc})
 
 (def special-case-aliasing
-  [
+  [])
    ;; Boolean
    ; `lib/and (macro)
    ; `lib/or (macro)
-   ])
+   
 
 (def ground-type-alias-map
   {nil {:type :s-var :sym 'a}
@@ -341,8 +341,8 @@
   ;;  'number `lib/DOUBLE
    "character" {:type 'char?}
    "string" {:type 'string?}
-   "symbol" {:type 'symbol?}
-   })
+   "symbol" {:type 'symbol?}})
+   
 
 (defn find-local
   "Takes a map or vec and recursively looks through it to find a map
@@ -438,18 +438,18 @@
                        ast)))))
 
 (defn add-to-locals-map
+  "Add all new locals in a given list to the decompile-ast locals map"
   ([locals locals-to-add] (add-to-locals-map locals locals-to-add 0))
   ([locals locals-to-add parity-offset] 
-  (doseq [local-name locals-to-add]
-    (if (nil? (get @locals local-name))
-      (swap! locals assoc local-name (- (count @locals) (+ 1 parity-offset))))) 
-   ))
-
+   (doseq [local-name locals-to-add]
+     (if (nil? (get @locals local-name))
+       (swap! locals assoc local-name (- (count @locals) (+ 1 parity-offset))))))) 
+   
 (defn remove-from-locals-map
+  "Remove all locals in a given list from the decompile-ast locals map"
   [locals locals-to-rm] 
   (doseq [local-name locals-to-rm]
-      (swap! locals dissoc local-name (count @locals))
-    ))
+      (swap! locals dissoc local-name)))
 
 (defn decompile-ast*
   "Decompiles AST into a CBGP genome."
@@ -458,7 +458,7 @@
   ([{:keys [op val tag args children] :as ast} task locals]
   ;;  (println "--------------------------")
   ;;  (println "[DECOMPILE INFO]")
-  ;; ;;  (println "-> AST: " "<removed for length>")
+  ;; ;;  (println "-> AST: " ast)
   ;; ;;  (println "-> TASK: " task)
   ;;  (println "-> LOCALS: " @locals)
   ;;  (println "-> OFFSET? " (get @locals :locals-parity-offset))
@@ -475,9 +475,7 @@
      (let [parity-offset (if (get @locals :locals-parity-offset) 1 0)
            _ (if (nil? (get @locals (:name ast)))
                (swap! locals assoc (:name ast) (- (count @locals) (+ 1 parity-offset))))
-           local_val (get @locals (:name ast) 0) 
-           ; [!] change smth here?
-           ]
+           local_val (get @locals (:name ast) 0)]
        (list {:gene :local :idx local_val}))
 
 ;; Handle static method or invoke or var
@@ -491,15 +489,15 @@
                          (symbol (-> ast :meta :name))
                          (= (-> ast :fn :op) :var) ; catch var (regular func call)
                          (-> ast :fn :form)
-                         :else 
+                         :else
                          (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast* % task locals) args)
-           decompiled-args (flatten (reverse raw-decompiled-args))
-           ]
+           decompiled-args (flatten (reverse raw-decompiled-args))]
+           
        (concat decompiled-args
                (cond
                  (= (ast-fn-name :op) :invoke)
-                 (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
+                     (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= (ast-fn-name :op) :local)
                  (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= (ast-fn-name :op) :fn)
@@ -507,7 +505,7 @@
                  (= op :var)
                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
                  :else (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                             {:gene :apply}))))
+                                                                      {:gene :apply}))))
 
 ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -527,12 +525,11 @@
 
 ;; Handle let
      (= op :let)
-     (let [;_ (println "LET - starting arg decomp...")
-           _ (swap! locals update :locals-parity-offset not)
+     (let [_ (swap! locals update :locals-parity-offset not)
            [final-locals init-forms]
            (reduce
             (fn [[running-locals forms] {:keys [name init]}]
-              (let [_ (add-to-locals-map locals [name]) ; [!] offset?
+              (let [_ (add-to-locals-map locals [name])
                     decompiled-init (decompile-ast* init task locals)]
                 [@locals (conj forms decompiled-init {:gene :let})]))
             [locals []]
@@ -546,7 +543,6 @@
      (= op :fn)
      (let [param-names (map :name (:params (first (:methods ast)))) 
            parity-offset (if (get @locals :locals-parity-offset) 1 0)
-           _ (println "FN - offset: " parity-offset " when locals empty is: " (empty? @locals)) 
            _ (add-to-locals-map locals param-names parity-offset)
 
            decompiled-body (decompile-ast* (:body (first (:methods ast))) task locals)
@@ -578,43 +574,28 @@
      :else
      (do
        (println "not handled yet AST op:" op)
-       (println "failing AST: \n" ast)
+      ;;  (println "failing AST: \n" ast)
        (println "---------------------------")
        nil))))
 
 (defn decompile-ast
+  "Decompiles AST into a CBGP genome."
   ([ast] (decompile-ast ast {}))
   ([ast task]
    (let [locals-map (atom {:locals-parity-offset false})]
      (decompile-ast* ast task locals-map)))
   ; [!] TO DO: make this work w/ verbose
   #_([ast task verbose]
-   (let [locals-map (atom {})]
-     (decompile-ast ast locals-map verbose))))
+     (let [locals-map (atom {})]
+       (decompile-ast ast locals-map verbose))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Testing
 (comment
-  
-  ; works -- make tests
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(nth [1.0 2.0 3.0 5.0] 3 4.04)))
-                     {:type 'double?})
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0]))) {:type :vector :child {:type 'int?}})
-  (decompile-ast (ana.jvm/analyze '(remove #(zero? %) [0 2 3 3 0])))
-  (decompile-ast (ana.jvm/analyze '(fn [x] (+ x 1))))
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [x y] (+ x y 2)) 1 3))) {:type 'int?})
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 1 y 3] (+ x y)))) {:type 'int?})
-  (decompile-ast (ana.jvm/analyze '(+ ((partial + 2) 3) 10)))
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(vec (remove #(= % \!) "hi!")))) {:type :vector :child {:type 'char?}})
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(assoc {\a 4 \b 5} \c 6)))
-                     {:type :map-of :key {:type 'char?} :value {:type 'int?}})
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(assoc [0 2 3] 0 6)))
-                     {:type :vector :child {:type 'int?}})
-
 ;;;; THESE DON'T WORK 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(< 4 5 8)))
                      {:type 'boolean?}) ; no multi-arity for comparison funcs
-
+  
   (compile-debugging (decompile-ast (ana.jvm/analyze '(or true false)))
                      {:type 'boolean?})
   (compile-debugging (decompile-ast (ana.jvm/analyze '(and 0 1))) {:type 'boolean?})
@@ -627,7 +608,7 @@
   ; --> :test {:name and... :op :local} *binds 'and' to 'true' cond? (first truthy value)
   ; --> :then {:op :const :val false}
   ; --> :else {:name and... :op :local} *does same as else?
-
+  
   ; accessing "and"
   (decompile-ast (ana.jvm/analyze '(and true true)))
   (clojure.string/includes?
@@ -636,108 +617,25 @@
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; LET/FN TESTING
+  (log/set-min-level! :trace) 
 
   ;; testing llm code
-  ; should eval to 25 (DONT RUN THE DEFN VERSION. until :def fixed)
+  ; niche defn issue:
+  ; analyzing a called defn breaks b/c no condition in handle methods for :op :invoke -> :op :def
   (decompile-ast (ana.jvm/analyze '((defn combine-fns [a b c]
-                                      (let [x (#(* % 2) a)
-                                            y (#(+ % 10) b)
-                                            z (#(- % 2) c)]
-                                        (+ x y z))) -1 10 9)))
-
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b]
-                                                         (let [x (#(* % 2) a)
-                                                               y (#(+ % 10) b)]
-                                                           (+ x y))) -1 10))) {:type 'int?} true)
-
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b] (+ a b)) -1 10))) {:type 'int?})
-
-  (compile-debugging
-   (decompile-ast (ana.jvm/analyze '((fn [a b c]
-                                       (let [x (#(* % 2) a)
-                                             y (#(+ % 10) b)
-                                             z (#(- % 2) c)]
-                                         (+ x y z))) -1 10 9))) {:type 'int?} true)
-
-  (decompile-ast (ana.jvm/analyze '((fn [a]
-                                      (let [x (#(* % 2) a)]
-                                        (inc x))))))
-  ; [return here] 
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b c]
-                                                         (let [x (#(* % 2) a)
-                                                               y (#(+ % 10) b)
-                                                               z (#(- % 2) c)]
-                                                           (+ x y z))) -1 10 9))) {:type 'int?} true)
-
-  ; = 13 (+ (* -1 2) (+ 5 10))
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b]
-                                                         (let [x (#(* % 2) a)
-                                                               y (#(+ % 10) b)]
-                                                           (+ x y))) -1 5))) {:type 'int?} true)
+                                        (let [x 3]
+                                          (+ x b c))) -1 10 9)))
+  (-> (ana.jvm/analyze '((defn combine-fns [a b c]
+                           (let [x 3]
+                             (+ x b c))) -1 10 9)) 
+      :fn
+      keys
+      )
   
-  ; broken
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b]
-                                                         (let [x (#(* % 2) a)]
-                                                           (+ x b))) -1 5))) {:type 'int?} true)
-  
-  ((fn [a b] (let [x ((fn [fn_x] (* fn_x 2)) a)] (+ x b))) -1 5)
-  
-  ; base (idx a = -1)
-  ((fn [a b] (let [x ((fn [fn_x] (* fn_x 2)) b)] (+ x a))) -1 5)
-
-  (compile-debugging '({:gene :lit, :type {:type int?}, :val 5}
-                       {:gene :lit, :type {:type int?}, :val -1}
-
-                       {:arg-types [{:sym s-43665, :type :s-var} {:sym s-43666, :type :s-var}],
-                        :gene :fn,
-                        :ret-type {:sym s-43667, :type :s-var}}
-                       {:gene :local, :idx 0} ; -1 | a --> let
-
-                       {:arg-types [{:sym s-43663, :type :s-var}], :gene :fn, :ret-type {:sym s-43664, :type :s-var}}
-                       {:gene :lit, :type {:type int?}, :val 2}
-                       {:gene :local, :idx 2} ; 2
-                       {:gene :var, :name *}
-                       {:gene :apply}
-                       {:gene :close}
-                       {:gene :apply}
-                       {:gene :let}
-
-                       {:gene :local, :idx 1} ; 0
-                       {:gene :local, :idx 2} ; 2
-                       {:gene :var, :name +}
-                       {:gene :apply}
-                       {:gene :close}
-                       {:gene :close}
-                       {:gene :apply})
-                     {:type 'int?} true)
-  
-  ;; testing
-  (log/set-min-level! :trace)
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [2 3]
-                                                            y (fn [z] (mapv #(* % 8) z))]
-                                                        (y x))))
-                     {:type :vector :child {:type 'int?}}
-                     true)
-
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [2 3]
-                                                            y (fn [z] (mapv inc z))]
-                                                        (y x))))
-                     {:type :vector :child {:type 'int?}} true)
-  
-    (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [3 0 2 0 1 0]
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [3 0 2 0 1 0]
                                                             y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))]
                                                         (y x))))
                      {:type :vector :child {:type 'int?}} true)
-
-  (compile-debugging (decompile-ast (ana.jvm/analyze '((fn [a b c]
-                                                       (let [x ((fn [x2] (* x2 2)) a) ; -2
-                                                             y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))
-                                                             w ((fn [w2] (- w2 -5)) b)] ; 8
-                                                         (+ x (count (y [3 0 2 0 1 0])) w))) -1 10 7))) {:type 'int?} true)
-  ((fn [a b c] 
-     (let [x ((fn [x2] (* x2 2)) a)] 
-       (let [y (fn [z] (mapv inc ((fn [z2] (erp12.cbgp-lite.lang.lib/conj' z2 4)) ((fn [z3] (erp12.cbgp-lite.lang.lib/remove' zero? z3)) z))))] 
-         (let [w ((fn [w2 w3] (- w2 w3)) b c)] 
-           (+ (+ x (count (y [3 0 2 0 1 0]))) w))))) -1 10 7)
-    (compile-debugging  {:type 'int?} true)
   )
+
+  
