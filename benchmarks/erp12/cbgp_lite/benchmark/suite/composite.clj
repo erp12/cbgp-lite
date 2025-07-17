@@ -172,7 +172,7 @@
      :case-generator (fn sum-2-vals-gen []
                        (sum-2-vals-case-generator (bu/string-generator 10)))
      :loss-fns       [bu/absolute-distance]}
-    
+
     "sum-2-vals-polymorphic"
     {:description    (str "Given a map from 'T to ints and two 'T that are "
                           "keys of the map, look up the values associated with those keys "
@@ -592,8 +592,8 @@
                          {:inputs [x]
                           :output (inc x)}))
      :loss-fns       [#(if (= %1 %2) (/ 1 0) (/ 1 0))]}}
-
-;; This adds nil penalties to all loss functions
+   
+   ;; This adds nil penalties to all loss functions
    (fn [problem-map]
      (update problem-map
              :loss-fns
