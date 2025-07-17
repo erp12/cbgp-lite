@@ -248,8 +248,8 @@
 ;; Loss Function Utils
 
 (defn tap-nodes
-  [f tree]
-  (w/walk (partial tap-nodes f) identity (f tree)))
+  [f tree] 
+    (w/walk (partial tap-nodes f) identity (f tree)))
 
 (defn has-nil?
   [x]
@@ -294,11 +294,14 @@
                         actual))
         (*' 1000 (abs (- (count expected) (count actual)))))))
 
-;; @todo move to ga-clj.
+;; @todo move to .
 (defn jaccard-similarity-loss
   "this = (1 - Jaccard similarity coefficent), since we want lower to be better
    https://en.wikipedia.org/wiki/Jaccard_index "
   [actual expected]
+  ;; (when (or (vector? actual) (vector? expected))
+  ;;   (println "Actual:" actual)
+  ;;   (println "Expected:" expected))
   (cond
     (or (nil? actual) (nil? expected)) nil
     (= actual expected) 0 ; if equal (including both empty), 0 loss

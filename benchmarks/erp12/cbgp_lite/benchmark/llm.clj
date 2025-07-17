@@ -1,25 +1,24 @@
-(ns erp12.cbgp-lite.benchmark.ga
-  (:require [clj-async-profiler.core :as prof]
+(ns erp12.cbgp-lite.benchmark.llm
+  (:require [erp12.cbgp-lite.benchmark.utils :as bu]
+            [erp12.cbgp-lite.lang.decompile :as decompile]
+            [erp12.cbgp-lite.benchmark.llm-util :as lu] 
             [clojure.java.io :as io]
-            [clojure.string :as str]
-            [erp12.cbgp-lite.benchmark.utils :as bu]
+            [clojure.string :as str] 
             [erp12.cbgp-lite.lang.compile :as c]
-            [erp12.cbgp-lite.search.individual :as i]
-            [erp12.cbgp-lite.search.plushy :as pl]
+            [erp12.cbgp-lite.search.individual :as i] 
             [erp12.cbgp-lite.task :as task]
             [erp12.ga-clj.search.ga :as ga]
             [erp12.ga-clj.toolbox :as tb]
             [taoensso.timbre :as log]
-            [taoensso.timbre.appenders.core :as log-app]))
+            [taoensso.timbre.appenders.core :as log-app]
+            [erp12.cbgp-lite.search.plushy :as pl]))
 
-(log/merge-config!
- {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
-  :appenders {:println (assoc (log-app/println-appender) :min-level :info)}})
-
+(log/set-min-level! :info)
 (def default-config
   {:n-train              200
    :n-test               2000
-   :population-size      1000
+   ;; Lower population size for easier testing 
+   :population-size      50
    :max-generations      300
    :umad-rate            0.1
    :min-genome-size      50
@@ -46,7 +45,7 @@
           :genome
           mutate))))
 
-(defn run
+(defn llm-run
   [{:keys [type-counts-file] :as opts}]
   (log/info "Options:"
             (->> opts
@@ -77,9 +76,8 @@
                                         (assoc :cases (:train task))
                                         (dissoc :train :test)))
         {:keys [best result]} (ga/run {:population-size (:population-size config)
-                                       :genome-factory (if (:source-gene opts)
-                                                         (fn [] (:source-gene opts))
-                                                        #(pl/random-plushy-genome opts))
+                                       :genome-factory ;#(pl/random-plushy-genome opts) 
+                                       #(lu/llm-genome opts)
                                        :pre-eval        (let [{:keys [downsample-rate train]} opts]
                                                           (fn [{:keys [step]}]
                                                             (log/info "STARTING" step)
@@ -137,7 +135,7 @@
                                                                 ;; no individual can become the new best and the run will fail.
                                                                 ;; @todo Fix this in ga-clj somehow?
                                                                 (log/info "Best individual solved a batch but not all training cases.")))))
-                                       :mapper          pmap})
+                                       :mapper          mapv})
         _ (log/info "PRE-SIMPLIFICATION" best)
         ;; Simplify the best individual seen during evolution.
         best (i/simplify {:individual           best
@@ -171,24 +169,3 @@
         (.write w "]")))
 
     (:func best)))
-
-(comment
-  
-  (run {:suite-ns        'erp12.cbgp-lite.benchmark.suite.psb
-        :data-dir        "data/psb/"
-        :problem         "vectors-summed"})
-
-  ;add a do block here, where it sets up the flame graph.
-  (do
-    (prof/profile
-     {:event :alloc}
-     (run {:suite-ns        'erp12.cbgp-lite.benchmark.suite.composite
-           ;:data-dir        "data/psb/"
-           :problem         "sum-vector-vals"
-           :app-type :baked-in
-           :baked-in-apply-probability 0.25
-           :mapper mapv}))
-    (prof/serve-ui 8080))
-
-  (prof/serve-ui 8080)
-  )
