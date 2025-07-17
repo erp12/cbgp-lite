@@ -262,6 +262,19 @@
      x)
     @result))
 
+(defn penalize-nil-and-exception
+  "Wraps a loss function to check if the output contains nil or throws exception
+   In those cases, returns penalty, otherwise applies loss-fn."
+  [penalty loss-fn]
+  (fn wrapped-loss [program-output correct-output]
+    (if (has-nil? program-output)
+      penalty
+      (try
+        (loss-fn program-output correct-output)
+        (catch Exception e
+          (println "Caught exception in loss function:" e)
+          penalty)))))
+
 (defn round
   "Round a double to the given precision (number of significant digits)"
   [precision n]
