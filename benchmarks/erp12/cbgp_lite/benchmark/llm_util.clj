@@ -8,8 +8,8 @@
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.lang.llm.problem-map :as probmap]
             [psb2.core :as psb2]
-            [pyjama.core :as ollama]))
-
+            [pyjama.core :as ollama]))  
+ 
 (defn make-program-prompt-model
   [prompt model]
   (with-out-str
