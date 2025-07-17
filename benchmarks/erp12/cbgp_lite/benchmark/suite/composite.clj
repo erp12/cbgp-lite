@@ -172,14 +172,14 @@
      :case-generator (fn sum-2-vals-gen []
                        (sum-2-vals-case-generator (bu/string-generator 10)))
      :loss-fns       [bu/absolute-distance]}
-
+    
     "sum-2-vals-polymorphic"
     {:description    (str "Given a map from 'T to ints and two 'T that are "
                           "keys of the map, look up the values associated with those keys "
                           "in the map and return their sum.")
-     :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}
-                      'input2 {:type :s-var :sym 'T}
-                      'input3 {:type :s-var :sym 'T}}
+     :input->type    {'input1 {:type :map-of, :key {:type :t-var :sym 'T}, :value {:type 'int?}}
+                      'input2 {:type :t-var :sym 'T}
+                      'input3 {:type :t-var :sym 'T}}
      :ret-type       {:type 'int?}
      :other-type-ctors    #{'boolean? 'string? 'char? 'double?}
      :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
@@ -270,8 +270,8 @@
     "count-true"
     {:description    (str "Given a vector of T and a predicate T => bool, return the "
                           "count of the number of elements in T that make the predicate true.")
-     :input->type    {'input1 {:type :vector :child {:type :s-var :sym 'T}}
-                      'input2 (lib/unary-pred {:type :s-var :sym 'T})}
+     :input->type    {'input1 {:type :vector :child {:type :t-var :sym 'T}}
+                      'input2 (lib/unary-pred {:type :t-var :sym 'T})}
      :ret-type       {:type 'int?}
      :other-type-ctors    #{'boolean?}
      :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
@@ -288,8 +288,8 @@
     "first-index-of-true"
     {:description    (str "Given a vector of T and a predicate T => bool, return the "
                           "first index in the vector where the predicate is true.")
-     :input->type    {'input1 {:type :vector :child {:type :s-var :sym 'T}}
-                      'input2 (lib/unary-pred {:type :s-var :sym 'T})}
+     :input->type    {'input1 {:type :vector :child {:type :t-var :sym 'T}}
+                      'input2 (lib/unary-pred {:type :t-var :sym 'T})}
      :ret-type       {:type 'int?}
      :other-type-ctors    #{'boolean?}
      :extra-genes    [{:gene :lit, :val -1, :type {:type 'int?}}
@@ -452,10 +452,10 @@
 
     "min-key"
     {:description    "Given map of {key => int}, return the key with the min value."
-     :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}}
+     :input->type    {'input1 {:type :map-of, :key {:type :t-var :sym 'T}, :value {:type 'int?}}}
      :ret-type       {:type :s-var :sym 'T}
      :other-type-ctors    #{'boolean? 'int?}
-     
+
      :extra-genes    []
      :case-generator (let [generators [(bu/string-generator 10)
                                        bu/rand-char
@@ -579,25 +579,23 @@
                          {:inputs [coll]
                           :output (+ 10 (count coll))}))
      :loss-fns       [bu/absolute-distance]}
-    
+
     "cause-crash"
     {:description    "Given map of {key => int}, return the key with the min value."
      :input->type    {'input1 {:type :s-var :sym 'T}}
      :ret-type       {:type :s-var :sym 'T}
-     :other-type-ctors    #{'boolean? 'int? 'double? 'string? 'char?} 
+     :other-type-ctors    #{'boolean? 'int? 'double? 'string? 'char?}
      :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
                       {:gene :lit, :val 10, :type {:type 'int?}}]
      :case-generator (fn []
                        (let [x (rand-int 10000)]
                          {:inputs [x]
                           :output (inc x)}))
-     :loss-fns       [#(if (= %1 %2) (/ 1 0) (/ 1 0))]}
-    }
+     :loss-fns       [#(if (= %1 %2) (/ 1 0) (/ 1 0))]}}
 
-
-      ;; This adds nil penalties to all loss functions
+;; This adds nil penalties to all loss functions
    (fn [problem-map]
-     (update problem-map 
+     (update problem-map
              :loss-fns
              #(map (partial bu/penalize-nil-and-exception penalty) %)))))
 

@@ -245,8 +245,12 @@
 
 (defn conj'
   [coll target]
-  (if (set? coll)
+  (cond 
+    (set? coll)
     ((comp set conj) coll target)
+    ;; (nil? coll)
+    ;; (throw (Exception. "Conj' called on nil"))
+    :else
     ((comp vec conj) coll target)))
 
 (defn concat'
@@ -334,7 +338,7 @@
   [coll target replacement]
   (if (string? coll)
     (str/replace coll target replacement)
-    (vec (replace {target replacement} coll))))
+    (replace {target replacement} coll)))
 
 (defn replace-first'
   [coll target replacement]
@@ -746,13 +750,13 @@
    'range1             (scheme (fn-of [INT] (vector-of INT)))
    'range2             (scheme (fn-of [INT INT] (vector-of INT)))
    'range3             (scheme (fn-of [INT INT INT] (vector-of INT)))
-   `mapv-indexed       (scheme (fn-of [(fn-of [INT (s-var 'a)] (s-var 'b))
-                                       (vector-of (s-var 'a))]
+   `mapv-indexed       (scheme (fn-of [(fn-of [INT {:type :s-var :sym 'a :typeclasses #{:indexable}}] (s-var 'b))
+                                       (vector-of {:type :s-var :sym 'a :typeclasses #{:indexable}})]
                                       (vector-of (s-var 'b))))
    `distinctv          (scheme (fn-of [(vector-of (s-var 'e))]
                                       (vector-of (s-var 'e))))
-   `sortv-by           (scheme (fn-of [(fn-of [(s-var 'e)] (s-var 'k))
-                                       (vector-of (s-var 'e))]
+   `sortv-by           (scheme (fn-of [(fn-of [{:type :s-var :sym 'e :typeclasses #{:comparable}}] (s-var 'k))
+                                       (vector-of {:type :s-var :sym 'e :typeclasses #{:comparable}})]
                                       (vector-of (s-var 'e))))
    'group-by           (scheme (fn-of [(fn-of [(s-var 'e)] (s-var 'k))
                                        (vector-of (s-var 'e))]
@@ -893,3 +897,79 @@
                                         (:alternatives typ)))))))
        (into {})))
 
+(comment
+  (count (keys (lib-for-type-ctors #{boolean? :tuple int? :vector :=> :map-of :t-var :set})))
+  (count (keys (lib-for-type-ctors #{boolean? :tuple int? :vector :=> :map-of :set})))
+
+  (let [input3 "t"]
+    (erp12.cbgp-lite.lang.lib/conj'
+     (last (erp12.cbgp-lite.lang.lib/rest' (mapv hash-set input3)))
+     input3))
+  (let [input3 "t"]
+    (erp12.cbgp-lite.lang.lib/conj'
+     (last (erp12.cbgp-lite.lang.lib/rest' (mapv hash-set '("t" "p" "l"))))
+     input3))
+  (let [input3 "t"]
+    (last (erp12.cbgp-lite.lang.lib/rest' (mapv hash-set input3))))
+
+  (rest' (mapv hash-set "t"))
+
+  (let [input1 #{"T:^,\\3_M]"
+                 "1`"
+                 "T"
+                 "u~'"
+                 "UY$DO&i@"
+                 ";_&"
+                 "X6"
+                 "D\nM"
+                 "\\i?$?"
+                 "UTn"
+                 "Mz"
+                 "af"
+                 "3YCcy"
+                 "<9t5"
+                 "y`wtdvW"
+                 ":fXC1D2["
+                 "~^"
+                 "-mV,"
+                 "?,JBCw"
+                 ":("
+                 "w6s?wbI}\t"}
+        input2 "`1,f"
+        input3 "h@b~\""]
+    (erp12.cbgp-lite.lang.lib/conj'
+     (first (erp12.cbgp-lite.lang.lib/rest'
+             (let [v-5521793 (erp12.cbgp-lite.lang.lib/butlast' (erp12.cbgp-lite.lang.lib/keys-vec
+                                                                 (hash-map input1 input2 input1
+                                                                           (erp12.cbgp-lite.lang.lib/in? input3 (erp12.cbgp-lite.lang.lib/max' input2 input3)))))]
+               v-5521793)))
+     input3))
+
+  (let [input1 #{"T:^,\\3_M]"
+                 "1`"
+                 "T"
+                 "u~'"
+                 "UY$DO&i@"
+                 ";_&"
+                 "X6"
+                 "D\nM"
+                 "\\i?$?"
+                 "UTn"
+                 "Mz"
+                 "af"
+                 "3YCcy"
+                 "<9t5"
+                 "y`wtdvW"
+                 ":fXC1D2["
+                 "~^"
+                 "-mV,"
+                 "?,JBCw"
+                 ":("
+                 "w6s?wbI}\t"}
+        input2 "`1,f"
+        input3 "h@b~\""]
+    (first (rest' (butlast' (keys-vec (hash-map input1 input2 input1
+                                                (erp12.cbgp-lite.lang.lib/in? input3 (erp12.cbgp-lite.lang.lib/max' input2 input3))))))))
+  )
+               
+  

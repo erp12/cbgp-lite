@@ -376,7 +376,13 @@
     (let [arity-map (get ast-arity-aliasing ast-fn-name)
           fn-symbol (get arity-map
                          (count args)
+<<<<<<< HEAD
                          (get arity-map :default))]
+=======
+                         (get arity-map :default))
+          ;; _ (println "CHECKING " ast-fn-name " WITH ARITY " (count args))
+          ]
+>>>>>>> odennen/llmgp/ad-hoc
       fn-symbol)
 
     ;; arg-type-specific functions
@@ -456,11 +462,19 @@
   ([ast] (decompile-ast* ast {}))
   ([ast task] (decompile-ast* ast task {}))
   ([{:keys [op val tag args children] :as ast} task locals]
+<<<<<<< HEAD
   ;;  (println "--------------------------")
   ;;  (println "[DECOMPILE INFO]")
   ;;  (println "-> AST: " "<removed for length>")
   ;;  (println "-> TASK: " task)
   ;;  (println "-> LOCALS: " @locals)
+=======
+   ;; (println "--------------------------")
+  ;;  (println "[DECOMPILE INFO]")
+  ;;  (println "-> AST: " "<removed for length>")
+  ;;  (println "-> TASK: " task) 
+   ;; (println "-> LOCALS: " @locals)
+>>>>>>> odennen/llmgp/ad-hoc
   ;;  (println "-> CURR OP: " op "\n")
    (cond
     ;; Handle constants
@@ -683,4 +697,227 @@
                                                         (y x))))
                      {:type :vector :child {:type 'int?}} true)
 
+  ; in :asts (#:erp12.cbgp-lite.lang.compile
+  '{:ast {:op :let,
+          :bindings [{:op :binding, :name v-43673, :init {:op :const, :val [2 3]}}],
+          :body {:op :let,
+                 :bindings [{:op :binding, :name v-43688, :init {:op :fn,
+                                                                 :methods [{:op :fn-method,
+                                                                            :params [],
+                                                                            :body {:op :invoke,
+                                                                                   :fn {:op :var, :var mapv},
+                                                                                   :args [{:op :var, :var inc} {:op :local, :name v-43673}]}}]}}],
+                 :body {:op :invoke, :fn {:op :local, :name v-43688}, :args []}}},
+    :type {:type :vector, :child {:type int?, :typeclasses #{:number}}}}
+
+  ; FORM: '(let [x [2 3] y (fn [z] (mapv inc z))] (y x))))
+  ; in :asts
+  '{:ast {:op :let,
+          :bindings [{:op :binding, :name v-43707, :init {:op :const, :val [2 3]}}],
+          :body {:op :let,
+                 :bindings [{:op :binding, :name v-43721, :init {:op :fn,
+                                                                 :methods [{:op :fn-method,
+                                                                            :params [],
+                                                                            :body {:op :invoke,
+                                                                                   :fn {:op :fn,
+                                                                                        :methods [{:op :fn-method,
+                                                                                                   :params [],
+                                                                                                   :body {:op :var, :var *}}]},
+                                                                                   :args []}}]}}],
+                 :body {:op :invoke, :fn {:op :local, :name v-43721}, :args []}}},
+    :type {:type :=>, :input {:type :cat, :children [{:type :s-var, :sym s-43711, :typeclasses #{:number}} {:type :s-var, :sym s-43711, :typeclasses #{:number}}]}, :output {:type :s-var, :sym s-43711, :typeclasses #{:number}}}}
+
+  (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x [2 3]
+                                                          y (fn [z] (mapv #(* % 8) z))]
+                                                      (y x)))))
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                            y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])]
+                                                        (+ (count y) x)))) {:type 'int?})
+
+  ; case 1.a: nested fn in first arg (works)
+  (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])
+                                                          y 4]
+                                                      (+ (count x) y)))))
+  ; case 1.b: nested fn in second arg (broken)
+  (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                          y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])]
+                                                      (+ (count y) x)))))
+
+  (decompile-ast (ana.jvm/analyze '(let [x 4
+                                         y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])]
+                                     (+ x (count y)))))
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                            y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])]
+                                                        (+ (count y) x))))
+                     {:type 'int?})
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])
+                                                            x 4]
+                                                        (+ (count y) x))))
+                     {:type 'int?})
+
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [y (remove (fn [y2] (zero? y2)) [0 1 3 2 1 1])
+                                                            z 6
+                                                            x 4]
+                                                        (+ (count y) (- z x)))))
+                     {:type 'int?} true)
+
+;; 1.a - working genome
+  '[{:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
+    {:arg-types [{:sym s-44788, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+    [{:gene :local, :idx 1}
+     {:gene :var, :name zero?}
+     {:gene :apply}]
+    {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+    {:gene :apply}
+    {:gene :let}
+    [{:gene :lit, :type {:type int?}, :val 4}
+     {:gene :let}
+     [{:gene :local, :idx 1} ; meant to be 0? or 1?
+      {:gene :local, :idx 0}
+      {:gene :var, :name count}
+      {:gene :apply}
+      {:gene :var, :name +}
+      {:gene :apply}]]]
+
+;; 1.b - broken genome
+  '[{:gene :lit, :type {:type int?}, :val 4}
+    {:gene :let}
+    [{:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
+     {:arg-types [{:sym s-44793, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+     [{:gene :local, :idx 2}  ; !! works if idx 1
+      {:gene :var, :name zero?}
+      {:gene :apply}]
+     {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+     {:gene :apply}
+     {:gene :let}
+     [{:gene :local, :idx 0}
+      {:gene :local, :idx 1}
+      {:gene :var, :name count}
+      {:gene :apply}
+      {:gene :var, :name +}
+      {:gene :apply}]]]
+
+;; (run compile on these asts to get the final result)
+;; 1.a - working ast
+  '{:ast {:op :let,
+          :bindings [{:op :binding,
+                      :name v-44972,
+                      :init {:op :invoke,
+                             :fn {:op :var, :var erp12.cbgp-lite.lang.lib/remove'},
+                             :args [{:op :fn,
+                                     :methods [{:op :fn-method,
+                                                :params [{:op :binding, :name a-44961}],
+                                                :body {:op :invoke, :fn {:op :var, :var zero?}, :args [{:op :local, :name a-44961}]}}]}
+                                    {:op :const, :val [0 1 3 2 1 1 0 0]}]}}],
+          :body {:op :let,
+                 :bindings [{:op :binding, :name v-44974, :init {:op :const, :val 4}}],
+                 :body {:op :invoke, :fn {:op :var, :var +},
+                        :args [{:op :invoke,
+                                :fn {:op :var, :var count},
+                                :args [{:op :local, :name v-44972}]}
+                               {:op :local, :name v-44974}]}}},
+    :type {:type int?, :typeclasses #{:number}}}
+
+;; 1.b - broken ast
+  '{:ast {:op :let,
+          :bindings [{:op :binding, :name v-44942, :init {:op :const, :val 4}}],
+          :body {:op :let,
+                 :bindings [{:op :binding,
+                             :name v-44952,
+                             :init {:op :invoke,
+                                    :fn {:op :fn,
+                                         :methods [{:op :fn-method,
+                                                    :params [], ; should have a binding here
+                                                    :body {:op :invoke, :fn {:op :var, :var zero?}, :args [{:op :local, :name v-44942}]}}]},
+                                    :args []}}], ; args should not be empty here
+                 :body {:op :var, :var +}}}, ; why no args for this level?
+    :type {:type :=>, :input {:type :cat, :children [{:type :s-var, :sym s-44955, :typeclasses #{:number}} {:type :s-var, :sym s-44955, :typeclasses #{:number}}]}, :output {:type :s-var, :sym s-44955, :typeclasses #{:number}}}}
+
+;; 1.b - broken ast, idx 2 -> 1 version (works)
+  '{:ast
+    {:op :let,
+     :bindings [{:init {:op :const, :val 4}, :name v-47771, :op :binding}],
+     :body {:op :let
+            :bindings [{:op :binding
+                        :name v-47784,
+                        :init {:op :invoke
+                               :fn {:op :var, :var erp12.cbgp-lite.lang.lib/remove'}
+                               :args [{:methods [{:body {:args [{:name a-47773, :op :local}],
+                                                         :fn {:op :var, :var zero?},
+                                                         :op :invoke},
+                                                  :op :fn-method,
+                                                  :params [{:name a-47773, :op :binding}]}],
+                                       :op :fn} {:op :const, :val [0 1 3 2 1 1]}]}}],
+            :body {:op :invoke
+                   :fn {:op :var, :var +},
+                   :args [{:args [{:name v-47784, :op :local}],
+                           :fn {:op :var, :var count},
+                           :op :invoke} {:name v-47771, :op :local}]}}}
+
+    :type {:type int?, :typeclasses #{:number}}}
+
+;; issues
+; -> local var id inconsistency (try 01?)
+; -> local var id resolution
+
+  (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                          y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])]
+                                                      (+ (count y) x)))))
+
+  (decompile-ast (ana.jvm/analyze '(let [x 4
+                                         y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])]
+                                     (+ (count y) x))))
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x 4
+                                                            y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])]
+                                                        (+ (count y) x)))) {:type 'int?})
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])
+                                                            x 4]
+                                                        (+ (count x) y)))) {:type 'int?})
+
+  '[{:gene :lit, :type {:type int?}, :val 4}
+    {:gene :let}
+    [{:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
+     {:arg-types [{:sym s-39758, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+     [{:gene :local, :idx 0}
+      {:gene :var, :name zero?}
+      {:gene :apply}]
+
+     {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+     {:gene :apply}
+     {:gene :let}
+     [{:gene :local, :idx 2}
+      {:gene :local, :idx 1}
+      {:gene :var, :name count}
+      {:gene :apply}
+      {:gene :var, :name +}
+      {:gene :apply}]]]
+
+  (pl/plushy->push (decompile-ast (ana.jvm/analyze '(let [y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])
+                                                          x 4]
+                                                      (+ (count y) x)))))
+  '[{:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
+    {:arg-types [{:sym s-39763, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
+    [{:gene :local, :idx 0}
+     {:gene :var, :name zero?}
+     {:gene :apply}]
+
+    {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
+    {:gene :apply}
+    {:gene :let}
+
+    [{:gene :lit, :type {:type int?}, :val 4}
+     {:gene :let}
+
+     [{:gene :local, :idx 2}
+      {:gene :local, :idx 1}
+      {:gene :var, :name count}
+      {:gene :apply}
+      {:gene :var, :name +}
+      {:gene :apply}]]]
+  
+
+  (decompile-ast (ana.jvm/analyze '(+ 1 2)))
   )
