@@ -697,7 +697,7 @@
      (do (println "DO - not tested AST op")
          (flatten (list (map #(decompile-ast* % task locals) (:statements ast))
                         {:gene :var :name (get-fn-symbol 'do tag (:statements ast) task)}
-                        {:gene :apply})))
+                        {:gene :apply}))) 
 
      :else
      (do
@@ -788,8 +788,8 @@
     {:gene :apply})
    {:input->type {'input1 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}
                   'input2 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}}
-    :ret-type {:type 'double?}} [[0.0 0.0] [1.0 1.0]] true)
-  
+    :ret-type {:type 'double?}} [[0.0 0.0] [1.0 1.0]] true) 
+   (decompile-ast (ana.jvm/analyze '(defn find-min-key [m] (first (reduce (fn [[k v] [new-k new-v]] (if (< new-v v) [new-k new-v] [k v])) [nil Long/MAX_VALUE] m)))))
 
   )
 
