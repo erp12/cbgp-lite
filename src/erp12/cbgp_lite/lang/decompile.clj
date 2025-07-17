@@ -771,6 +771,33 @@
                                                             y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))]
                                                         (y x))))
                      {:type :vector :child {:type 'int?}} true)
+  
+
+;; This only works when forcing left and right instead of first and second
+  (compile-debugging2
+   '({:gene :local, :idx 1}
+    {:gene :var, :name right}
+    {:gene :apply}
+    {:gene :local, :idx 0}
+    {:gene :var, :name right}
+    {:gene :apply}
+    {:gene :var, :name -}
+    {:gene :apply}
+    {:gene :local, :idx 1}
+    {:gene :var, :name left}
+    {:gene :apply}
+    {:gene :local, :idx 0}
+    {:gene :var, :name left}
+    {:gene :apply}
+    {:gene :var, :name -}
+    {:gene :apply}
+    {:gene :var, :name *}
+    {:gene :apply})
+   {:input->type {'input1 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}
+                  'input2 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}}
+    :ret-type {:type 'double?}} [[0.0 0.0] [1.0 1.0]] true)
+  
+
   )
 
   
