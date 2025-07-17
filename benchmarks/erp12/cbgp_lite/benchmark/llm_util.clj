@@ -242,7 +242,7 @@
 (defn test-results-with-model
   "Generates n programs for a given PSB2 problem and prints the expected
      output, actual output, and if they are the same"
-  ([problem num-programs model suite-ns verbose]
+  [problem num-programs model suite-ns verbose]
    (let [prompt (probmap/get-desc (str problem))
          _ (println "prompt" prompt)
          programs (repeatedly num-programs
@@ -256,7 +256,7 @@
                                                                  Vectors, sets, the keys for maps, and the values of maps must contain a single type
                                                                  Cannot use these functions: some, recur, loop, when, letfn
                                                                  
-                                                                 The problem:" prompt) model)))
+                                                                 The problem:" prompt) model))))
          ex (if (= 'psb suite-ns)
               (get (psb2/fetch-examples "path/to/PSB2/datasets/" (str problem) 50 0) :train)
               (repeatedly 50 (get case-generators (str problem)))) 
@@ -286,7 +286,7 @@
              (when verbose (println "Actual: " answers))
              (when verbose (println "Expected: " outputs))
              (println (= outputs answers))))
-         (catch Exception e (println (str "caught exception: " (.getMessage e)))))))))
+         (catch Exception e (println (str "caught exception: " (.getMessage e))))))))
 
 (defn input-test
   [{:keys [problem model suite-ns]}]
@@ -325,5 +325,5 @@
 
 (comment 
   (llm-genome {:problem "area-of-rectangle" :model "codestral"})
-  (test-results-with-model "min-key" 10 "codestral" "composite" true)
+  (test-results-with-model "min-key" 10 "codestral" "composite" true) 
   )
