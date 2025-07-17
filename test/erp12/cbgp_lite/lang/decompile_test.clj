@@ -1372,6 +1372,7 @@
                                                                        (y x))))
                                  {:type 'int?})
            32))
+           
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x [2 3]
                                                                            y (fn [z] (mapv inc z))]
                                                                        (y x))))
@@ -1397,8 +1398,8 @@
            9))
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
                                                                            y (remove (fn [x2] (zero? x2)) [0 1 3 2 1 1])]
-                                                                       (+ (count y) x))))
-                                 {:type 'int?})
+                                                                       (+ (count y) x))))  
+                                 {:type 'int?}) 
            9))
 
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
@@ -1555,5 +1556,6 @@
                                                                         y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))
                                                                         w ((fn [w2] (- w2 -5)) b)]
                                                                     (+ x (count (y [3 0 2 0 1 0])) w))) -1 10 7))) {:type 'int?})
-             17))))
+             17)))
+             )
     

@@ -1,12 +1,12 @@
 (ns erp12.cbgp-lite.lang.decompile
-  (:require [clojure.tools.analyzer.jvm :as ana.jvm]
+  (:require [clojure.set :as set]
+            [clojure.tools.analyzer.jvm :as ana.jvm]
             [erp12.cbgp-lite.lang.ast :as ast]
             [erp12.cbgp-lite.lang.compile :as co]
             [erp12.cbgp-lite.lang.lib :as lib]
             [erp12.cbgp-lite.search.plushy :as pl]
             [erp12.cbgp-lite.task :as tsk]
-            [taoensso.timbre :as log]
-            [clojure.set :as set]))
+            [taoensso.timbre :as log]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;; Compilation testing
@@ -27,7 +27,7 @@
          func (ast/form->fn [] form)]
      (func))))
 
-(defn compile-debugging2 
+(defn compile-debugging2
   ([genome task]
    (compile-debugging2 genome task []))
 
@@ -163,7 +163,7 @@
   [;; FP
    'comp
    'partial
-   
+
    ;; Common/Misc
    'not
    'not=
@@ -203,7 +203,7 @@
    'min `lib/min'
 
    ;; Numeric
-   'add '+ 
+   'add '+
    'multiply '*
    'quotient `lib/safe-quot
    'divide `lib/safe-div
@@ -236,7 +236,7 @@
    'str/lower-case  `str/lower-case
    'toUpperCase  `lib/char-upper
    'toLowerCase  `lib/char-lower
-   
+
    ;; Collections
    ; `lib/->map --> in Clojure: into {}
    'concat `lib/concat'
@@ -272,7 +272,7 @@
    'set/intersection `set/intersection
    'set/subset? `set/subset?
    'set/superset? `set/superset?
-   
+
    ;; Map
    'keys `lib/keys-vec
    ; `lib/keys-set (doesn't exist in clojure?)
@@ -332,7 +332,6 @@
    ;; Boolean
    ; `lib/and (macro)
    ; `lib/or (macro)
-   
 
 (def ground-type-alias-map
   {nil {:type :s-var :sym 'a}
@@ -342,7 +341,6 @@
    "character" {:type 'char?}
    "string" {:type 'string?}
    "symbol" {:type 'symbol?}})
-   
 
 (defn find-local
   "Takes a map or vec and recursively looks through it to find a map
@@ -383,10 +381,10 @@
     (contains? type-specific-aliasing ast-fn-name)
     (cond
       (= 'remove ast-fn-name)
-      (if (= :set (:type (first args))) 
+      (if (= :set (:type (first args)))
         `lib/remove-element
         `lib/remove')
-      
+
       (= 'assoc ast-fn-name)
       (if (= :vector (:type (first args)))
         `lib/safe-assoc-nth
@@ -573,16 +571,16 @@
 (defn add-to-locals-map
   "Add all new locals in a given list to the decompile-ast locals map"
   ([locals locals-to-add] (add-to-locals-map locals locals-to-add 0))
-  ([locals locals-to-add parity-offset] 
+  ([locals locals-to-add parity-offset]
    (doseq [local-name locals-to-add]
      (if (nil? (get @locals local-name))
-       (swap! locals assoc local-name (- (count @locals) (+ 1 parity-offset))))))) 
-   
+       (swap! locals assoc local-name (- (count @locals) (+ 1 parity-offset)))))))
+
 (defn remove-from-locals-map
   "Remove all locals in a given list from the decompile-ast locals map"
-  [locals locals-to-rm] 
+  [locals locals-to-rm]
   (doseq [local-name locals-to-rm]
-      (swap! locals dissoc local-name)))
+    (swap! locals dissoc local-name)))
 
 (defn decompile-ast*
   "Decompiles AST into a CBGP genome."
@@ -619,11 +617,11 @@
                          (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast* % task locals) args)
            decompiled-args (flatten (reverse raw-decompiled-args))]
-           
+
        (concat decompiled-args
                (cond
                  (= (ast-fn-name :op) :invoke)
-                     (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
+                 (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= (ast-fn-name :op) :local)
                  (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= (ast-fn-name :op) :fn)
@@ -631,7 +629,7 @@
                  (= op :var)
                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
                  :else (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                                                                      {:gene :apply}))))
+                             {:gene :apply}))))
 
 ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -667,7 +665,7 @@
 
 ;; Handle anonymous function abstraction
      (= op :fn)
-     (let [param-names (map :name (:params (first (:methods ast)))) 
+     (let [param-names (map :name (:params (first (:methods ast))))
            parity-offset (if (get @locals :locals-parity-offset) 1 0)
            _ (add-to-locals-map locals param-names parity-offset)
 
@@ -723,7 +721,7 @@
 ;;;; THESE DON'T WORK 
   (compile-debugging (decompile-ast (ana.jvm/analyze '(< 4 5 8)))
                      {:type 'boolean?}) ; no multi-arity for comparison funcs
-  
+
   (compile-debugging (decompile-ast (ana.jvm/analyze '(or true false)))
                      {:type 'boolean?})
   (compile-debugging (decompile-ast (ana.jvm/analyze '(and 0 1))) {:type 'boolean?})
@@ -736,7 +734,7 @@
   ; --> :test {:name and... :op :local} *binds 'and' to 'true' cond? (first truthy value)
   ; --> :then {:op :const :val false}
   ; --> :else {:name and... :op :local} *does same as else?
-  
+
   ; accessing "and"
   (decompile-ast (ana.jvm/analyze '(and true true)))
   (clojure.string/includes?
@@ -745,21 +743,20 @@
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; LET/FN TESTING
-  (log/set-min-level! :trace) 
+  (log/set-min-level! :trace)
 
   ;; testing llm code
   ; niche defn issue:
   ; analyzing a called defn breaks b/c no condition in handle methods for :op :invoke -> :op :def
   (decompile-ast (ana.jvm/analyze '((defn combine-fns [a b c]
-                                        (let [x 3]
-                                          (+ x b c))) -1 10 9)))
+                                      (let [x 3]
+                                        (+ x b c))) -1 10 9)))
   (-> (ana.jvm/analyze '((defn combine-fns [a b c]
                            (let [x 3]
-                             (+ x b c))) -1 10 9)) 
+                             (+ x b c))) -1 10 9))
       :fn
-      keys
-      )
-  
+      keys)
+
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [3 0 2 0 1 0]
                                                             y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))]
                                                         (y x))))
