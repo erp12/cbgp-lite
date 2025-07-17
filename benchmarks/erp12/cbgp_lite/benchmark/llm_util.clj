@@ -27,6 +27,12 @@
       (first matches)
       s)))
 
+(defn namespace-qualify-macros
+  [s]
+  (-> s
+      (clojure.string/replace #"and " "erp12.cbgp-lite.lang.lib/and ")
+      (clojure.string/replace #"or " "erp12.cbgp-lite.lang.lib/or ")))
+
 (defn get-inputs
   [examples]
   (map #(butlast (vals %)) examples))
@@ -240,8 +246,8 @@
    (let [prompt (probmap/get-desc (str problem))
          _ (println "prompt" prompt)
          programs (repeatedly num-programs
-                              #(extract-triple-backtick-code
-                                (make-program-prompt-model (str "Main Task: Code an expert-level Clojure function that solves the given programming problem 
+                              #(namespace-qualify-macros (extract-triple-backtick-code 
+                                 (make-program-prompt-model (str "Main Task: Code an expert-level Clojure function that solves the given programming problem 
                                                                  without any comment, explanation, or example usage. Only return a single function.
                                                                  
                                                                  This function should follow these restrictions:
@@ -292,8 +298,8 @@
   (when verbose (println (type problem)))
   (let [prompt (probmap/get-desc (str problem))
         _ (when verbose (println "Prompt:" prompt))
-        program-string (extract-triple-backtick-code
-                        (make-program-prompt-model (str "Main Task: Code an expert-level Clojure function that solves the given programming problem 
+        program-string (namespace-qualify-macros (extract-triple-backtick-code
+                                                  (make-program-prompt-model (str "Main Task: Code an expert-level Clojure function that solves the given programming problem 
                                                                                  without any comment, explanation, or example usage. Only return a single function.
                                                                                  
                                                                                  This function should follow these restrictions:
@@ -302,7 +308,7 @@
                                                                                  Vectors, sets, the keys for maps, and the values of maps must contain a single type
                                                                                  Cannot use these functions: some, recur, loop, when, letfn
                                                                                  
-                                                                                 The problem:" prompt) (str model)))
+                                                                                 The problem:" prompt) (str model))))
         _ (when verbose (println "Program-str" program-string))
         program-fn (read-string program-string)
         _ (when verbose (println "Program-fn" program-fn))]

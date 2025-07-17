@@ -376,9 +376,7 @@
     (let [arity-map (get ast-arity-aliasing ast-fn-name)
           fn-symbol (get arity-map
                          (count args)
-                         (get arity-map :default))
-          ;; _ (println "CHECKING " ast-fn-name " WITH ARITY " (count args))
-          ]
+                         (get arity-map :default))]
       fn-symbol)
 
     ;; arg-type-specific functions
