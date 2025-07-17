@@ -1372,7 +1372,6 @@
                                                                        (y x))))
                                  {:type 'int?})
            32))
-           32))
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x [2 3]
                                                                            y (fn [z] (mapv inc z))]
                                                                        (y x))))

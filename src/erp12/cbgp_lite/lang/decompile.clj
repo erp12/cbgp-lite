@@ -376,13 +376,9 @@
     (let [arity-map (get ast-arity-aliasing ast-fn-name)
           fn-symbol (get arity-map
                          (count args)
-<<<<<<< HEAD
-                         (get arity-map :default))]
-=======
                          (get arity-map :default))
           ;; _ (println "CHECKING " ast-fn-name " WITH ARITY " (count args))
           ]
->>>>>>> odennen/llmgp/ad-hoc
       fn-symbol)
 
     ;; arg-type-specific functions
@@ -595,14 +591,6 @@
   ([ast] (decompile-ast* ast {}))
   ([ast task] (decompile-ast* ast task {}))
   ([{:keys [op val tag args children] :as ast} task locals]
-<<<<<<< HEAD
-  ;;  (println "--------------------------")
-  ;;  (println "[DECOMPILE INFO]")
-  ;; ;;  (println "-> AST: " ast)
-  ;; ;;  (println "-> TASK: " task)
-  ;;  (println "-> LOCALS: " @locals)
-  ;;  (println "-> OFFSET? " (get @locals :locals-parity-offset))
-  ;;  (println "-> CURR OP: " op "\n")
    (cond
     ;; Handle constants
      (= :const op)
