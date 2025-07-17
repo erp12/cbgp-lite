@@ -30,8 +30,8 @@
 (defn namespace-qualify-macros
   [s]
   (-> s
-      (clojure.string/replace #"and " "erp12.cbgp-lite.lang.lib/and' ")
-      (clojure.string/replace #"or " "erp12.cbgp-lite.lang.lib/or' ")))
+      (clojure.string/replace #"and " "erp12.cbgp-lite.lang.lib/and ")
+      (clojure.string/replace #"or " "erp12.cbgp-lite.lang.lib/or ")))
 
 (defn get-inputs
   [examples]
