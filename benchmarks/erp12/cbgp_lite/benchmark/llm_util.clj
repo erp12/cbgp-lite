@@ -243,7 +243,8 @@
   "Generates n programs for a given PSB2 problem and prints the expected
      output, actual output, and if they are the same"
   ([problem num-programs model suite-ns verbose]
-   (let [prompt (probmap/get-desc problem)
+   (let [prompt (probmap/get-desc (str problem))
+         _ (println "prompt" prompt)
          programs (repeatedly num-programs
                               #(namespace-qualify-macros (extract-triple-backtick-code 
                                  (make-program-prompt-model (str "Main Task: Code an expert-level Clojure function that solves the given programming problem 
@@ -255,12 +256,15 @@
                                                                  Vectors, sets, the keys for maps, and the values of maps must contain a single type
                                                                  Cannot use these functions: some, recur, loop, when, letfn
                                                                  
-                                                                 The problem:" prompt) model))))
-         datadir (if (= "psb" suite-ns)
-                   "data/psb/datasets")
-         ex (get (psb2/fetch-examples datadir problem 50 0) :train)
+                                                                 The problem:" prompt) model)))
+         ex (if (= 'psb suite-ns)
+              (get (psb2/fetch-examples "path/to/PSB2/datasets/" (str problem) 50 0) :train)
+              (repeatedly 50 (get case-generators (str problem)))) 
+         _ (println "Examples" ex)
          inputs (extract-io ex "input")
-         outputs (extract-io ex "output")]
+         _ (println "IN:" inputs)
+         outputs (extract-io ex "output")
+         _ (println "OUT:" outputs)]
       ;(println "IN: " inputs)
      (doseq [prog programs]
        (try
@@ -284,7 +288,10 @@
              (println (= outputs answers))))
          (catch Exception e (println (str "caught exception: " (.getMessage e)))))))))
 
-
+(defn input-test
+  [{:keys [problem model suite-ns]}]
+  (println "Problem" problem)
+  (test-results-with-model problem 10 model suite-ns true))
 
 (defn llm-genome
   [{:keys [problem model verbose]}]
@@ -311,7 +318,9 @@
         decompiled-func)
       (catch Exception e (str "Failed Decompile:" (.getMessage e)))))
   )
-
+(defn get-examples
+  [{:keys [problem]}]
+  (println (get (psb2/fetch-examples "data/psb/datasets" (str problem) 50 0) :train)))
 
 
 (comment 

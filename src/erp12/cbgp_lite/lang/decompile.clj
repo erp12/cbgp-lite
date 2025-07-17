@@ -435,6 +435,139 @@
                   (str "AST contains a type that shouldn't be possible: "
                        ast)))))
 
+;; (defn push-scope! [locals]
+;;   (swap! locals conj {}))
+
+;; (defn pop-scope! [locals]
+;;   (swap! locals pop))
+
+;; (defn add-to-locals-scope! [locals param-names]
+;;   (let [current-scope (peek @locals)
+;;         start-idx (count current-scope)
+;;         new-bindings (into {}
+;;                            (map-indexed (fn [i name]
+;;                                           [name (+ start-idx i)])
+;;                                         param-names))
+;;         new-scope (merge current-scope new-bindings)]
+;;     (swap! locals #(conj (pop %) new-scope))))
+
+;; (defn resolve-local [locals name]
+;;   (some (fn [scope] (get scope name))
+;;         (reverse @locals)))
+
+;; (defn decompile-ast*
+;;   ([ast] (decompile-ast* ast {}))
+;;   ([ast task] (decompile-ast* ast task (atom [{}])))
+;;   ([{:keys [op val tag args children] :as ast} task locals]
+;;    (cond
+;;      ;; constants
+;;      (= :const op)
+;;      (list {:gene :lit
+;;             :val val
+;;             :type (find-type val ast)})
+
+;;      ;; locals
+;;      (= :local op)
+;;      (let [idx (resolve-local locals (:name ast))]
+;;        (when (nil? idx)
+;;          (throw (ex-info (str "Unbound local: " (:name ast)) {:locals @locals})))
+;;        (list {:gene :local :idx idx}))
+
+;;      ;; vars, invokes, static calls
+;;      (or (= op :static-call) (= op :invoke) (= op :var))
+;;      (let [ast-fn-name (cond
+;;                          (= op :static-call) (:method ast)
+;;                          (= op :var) (symbol (-> ast :meta :name))
+;;                          (= (-> ast :fn :op) :var) (-> ast :fn :form)
+;;                          :else (-> ast :fn))
+;;            raw-decompiled-args (map #(decompile-ast* % task locals) args)
+;;            decompiled-args (flatten (reverse raw-decompiled-args))]
+;;        (concat decompiled-args
+;;                (cond
+;;                  (= (ast-fn-name :op) :invoke)
+;;                  (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
+;;                  (= (ast-fn-name :op) :local)
+;;                  (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
+;;                  (= (ast-fn-name :op) :fn)
+;;                  (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
+;;                  (= op :var)
+;;                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
+;;                  :else
+;;                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
+;;                        {:gene :apply}))))
+
+;;      ;; quoted list
+;;      (= op :quote)
+;;      (let [the-vector (vec (-> ast :expr :val))]
+;;        (list {:gene :lit
+;;               :val the-vector
+;;               :type (find-type the-vector (assoc ast :type :vector))}))
+
+;;      ;; if form
+;;      (= op :if)
+;;      (let [ast-fn-name 'if
+;;            raw-decompiled-args (map #(decompile-ast* % task locals) (map ast children))
+;;            decompiled-args (flatten (reverse raw-decompiled-args))]
+;;        (concat decompiled-args
+;;                (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
+;;                      {:gene :apply})))
+
+;;      ;; let
+;;      (= op :let)
+;;      (do
+;;        (push-scope! locals)
+;;        (let [[_ init-forms]
+;;              (reduce
+;;               (fn [[_ forms] {:keys [name init]}]
+;;                 (add-to-locals-scope! locals [name])
+;;                 [@locals (conj forms (decompile-ast* init task locals) {:gene :let})])
+;;               [locals []]
+;;               (:bindings ast))
+;;              decompiled-body (decompile-ast* (:body ast) task locals)]
+;;          (pop-scope! locals)
+;;          (flatten (concat init-forms decompiled-body
+;;                           (repeat (count (:bindings ast)) {:gene :close})))))
+
+;;      ;; fn (anonymous)
+;;      (= op :fn)
+;;      (do
+;;        (push-scope! locals)
+;;        (let [params (:params (first (:methods ast)))
+;;              param-names (map :name params)
+;;              arg-count (count param-names)
+;;              arg-types (vec (repeatedly arg-count #(lib/s-var (gensym "s-"))))
+;;              _ (add-to-locals-scope! locals param-names)
+;;              decompiled-body (decompile-ast* (:body (first (:methods ast))) task locals)
+;;              return-type (if-let [tag (:return-tag ast)]
+;;                            (get ground-type-alias-map (.getName tag) (lib/s-var (gensym "s-")))
+;;                            (lib/s-var (gensym "s-")))]
+;;          (pop-scope! locals)
+;;          (list {:gene :fn :arg-types arg-types :ret-type return-type}
+;;                decompiled-body
+;;                {:gene :close})))
+
+;;      ;; def
+;;      (= op :def)
+;;      (decompile-ast* (-> ast :init :expr :methods first :body)
+;;                      task
+;;                      locals)
+
+;;      ;; fallback
+;;      :else
+;;      (do
+;;        (println "not handled yet AST op:" op)
+;;        (println "failing AST: \n" ast)
+;;        (println "---------------------------")
+;;        nil))))
+
+;; (defn decompile-ast
+;;   ([ast]
+;;    (decompile-ast* ast {} (atom [{}])))
+;;   ([ast task]
+;;    (decompile-ast* ast task (atom [{}]))))
+
+
+
 (defn add-to-locals-map
   "Add all new locals in a given list to the decompile-ast locals map"
   ([locals locals-to-add] (add-to-locals-map locals locals-to-add 0))
@@ -454,13 +587,6 @@
   ([ast] (decompile-ast* ast {}))
   ([ast task] (decompile-ast* ast task {}))
   ([{:keys [op val tag args children] :as ast} task locals]
-  ;;  (println "--------------------------")
-  ;;  (println "[DECOMPILE INFO]")
-  ;; ;;  (println "-> AST: " ast)
-  ;; ;;  (println "-> TASK: " task)
-  ;;  (println "-> LOCALS: " @locals)
-  ;;  (println "-> OFFSET? " (get @locals :locals-parity-offset))
-  ;;  (println "-> CURR OP: " op "\n")
    (cond
     ;; Handle constants
      (= :const op)
@@ -544,14 +670,16 @@
            _ (add-to-locals-map locals param-names parity-offset)
 
            decompiled-body (decompile-ast* (:body (first (:methods ast))) task locals)
-           arg-count (count (-> ast :methods first :params)) ; [!] any case w/ multiple :methods? 
+           arg-count (count (-> ast :methods first :params)) ; [!] any case w/ multiple :methods?
            arg-types (vec (repeatedly arg-count #(lib/s-var (gensym "s-"))))
+          ;;  _ (println "FN - finished arg decomp...")
+      ;; Resolve the return type or generate a fresh one
            return-type (if (nil? (:return-tag ast))
                          (lib/s-var (gensym "s-"))
                          (get ground-type-alias-map (.getName (:return-tag ast)) (lib/s-var (gensym "s-"))))]
        (remove-from-locals-map locals param-names)
        (flatten (list {:gene :fn :arg-types arg-types :ret-type return-type} decompiled-body {:gene :close})))
-
+     
      (= op :def)
      (decompile-ast* (-> ast
                          :init
@@ -632,4 +760,34 @@
   (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [3 0 2 0 1 0]
                                                             y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))]
                                                         (y x))))
-                     {:type :vector :child {:type 'int?}} true))
+                     {:type :vector :child {:type 'int?}} true)
+  
+
+;; This only works when forcing left and right instead of first and second
+  (compile-debugging2
+   '({:gene :local, :idx 1}
+    {:gene :var, :name right}
+    {:gene :apply}
+    {:gene :local, :idx 0}
+    {:gene :var, :name right}
+    {:gene :apply}
+    {:gene :var, :name -}
+    {:gene :apply}
+    {:gene :local, :idx 1}
+    {:gene :var, :name left}
+    {:gene :apply}
+    {:gene :local, :idx 0}
+    {:gene :var, :name left}
+    {:gene :apply}
+    {:gene :var, :name -}
+    {:gene :apply}
+    {:gene :var, :name *}
+    {:gene :apply})
+   {:input->type {'input1 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}
+                  'input2 {:type :tuple, :children [{:type 'double?} {:type 'double?}]}}
+    :ret-type {:type 'double?}} [[0.0 0.0] [1.0 1.0]] true)
+  
+
+  )
+
+  

@@ -7,6 +7,8 @@
             [erp12.cbgp-lite.task :as task]
             [psb2.core :as psb2]))
 
+(declare penalty)
+
 (def psb-problems
   {"checksum" {:input->type {'input1 {:type 'string?}}
                :ret-type {:type 'string?}

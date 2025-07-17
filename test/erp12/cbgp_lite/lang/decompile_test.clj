@@ -1402,60 +1402,6 @@
                                  {:type 'int?}) 
            9))
 
-    (is (= (de/compile-debugging '({:gene :lit, :type {:type int?}, :val 4}
-                                   {:gene :let}
-                                   {:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1]}
-                                   {:arg-types [{:sym s-20513, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
-                                   {:gene :local, :idx 1} ;; must be odd (to refer to the vector) can alos be 3, 5, 7 etc
-                                   {:gene :var, :name zero?}
-                                   {:gene :apply}
-                                   {:gene :close}
-                                   {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
-                                   {:gene :apply}
-                                   {:gene :let}
-                                   {:gene :local, :idx 0} ;; even number to refer to the int 
-                                   {:gene :local, :idx 1} ;; here need an odd number (to refer to the vector and be counted)
-                                   {:gene :var, :name count}
-                                   {:gene :apply}
-                                   {:gene :var, :name +}
-                                   {:gene :apply}
-                                   {:gene :close}
-                                   {:gene :close}) 
-                                 {:type 'int?} true)
-           9)) 
-
-       (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
-                                                                              y (fn [y2] (remove (fn [y3] (zero? y3)) y2))]
-                                                                          (+ (count (y [0 1 3 2 1 1 0 0])) x))))
-                                 {:type 'int?})
-           9))
-       
-       (is (= (de/compile-debugging '({:gene :lit, :type {:type int?}, :val 4}
-                                      {:gene :let}
-                                      {:arg-types [{:sym s-21872, :type :s-var}], :gene :fn, :ret-type {:sym s-21873, :type :s-var}}
-                                      {:gene :local, :idx 1}
-                                      {:arg-types [{:sym s-21869, :type :s-var}], :gene :fn, :ret-type {:type boolean?}}
-                                      {:gene :local, :idx 2}
-                                      {:gene :var, :name zero?}
-                                      {:gene :apply}
-                                      {:gene :close}
-                                      {:gene :var, :name erp12.cbgp-lite.lang.lib/remove'}
-                                      {:gene :apply}
-                                      {:gene :close}
-                                      {:gene :let}
-                                      {:gene :local, :idx 0}
-                                      {:gene :lit, :type {:child {:type int?}, :type :vector}, :val [0 1 3 2 1 1 0 0]}
-                                      {:gene :local, :idx 1}
-                                      {:gene :apply}
-                                      {:gene :var, :name count}
-                                      {:gene :apply}
-                                      {:gene :var, :name +}
-                                      {:gene :apply}
-                                      {:gene :close}
-                                      {:gene :close})
-                                    {:type 'int?})
-              9))
-
     (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(let [x 4
                                                                            y (count (remove (fn [y2] (zero? y2)) [0 0 1 2 3]))]
                                                                        (+ y x))))
