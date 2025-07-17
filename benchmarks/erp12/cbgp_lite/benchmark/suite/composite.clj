@@ -156,10 +156,12 @@
 (defn problems
   [{:keys [penalty]}]
   (let [penalize-nil (fn [loss-fn]
-                       (fn wrapped-loss [program-output correct-output]
-                         (if (bu/has-nil? program-output)
-                           penalty
-                           (loss-fn program-output correct-output))))]
+                       (fn wrapped-loss [program-output correct-output] 
+                           (if (bu/has-nil? program-output)
+                             penalty
+                             (try (loss-fn program-output correct-output)
+                                  (catch Exception e (str "Loss-fn Exception:" (.getMessage e))
+                                         penalty)))))]
     (update-vals
      {"sum-2-vals"
       {:description    (str "Given a map from strings to ints and two strings that are "
@@ -182,9 +184,9 @@
       {:description    (str "Given a map from 'T to ints and two 'T that are "
                             "keys of the map, look up the values associated with those keys "
                             "in the map and return their sum.")
-       :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}
-                        'input2 {:type :s-var :sym 'T}
-                        'input3 {:type :s-var :sym 'T}}
+       :input->type    {'input1 {:type :map-of, :key {:type :t-var :sym 'T}, :value {:type 'int?}}
+                        'input2 {:type :t-var :sym 'T}
+                        'input3 {:type :t-var :sym 'T}}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean? 'string? 'char? 'double?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}]
@@ -275,8 +277,8 @@
       "count-true"
       {:description    (str "Given a vector of T and a predicate T => bool, return the "
                             "count of the number of elements in T that make the predicate true.")
-       :input->type    {'input1 {:type :vector :child {:type :s-var :sym 'T}}
-                        'input2 (lib/unary-pred {:type :s-var :sym 'T})}
+       :input->type    {'input1 {:type :vector :child {:type :t-var :sym 'T}}
+                        'input2 (lib/unary-pred {:type :t-var :sym 'T})}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean?}
        :extra-genes    [{:gene :lit, :val 0, :type {:type 'int?}}
@@ -293,8 +295,8 @@
       "first-index-of-true"
       {:description    (str "Given a vector of T and a predicate T => bool, return the "
                             "first index in the vector where the predicate is true.")
-       :input->type    {'input1 {:type :vector :child {:type :s-var :sym 'T}}
-                        'input2 (lib/unary-pred {:type :s-var :sym 'T})}
+       :input->type    {'input1 {:type :vector :child {:type :t-var :sym 'T}}
+                        'input2 (lib/unary-pred {:type :t-var :sym 'T})}
        :ret-type       {:type 'int?}
        :other-type-ctors    #{'boolean?}
        :extra-genes    [{:gene :lit, :val -1, :type {:type 'int?}}
@@ -457,8 +459,8 @@
 
       "min-key"
       {:description    "Given map of {key => int}, return the key with the min value."
-       :input->type    {'input1 {:type :map-of, :key {:type :s-var :sym 'T}, :value {:type 'int?}}}
-       :ret-type       {:type :s-var :sym 'T}
+       :input->type    {'input1 {:type :map-of, :key {:type :t-var :sym 'T}, :value {:type 'int?}}}
+       :ret-type       {:type :t-var :sym 'T}
        :other-type-ctors    #{'boolean? 'int?}
        
        :extra-genes    []

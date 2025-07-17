@@ -637,5 +637,3 @@
                                                         (y x))))
                      {:type :vector :child {:type 'int?}} true)
   )
-
-  
