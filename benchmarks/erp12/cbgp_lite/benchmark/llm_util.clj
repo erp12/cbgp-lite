@@ -288,12 +288,8 @@
              (println (= outputs answers))))
          (catch Exception e (println (str "caught exception: " (.getMessage e))))))))
 
-(defn input-test
-  [{:keys [problem model suite-ns]}]
-  (println "Problem" problem)
-  (test-results-with-model problem 10 model suite-ns true))
-
 (defn llm-genome
+  "Generates LLM code and decompiles it into a plushy genome"
   [{:keys [problem model verbose]}]
   (when verbose (println (type problem)))
   (let [prompt (probmap/get-desc (str problem))

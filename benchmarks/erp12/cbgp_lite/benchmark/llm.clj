@@ -18,7 +18,7 @@
   {:n-train              200
    :n-test               2000
    ;; Lower population size for easier testing 
-   :population-size      50
+   :population-size      10
    :max-generations      300
    :umad-rate            0.1
    :min-genome-size      50
