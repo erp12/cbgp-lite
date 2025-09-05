@@ -73,8 +73,8 @@
                                                             {:cases      (if downsample-rate
                                                                            (let [ds-cases (take (int (* downsample-rate (count train)))
                                                                                                 (shuffle train))]
-                                                                             (log/info ":cases-this-generation" ds-cases)
-                                                                             (log/info ":count-cases-this-generation" (count ds-cases))
+                                                                             (log/debug ":cases-this-generation" ds-cases)
+                                                                             (log/debug ":count-cases-this-generation" (count ds-cases))
                                                                              ds-cases)
                                                                            train)
                                                              :step-start (System/currentTimeMillis)}))
