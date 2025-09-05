@@ -55,10 +55,6 @@
   (-> opts
       (assoc :dealiases lib/dealiases)
       (u/enhance
-        ;; The size of an individual's error vector
-       :num-errors (fn [{:keys [train loss-fns stdout-key]}]
-                     (+ (* (count train) (count loss-fns))
-                        (if (nil? stdout-key) 0 (count train))))
         ;; Create a sequence of program argument symbols
        :arg-symbols arg-symbols
         ;; Find all types related to the task

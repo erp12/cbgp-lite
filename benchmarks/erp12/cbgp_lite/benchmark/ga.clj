@@ -64,16 +64,18 @@
         opts (merge config task)
         _ (log/info "Type Constructors: " (:type-ctors opts))
         _ (log/info "Vars:" (:vars opts))
-        evaluator (i/make-evaluator (-> opts
-                                        (assoc :cases (:train task))
-                                        (dissoc :train :test)))
+        evaluator (i/make-evaluator (dissoc opts :train :test))
         {:keys [best result]} (ga/run {:population-size (:population-size config)
                                        :genome-factory  #(pl/random-plushy-genome opts)
                                        :pre-eval        (let [{:keys [downsample-rate train]} opts]
                                                           (fn [{:keys [step]}]
                                                             (log/info "STARTING" step)
                                                             {:cases      (if downsample-rate
-                                                                           (random-sample downsample-rate train)
+                                                                           (let [ds-cases (take (int (* downsample-rate (count train)))
+                                                                                                (shuffle train))]
+                                                                             (log/info ":cases-this-generation" ds-cases)
+                                                                             (log/info ":count-cases-this-generation" (count ds-cases))
+                                                                             ds-cases)
                                                                            train)
                                                              :step-start (System/currentTimeMillis)}))
                                        :evaluator       evaluator
@@ -109,7 +111,7 @@
                                                               ;; If the "best" individual has solved the subset of cases
                                                               ;; Test if on the full training set.
                                                               (zero? (:total-error best))
-                                                              (if (and new-best? (zero? (:total-error (evaluator (:genome best) {:cases cases}))))
+                                                              (if (and new-best? (zero? (:total-error (evaluator (:genome best) {:cases (:train opts)}))))
                                                                 :solution-found
                                                                 ;; If an individual solves a batch but not all training cases,
                                                                 ;; no individual can become the new best and the run will fail.
@@ -120,7 +122,8 @@
         ;; Simplify the best individual seen during evolution.
         best (i/simplify {:individual           best
                           :simplification-steps (:simplification-steps config)
-                          :evaluator            evaluator})
+                          :evaluator            evaluator
+                          :context              {:cases (:train opts)}})
         _ (log/info "POST-SIMPLIFICATION" best)
         ;; Evaluate the final program on the unseen test cases.
         {:keys [solution?]} (i/evaluate-full-behavior {:func     (:func best)
