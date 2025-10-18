@@ -1,4 +1,5 @@
 (ns erp12.cbgp-lite.lang.llm.problem-map)
+
 (def problems-map {
                    ;; PSB1 PROBLEMS
                    "checksum"	"Given a string, convert each character in the string into its integer ASCII value, sum them, take the sum modulo 64, add the integer value of the space character, and then convert that integer back into its corresponding character (the checksum character) . The program must print Check sum is X, where X is replaced by the correct checksum character."

@@ -22,7 +22,6 @@
   (try
     (with-out-and-stdout (apply func args))
     (catch Exception e
-      ;(println "TMH1" (.getMessage e))
       {:output e :std-out nil})))
 
 (defn errors-for-case

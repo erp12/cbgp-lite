@@ -5,8 +5,7 @@
             org.clojure/tools.analyzer.jvm {:mvn/version "1.3.2"}
             com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.4"}
             hellonico/pyjama {:git/url "https://github.com/hellonico/pyjama.git"
-                              :sha "ec753eebffd422fd2d02eb1c93957a9f8adb0016"}
-            }
+                              :sha "ec753eebffd422fd2d02eb1c93957a9f8adb0016"}}
  :aliases  {:test       {:extra-paths ["test"]
                          :extra-deps  {io.github.metabase/hawk   {:sha "9c97bcb6d4de116325e651b40973fd0a75b7ae21"}
                                        meander/epsilon           {:mvn/version "0.0.650"}}
@@ -15,4 +14,4 @@
                          :extra-deps  {org.clojure/tools.cli    {:mvn/version "1.0.206"}
                                        net.clojars.schneau/psb2 {:mvn/version "1.1.1"}
                                        io.github.erp12/ga-clj   {:git/sha "a6ef20b104875369a4266bd7fd4ff6cc0e7fa786"}}
-                         :jvm-opts ["-XX:CompressedClassSpaceSize=2g"]}}}
+                         :jvm-opts ["-XX:CompressedClassSpaceSize=2g" "-Dclojure.main.report=stderr"]}}}

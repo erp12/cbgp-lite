@@ -26,6 +26,7 @@
    :max-genome-size      250
    :penalty              1e6
    :simplification-steps 2000
+   :data-dir             "data/psb"
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Experimental
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
