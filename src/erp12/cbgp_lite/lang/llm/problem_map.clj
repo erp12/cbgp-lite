@@ -72,7 +72,7 @@
                    "filter-bounds" "Given a set of elements that are all of the same comparable type, T , and two instance of type T representing a lower and upper bound, filter the set to the elements that fall between two bounds (inclusively)."
                    "area-of-rectangle" "Given two tuples of floats representing the upper-right and lower-left coordinates of a rectangle in the cartesian plane, find the area of the rectangle."
                    "sum-vector-vals" "Given a map {string => int} and vector of strings that are keys of the map, look up the values associated with those keys in the map and return their sum."
-                   "sets-with-element" "Given a set of sets, filter to only contain sets that contain a certain element."
+                   "sets-with-element" "Given a set of sets of integers, filter to only contain sets that contain a certain element that is an integer."
                    "time-sheet" "Given a list of tuples of the form: [(name, hours), ...], and a specific name, sum the hours associated with that name."
                    "min-key" "Given map of {key => int}, return the key with the min value."
                    "simple-encryption" "Given a string and a function (char => char), use the function to encrypt the string."

@@ -23,7 +23,7 @@
    :n-test               2000
    ;; Lower population size for easier testing 
    :population-size      10
-   :max-generations      300
+   :max-generations      2 ;; 300 TMH set back to 300 later
    :umad-rate            0.1
    :min-genome-size      50
    :max-genome-size      250
@@ -40,7 +40,7 @@
    ;; LLM-GP
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    :model "llama3.2" ; TMH: Replace with "codestral" for use on HPC
-   :number-llm-programs 5 ;; TMH: set back to 50
+   :number-llm-programs 10 ;; TMH: set back to 50
    })
 
 (defn make-breed
@@ -93,108 +93,124 @@
             (println prog-string)
             (println))
         _ (log/info "Time for LLM to generate" (:number-llm-programs opts) "programs (in ms):" (/ (- (System/nanoTime) gen-start-time) 1e6))
-        llm-solutions (lu/evaluate-llm-program-strings llm-generated-program-strings opts)]
+        llm-solutions (lu/evaluate-llm-program-strings llm-generated-program-strings opts)
+        llm-solutions '() ;; TMH remove later, just to make it so we always try to enter GP
 
-    (println "LLM solutions")
-    (binding [*print-length* 10]
-      (clojure.pprint/pprint llm-solutions))
+        {:keys [best result]}
+        (if (seq llm-solutions) ;; not empty
+            ;; If LLMs generated one or more programs that pass all of the training set,
+            ;; don't run GP and just return one of them as a solution
+          {:best (first llm-solutions)
+           :result :solution-found}
+            ;; Otherwise, run GP, seeding population from those programs
+          (ga/run {:population-size (:population-size config)
+                   :genome-factory  (let [llm-genomes-decompiled (lu/decompile-llm-program-strings-to-genomes llm-generated-program-strings)
+                                          _ (log/info "Number of decompiled LLM programs (may not properly recompile):" (count llm-genomes-decompiled))
+                                          llm-genomes (vec (lu/check-compilation-of-decompiled-genomes llm-genomes-decompiled evaluator))
+                                          _ (log/info "Number of decompiled LLM programs used as seeds for GP genomes:" (count llm-genomes))
+                                          _ (println "GENOMES TMH")
+                                          _ (clojure.pprint/pprint llm-genomes)]
+                                      (System/exit 0)
 
-    (System/exit 0)
 
-    ;; here, test programs and see if any pass all training data
-    ;; if so, done
-    ;; if not, make them into genomes, and those that do properly, use to seed GP population
-    
-    (let [{:keys [best result]} (ga/run {:population-size (:population-size config)
-                                         :genome-factory  #(rand-nth llm-generated-program-strings) ; #(lu/llm-genome opts) ;; TMH broke, but eventually just pick a random genome from the list of successfully decompiled genomes
-                                         :pre-eval        (let [{:keys [downsample-rate train]} opts]
-                                                            (fn [{:keys [step]}]
-                                                              (log/info "STARTING" step)
-                                                              {:cases      (if downsample-rate
-                                                                             (random-sample downsample-rate train)
-                                                                             train)
-                                                               :step-start (System/currentTimeMillis)}))
-                                         :evaluator       evaluator
-                                         :post-eval       (fn [{:keys [individuals]}]
-                                                            (doseq [[stat-name stat-val]
-                                                                    (sort-by key
-                                                                             (bu/aggregate-stats {:ast-final-stack-size  bu/ast-stack-size-stat
-                                                                                                  :ast-stack-max-tree-size bu/ast-stack-max-tree-size
-                                                                                                  :ast-stack-max-tree-size-right-type bu/ast-stack-max-tree-size-for-right-type
-                                                                                                  :ast-stack-median-tree-size bu/ast-stack-median-tree-size
-                                                                                                  :ast-stack-max-tree-depth bu/ast-stack-max-tree-depth
-                                                                                                  :ast-stack-max-tree-depth-right-type bu/ast-stack-max-tree-depth-for-right-type
-                                                                                                  :code-depth            bu/code-depth-stat
-                                                                                                  :code-depth-over-size  bu/code-depth-over-size-stat
-                                                                                                  :code-size             bu/code-size-stat
-                                                                                                  :exceptions            bu/exception-messages-stat
-                                                                                                  :genome-size           bu/genome-size-stat
-                                                                                                  :lowest-error-per-case bu/lowest-error-per-case
-                                                                                                  :applied-amount        bu/applied-stat
-                                                                                                  :not-applied-amount    bu/not-applied-stat
-                                                                                                  :not-func-not-apply    bu/not-func-so-not-apply-stat
-                                                                                                  :num-no-ast            bu/num-no-ast-stat
-                                                                                                  :num-penalties         (bu/make-num-penalty-stat (:penalty opts))
-                                                                                                  :num-throwing          bu/num-throwing-stat
-                                                                                                  :final-dna-counter     bu/dna-counter-stat
-                                                                                                  :total-error           bu/total-error-stat
-                                                                                                  :unique-behaviors      bu/unique-behaviors-stat}
-                                                                                                 individuals))]
-                                                              (log/info stat-name stat-val))
-                                                            {:grouped (group-by :errors individuals)})
-                                         :breed           (make-breed opts)
-                                         :individual-cmp  (comparator #(< (:total-error %1) (:total-error %2)))
-                                         :stop-fn         (let [{:keys [max-generations cases]} opts]
-                                                            (fn [{:keys [step step-start best new-best?]}]
-                                                              (log/info :best-individual-errors (:errors best))
-                                                              (log/info :best-genome (:genome best))
-                                                              (log/info "REPORT"
-                                                                        {:step       step
-                                                                         :duration   (- (System/currentTimeMillis) step-start)
-                                                                         :best-error (:total-error best)
-                                                                         :best-code  (:code best)})
-                                                              (cond
-                                                                (= step max-generations) :max-generation-reached
+
+                                      (if (empty? llm-genomes)
+                                        (do
+                                          (log/info "No LLM genomes, so using random genomes to seed population.")
+                                          #(pl/random-plushy-genome opts))
+                                        #(rand-nth llm-genomes)))
+                   :pre-eval        (let [{:keys [downsample-rate train]} opts]
+                                      (fn [{:keys [step]}]
+                                        (log/info "STARTING" step)
+                                        {:cases      (if downsample-rate
+                                                       (random-sample downsample-rate train)
+                                                       train)
+                                         :step-start (System/currentTimeMillis)}))
+                   :evaluator       evaluator
+                   :post-eval       (fn [{:keys [individuals]}]
+                                      (doseq [[stat-name stat-val]
+                                              (sort-by key
+                                                       (bu/aggregate-stats {:ast-final-stack-size  bu/ast-stack-size-stat
+                                                                            :ast-stack-max-tree-size bu/ast-stack-max-tree-size
+                                                                            :ast-stack-max-tree-size-right-type bu/ast-stack-max-tree-size-for-right-type
+                                                                            :ast-stack-median-tree-size bu/ast-stack-median-tree-size
+                                                                            :ast-stack-max-tree-depth bu/ast-stack-max-tree-depth
+                                                                            :ast-stack-max-tree-depth-right-type bu/ast-stack-max-tree-depth-for-right-type
+                                                                            :code-depth            bu/code-depth-stat
+                                                                            :code-depth-over-size  bu/code-depth-over-size-stat
+                                                                            :code-size             bu/code-size-stat
+                                                                            :exceptions            bu/exception-messages-stat
+                                                                            :genome-size           bu/genome-size-stat
+                                                                            :lowest-error-per-case bu/lowest-error-per-case
+                                                                            :applied-amount        bu/applied-stat
+                                                                            :not-applied-amount    bu/not-applied-stat
+                                                                            :not-func-not-apply    bu/not-func-so-not-apply-stat
+                                                                            :num-no-ast            bu/num-no-ast-stat
+                                                                            :num-penalties         (bu/make-num-penalty-stat (:penalty opts))
+                                                                            :num-throwing          bu/num-throwing-stat
+                                                                            :final-dna-counter     bu/dna-counter-stat
+                                                                            :total-error           bu/total-error-stat
+                                                                            :unique-behaviors      bu/unique-behaviors-stat}
+                                                                           individuals))]
+                                        (log/info stat-name stat-val))
+                                      {:grouped (group-by :errors individuals)})
+                   :breed           (make-breed opts)
+                   :individual-cmp  (comparator #(< (:total-error %1) (:total-error %2)))
+                   :stop-fn         (let [{:keys [max-generations cases]} opts]
+                                      (fn [{:keys [step step-start best new-best?]}]
+                                        (log/info :best-individual-errors (:errors best))
+                                        (log/info :best-genome (:genome best))
+                                        (log/info "REPORT"
+                                                  {:step       step
+                                                   :duration   (- (System/currentTimeMillis) step-start)
+                                                   :best-error (:total-error best)
+                                                   :best-code  (:code best)})
+                                        (cond
+                                          (= step max-generations) :max-generation-reached
                                                               ;; If the "best" individual has solved the subset of cases
                                                               ;; Test if on the full training set.
-                                                                (zero? (:total-error best))
-                                                                (if (and new-best? (zero? (:total-error (evaluator (:genome best) {:cases cases}))))
-                                                                  :solution-found
+                                          (zero? (:total-error best))
+                                          (if (and new-best? (zero? (:total-error (evaluator (:genome best) {:cases cases}))))
+                                            :solution-found
                                                                 ;; If an individual solves a batch but not all training cases,
                                                                 ;; no individual can become the new best and the run will fail.
                                                                 ;; @todo Fix this in ga-clj somehow?
-                                                                  (log/info "Best individual solved a batch but not all training cases.")))))
-                                         :mapper          pmap})
-          _ (log/info "PRE-SIMPLIFICATION" best)
+                                            (log/info "Best individual solved a batch but not all training cases.")))))
+                   :mapper          pmap}))
+        _ (log/info "PRE-SIMPLIFICATION" best)
         ;; Simplify the best individual seen during evolution.
-          best (i/simplify {:individual           best
+        best (if (:genome best)
+               (i/simplify {:individual           best
                             :simplification-steps (:simplification-steps config)
                             :evaluator            evaluator})
-          _ (log/info "POST-SIMPLIFICATION" best)
+               best)
+        _ (if (:genome best)
+            (log/info "POST-SIMPLIFICATION" best)
+            (log/info "NO SIMPLIFICATION BECAUSE LLM GENERATED SOLUTION PROGRAM"))
         ;; Evaluate the final program on the unseen test cases.
-          {:keys [solution?]} (i/evaluate-full-behavior {:func     (:func best)
-                                                         :cases    (:test task)
-                                                         :loss-fns (:loss-fns task)
-                                                         :penalty  (:penalty default-config)})]
-      (log/info "BEST CODE" (let [code (:code best)]
-                              (if (coll? code)
-                                (reverse (into '() code))
-                                code)))
+        {:keys [solution?]} (i/evaluate-full-behavior {:func     (:func best)
+                                                       :cases    (:test task)
+                                                       :loss-fns (:loss-fns task)
+                                                       :penalty  (:penalty default-config)})]
+    (log/info "BEST CODE" (let [code (:code best)]
+                            (if (coll? code)
+                              (reverse (into '() code))
+                              code)))
 
-      (if (= :solution-found result)
-        (do
-          (log/info "SOLUTION FOUND")
-          (if solution?
-            (log/info "SOLUTION GENERALIZED")
-            (log/info "SOLUTION FAILED TO GENERALIZE")))
-        (log/info "SOLUTION NOT FOUND"))
+    (if (= :solution-found result)
+      (do
+        (log/info "SOLUTION FOUND")
+        (if solution?
+          (log/info "SOLUTION GENERALIZED")
+          (log/info "SOLUTION FAILED TO GENERALIZE")))
+      (log/info "SOLUTION NOT FOUND"))
 
-      (when type-counts-file
-        (log/info "Writing type frequencies to" type-counts-file)
-        (with-open [w (io/writer type-counts-file :append true)]
-          (.write w "[")
-          (doseq [[typ freq] @c/types-seen]
-            (.write w (prn-str {:type typ :freq freq})))
-          (.write w "]")))
+    (when type-counts-file
+      (log/info "Writing type frequencies to" type-counts-file)
+      (with-open [w (io/writer type-counts-file :append true)]
+        (.write w "[")
+        (doseq [[typ freq] @c/types-seen]
+          (.write w (prn-str {:type typ :freq freq})))
+        (.write w "]")))
 
-      (:func best))))
+    (:func best)))

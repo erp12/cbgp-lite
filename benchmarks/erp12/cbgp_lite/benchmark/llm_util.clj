@@ -1,23 +1,25 @@
 (ns erp12.cbgp-lite.benchmark.llm-util
   (:require clojure.pprint
             [clojure.string :as string]
+            [clojure.tools.analyzer.jvm :as ana.jvm]
             [erp12.cbgp-lite.benchmark.suite.composite :as c]
             [erp12.cbgp-lite.benchmark.suite.psb :as psb]
             [erp12.cbgp-lite.benchmark.utils :as bu]
             [erp12.cbgp-lite.lang.compile :as compi]
+            [erp12.cbgp-lite.lang.decompile :as decompile]
             [erp12.cbgp-lite.lang.llm.problem-map :as probmap]
             [erp12.cbgp-lite.search.individual :as i]
             [erp12.cbgp-lite.task :as task]
-
             [pyjama.core :as ollama]
             [taoensso.timbre :as log]
-            [taoensso.timbre.appenders.core :as log-app]))
+            [taoensso.timbre.appenders.core :as log-app]
+            
+            
+            [erp12.cbgp-lite.lang.schema :as schema]))
 
 (log/merge-config!
  {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
   :appenders {:println (assoc (log-app/println-appender) :min-level :info)}})
-
-(log/set-min-level! :info)
 
 (defn make-program-prompt-model
   "Given a prompt and a model, uses ollama to generate a response.
@@ -190,21 +192,48 @@ This function should follow these restrictions:
    Returns a list of all programs that pass all training cases, which will be empty
    if none do."
   [llm-generated-program-strings {:keys [evaluate-fn train] :as opts}]
-  (let [evaluated-inds (map #(assoc (evaluate-fn (assoc opts
-                                                        :cases train
-                                                        :func (convert-llm-string-to-fn %)))
-                                    :prog-string %
-                                    :program (try (read-string %)
-                                                  (catch Exception _ nil)))
+  (let [evaluated-inds (map #(let [func (convert-llm-string-to-fn %)]
+                               (assoc (evaluate-fn (assoc opts
+                                                          :cases train
+                                                          :func func))
+                                      :code-string %
+                                      :code (try (read-string %)
+                                                 (catch Exception _ nil))
+                                      :func func))
                             llm-generated-program-strings)
-        _ (log/info "Number of LLM programs that parse without exception:" (count (filter #(not (nil? (:program %)))
+        _ (log/info "Number of LLM programs that parse without exception:" (count (filter #(not (nil? (:code %)))
                                                                                           evaluated-inds)))
-        _ (log/info "Number of LLM programs that run without exception:" (count (filter #(and (not (nil? (:program %)))
+        _ (log/info "Number of LLM programs that run without exception:" (count (filter #(and (not (nil? (:code %)))
                                                                                               (not (nil? (:behavior %)))
                                                                                               (nil? (:exception %)))
                                                                                         evaluated-inds)))]
     (filter :solution? evaluated-inds)))
 
+(defn decompile-llm-program-strings-to-genomes
+  "Decompiles each LLM-generated program string into a genome, if possible, and
+   returns those that decompiled successfully."
+  [llm-generated-program-strings]
+  (remove nil?
+          (map (fn [program-string]
+                 (try
+                   (-> program-string
+                       read-string
+                       ana.jvm/analyze
+                       decompile/decompile-ast)
+                   (catch Exception _ nil)))
+               llm-generated-program-strings)))
+
+(defn check-compilation-of-decompiled-genomes
+  "Takes decompiled LLM genomes and attempts to recompile them, only returning
+   those that properly recompile."
+  [genomes evaluator]
+  (filter (fn [genome]
+            (try
+              (let [evalled (evaluator genome {})]
+                (println "evaluated genome:" (dissoc evalled :behavior)) ;; TMH remove later
+                evalled)
+              (catch Exception _ nil)))
+          genomes))
 
 (def default-config
   {:n-train              200
@@ -258,21 +287,48 @@ This function should follow these restrictions:
         opts (merge config task)
         _ (log/info "Type Constructors: " (:type-ctors opts))
         _ (log/info "Vars:" (:vars opts))
-        ;; evaluator (i/make-evaluator (-> opts
-        ;;                                 (assoc :cases (:train task))
-        ;;                                 (dissoc :train :test)))
+        evaluator (i/make-evaluator (-> opts
+                                        (assoc :cases (:train task))
+                                        (dissoc :train :test)))
         gen-start-time (System/nanoTime)
+        ;; llm-generated-program-strings (generate-llm-program-strings opts)
         _ (log/info "LLM-generated program strings:")
         _ (doseq [prog-string llm-generated-program-strings]
             (println prog-string)
             (println))
         _ (log/info "Time for LLM to generate" (:number-llm-programs opts) "programs (in ms):" (/ (- (System/nanoTime) gen-start-time) 1e6))
-        llm-solutions (evaluate-llm-program-strings llm-generated-program-strings opts)]
+        llm-solutions (evaluate-llm-program-strings llm-generated-program-strings opts)
+        ;llm-solutions '() ;; TMH remove later, just to make it so we always try to enter GP
+        factory (let [llm-genomes-decompiled (decompile-llm-program-strings-to-genomes llm-generated-program-strings)
+                      _ (log/info "Number of decompiled LLM programs (may not properly recompile):" (count llm-genomes-decompiled))
+                      llm-genomes (vec (check-compilation-of-decompiled-genomes llm-genomes-decompiled evaluator))
+                      _ (log/info "Number of decompiled LLM programs used as seeds for GP genomes:" (count llm-genomes))
+                      _ (println "GENOMES TMH")
+                      _ (clojure.pprint/pprint llm-genomes)]
+
+                  (if (empty? llm-genomes)
+                    (log/info "No LLM genomes, so using random genomes to seed population.")
+                    #(rand-nth llm-genomes)))]
+    ;; (println "type-env keys:" (keys (:type-env opts)))
+    ;; (println "flatten in type-env" (get (:type-env opts) 'flatten))
 
     #_(map #(dissoc % :behavior :exception) llm-solutions)
-    llm-solutions))
+    factory))
 
 (comment
+  
+  (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.composite
+        :problem "sets-with-element"}
+       (list prog-with-flatten
+             prog-with-set))
+  
+  (def prog-with-flatten "(defn sets-with-element
+  [input1 input2]
+  (set (flatten input1)))")
+
+  (def prog-with-set "(defn sets-with-element
+    [input1 input2]
+    (disj input1 #{}))")
 
 
   (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.composite
@@ -283,13 +339,10 @@ This function should follow these restrictions:
          "(defn yay-solution [[x1 y1] [x2 y2]] (* (- x2 x1) (- y2 y1)))"
          "(defn not-solution [[x1 y1] [x2 y2]] (+ (- x2 x1) (- y2 y1)))"))
 
-
-  
-
   ((convert-llm-string-to-fn "(defn itsafn [x] (+ x 5))")
    100)
   ;;=> 105
-  
+
   (convert-llm-string-to-fn "(defn itsafn [x] (+ x 5")
 
   (convert-llm-string-to-fn "(defn [x] (+ x 5))")
@@ -362,7 +415,5 @@ This function should follow these restrictions:
        (concat
         (vals c/composite-problems)
         (vals psb/psb-problems)))
-  
 
-  
   )

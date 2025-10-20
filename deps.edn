@@ -14,4 +14,5 @@
                          :extra-deps  {org.clojure/tools.cli    {:mvn/version "1.0.206"}
                                        net.clojars.schneau/psb2 {:mvn/version "1.1.1"}
                                        io.github.erp12/ga-clj   {:git/sha "a6ef20b104875369a4266bd7fd4ff6cc0e7fa786"}}
-                         :jvm-opts ["-XX:CompressedClassSpaceSize=2g" "-Dclojure.main.report=stderr"]}}}
+                         :jvm-opts ["-XX:CompressedClassSpaceSize=2g" ;"-Dclojure.main.report=stderr" ;; TMH Put this back!
+                                    ]}}}

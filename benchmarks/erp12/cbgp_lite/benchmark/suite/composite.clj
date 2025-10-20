@@ -398,8 +398,8 @@
     :loss-fns       [bu/absolute-distance]}
 
    "sets-with-element"
-   {:description    (str "Given a set of sets, filter to only contain sets that "
-                         "contain a certain element.")
+   {:description    (str "Given a set of sets of integers, filter to only contain sets that "
+                         "contain a certain element that is an integer.")
     :input->type    {'input1 {:type :set :child {:type :set :child {:type 'int?}}}
                      'input2  {:type 'int?}}
     :ret-type       {:type :set :child {:type :set :child {:type 'int?}}}
