@@ -316,12 +316,27 @@ This function should follow these restrictions:
     factory))
 
 (comment
-  
+
+  (decompile-llm-program-strings-to-genomes '("(defn what
+  [input1]
+  [1 2 3])"))
+
+  (decompile-llm-program-strings-to-genomes
+   '("(defn what
+    [input1]
+    (vector 2 3 input1 6))"))
+  ;;=> (({:gene :lit, :val 6, :type {:type int?}}
+  ;;     {:gene :local, :idx 0}
+  ;;     {:gene :lit, :val 3, :type {:type int?}}
+  ;;     {:gene :lit, :val 2, :type {:type int?}}
+  ;;     {:gene :var, :name ->vector1}
+  ;;     {:gene :apply}))
+
   (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.composite
         :problem "sets-with-element"}
        (list prog-with-flatten
              prog-with-set))
-  
+
   (def prog-with-flatten "(defn sets-with-element
   [input1 input2]
   (set (flatten input1)))")
@@ -329,7 +344,6 @@ This function should follow these restrictions:
   (def prog-with-set "(defn sets-with-element
     [input1 input2]
     (disj input1 #{}))")
-
 
   (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.composite
         :problem "area-of-rectangle"}
