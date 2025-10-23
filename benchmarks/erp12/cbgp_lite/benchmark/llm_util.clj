@@ -33,6 +33,12 @@
      {:prompt prompt
       :model model})))
 
+(defn safe-read-string
+  "Ensures that read-string can't use eval macros like #=(+ 1 2) to evaluate"
+  [s]
+  (binding [*read-eval* false]
+    (read-string s)))
+
 (defn extract-triple-backtick-code
   "Uses a regex to grab all text between first two triple backticks. Ignores
    language specifier after first triple backticks, if it exists."
@@ -42,34 +48,6 @@
     (if (seq matches)
       (first matches)
       s)))
-
-;; (defn extract-first-parens-and-pad-end-OLD
-;;   "Returns substring containing first pair of matching parentheses.
-;;    If no open paren, returns whole string.
-;;    If there aren't enough parentheses at the end, adds them to make them match"
-;;   [s]
-;;   (let [start (.indexOf s "(")]
-;;     (if (< start 0)
-;;       s
-;;       (loop [s (subs s (inc start))
-;;              depth 1
-;;              result "("]
-;;         (cond
-;;           (= depth 0) result
-;;           (empty? s) (apply str result (repeat depth ")")) ;; pad here
-;;           :else (let [c (first s)]
-;;                   (recur (rest s)
-;;                          (case c
-;;                            \( (inc depth)
-;;                            \) (dec depth)
-;;                            depth)
-;;                          (str result c))))))))
-
-(defn safe-read-string
-  "Ensures that read-string can't use eval macros like #=(+ 1 2) to evaluate"
-  [s]
-  (binding [*read-eval* false]
-    (read-string s)))
 
 (defn extract-paren-to-blank-line 
   "Extracts first parenthesis in s up to either first blank line or end of string.
@@ -82,19 +60,19 @@
 (defn extract-first-parens-and-pad-end
   "Returns substring containing first pair of matching parentheses.
    If no open paren, returns whole string.
-   If there aren't enough parentheses at the end, adds them to make them match"
+   Adds parentheses to end of string, likely more than necessary. Since this string
+   is always run through read-string, which should ignore extra parens, this is fine."
   [s]
   (let [start-to-end (extract-paren-to-blank-line s)
-        read-s (safe-read-string (str start-to-end
-                                      (apply str (repeat 10000 ")"))))]
-    (pr-str read-s)))
+        num-open-parens (get (frequencies start-to-end) \()]
+    (apply str start-to-end (repeat num-open-parens \) ))))
 
 (defn namespace-qualify-macros
   "Ensures that macros are namespace qualified correctly as functions."
   [s]
   (-> s
-      (clojure.string/replace "and " "erp12.cbgp-lite.lang.lib/and ")
-      (clojure.string/replace "or " "erp12.cbgp-lite.lang.lib/or ")))
+      (clojure.string/replace "(and " "(erp12.cbgp-lite.lang.lib/and ")
+      (clojure.string/replace "(or " "(erp12.cbgp-lite.lang.lib/or ")))
 
 (defn clean-llm-program-string
   "Given LLM output, finds and cleans the first function in triple backquotes."
@@ -357,28 +335,6 @@ Here is the function to implement:
 (comment
   
 
-  (let [s (pr-str '(defn hello
-                     "docstring \"with\" quotes and \"/?O&\" weird  "
-                     [x]
-                     (+ x 2)))]
-    (extract-first-parens-and-pad-end s))
-
-  (let [s "(defn asx
-           [a]
-           (+ a 3))
-
-           (defn asdawawd
-           [b]
-           (+ b 3))"]
-;    (re-find #"(?m)^\s*$" s)
-    (re-find #"(?m)^(\s*)$" s))
-
-  (r/read {:read-eval false} (rt/push-back-reader "#=(+ 1 2)"))
-
-  (binding [*read-eval* false] (r/read "#=(def x 3)"))
-
-  (safe-read-string "#=(+ 1 2)")
-
   (decompile-llm-program-strings-to-genomes '("(defn what
   [input1]
   [1 2 3])"))
@@ -424,8 +380,6 @@ Here is the function to implement:
          "(defn not-solution [[x1 y1] [x2 y2]] (+ (- x2 x1) (- y2 y1)))"
          "(defn parens-in-docstring-and-char \"Paren in docstring ) <- there \" [x] (str \\) x))"))
 
-  (eval (read-string "(defn parens-in-docstring-and-char \"Paren in docstring ) <- there \" [x] (str \\) x))"))
-  (parens-in-docstring-and-char "hi")
 
   ((convert-llm-string-to-fn "(defn itsafn [x] (+ x 5))")
    100)
