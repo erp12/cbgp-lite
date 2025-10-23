@@ -14,8 +14,8 @@
             [taoensso.timbre :as log]
             [taoensso.timbre.appenders.core :as log-app]
             
-            
-            [erp12.cbgp-lite.lang.schema :as schema]))
+            [clojure.tools.reader :as r]
+            [clojure.tools.reader.reader-types :as rt]))
 
 (log/merge-config!
  {:output-fn (partial log/default-output-fn {:stacktrace-fonts {}})
@@ -43,27 +43,51 @@
       (first matches)
       s)))
 
+;; (defn extract-first-parens-and-pad-end-OLD
+;;   "Returns substring containing first pair of matching parentheses.
+;;    If no open paren, returns whole string.
+;;    If there aren't enough parentheses at the end, adds them to make them match"
+;;   [s]
+;;   (let [start (.indexOf s "(")]
+;;     (if (< start 0)
+;;       s
+;;       (loop [s (subs s (inc start))
+;;              depth 1
+;;              result "("]
+;;         (cond
+;;           (= depth 0) result
+;;           (empty? s) (apply str result (repeat depth ")")) ;; pad here
+;;           :else (let [c (first s)]
+;;                   (recur (rest s)
+;;                          (case c
+;;                            \( (inc depth)
+;;                            \) (dec depth)
+;;                            depth)
+;;                          (str result c))))))))
+
+(defn safe-read-string
+  "Ensures that read-string can't use eval macros like #=(+ 1 2) to evaluate"
+  [s]
+  (binding [*read-eval* false]
+    (read-string s)))
+
+(defn extract-paren-to-blank-line 
+  "Extracts first parenthesis in s up to either first blank line or end of string.
+   If s does not have an open paren, returns s"
+  [s]
+  (if-let [match (re-find #"(?s)\(.*?(?:\n[ \t]*\n|$)" s)]
+    match
+    s))
+
 (defn extract-first-parens-and-pad-end
   "Returns substring containing first pair of matching parentheses.
    If no open paren, returns whole string.
    If there aren't enough parentheses at the end, adds them to make them match"
   [s]
-  (let [start (.indexOf s "(")]
-    (if (< start 0)
-      s
-      (loop [s (subs s (inc start))
-             depth 1
-             result "("]
-        (cond
-          (= depth 0) result
-          (empty? s) (apply str result (repeat depth ")")) ;; pad here
-          :else (let [c (first s)]
-                  (recur (rest s)
-                         (case c
-                           \( (inc depth)
-                           \) (dec depth)
-                           depth)
-                         (str result c))))))))
+  (let [start-to-end (extract-paren-to-blank-line s)
+        read-s (safe-read-string (str start-to-end
+                                      (apply str (repeat 10000 ")"))))]
+    (pr-str read-s)))
 
 (defn namespace-qualify-macros
   "Ensures that macros are namespace qualified correctly as functions."
@@ -72,13 +96,18 @@
       (clojure.string/replace "and " "erp12.cbgp-lite.lang.lib/and ")
       (clojure.string/replace "or " "erp12.cbgp-lite.lang.lib/or ")))
 
-(defn llm-generate-program-string
-  "Generates a cleans a program string using given model and prompt"
-  [prompt model]
-  (-> (make-program-prompt-model prompt model)
+(defn clean-llm-program-string
+  "Given LLM output, finds and cleans the first function in triple backquotes."
+  [prog-string]
+  (-> prog-string
       extract-triple-backtick-code
       extract-first-parens-and-pad-end
       namespace-qualify-macros))
+
+(defn llm-generate-program-string
+  "Generates and cleans a program string using given model and prompt"
+  [prompt model]
+  (clean-llm-program-string (make-program-prompt-model prompt model)))
 
 (def core-prompt
   "You are a smart Clojure programmer implementing a function based on its docstring description. 
@@ -94,13 +123,17 @@ This function should follow these restrictions:
 4. Vectors, sets, the keys for maps, and the values of maps must contain a single type
 5. Cannot use these functions: some, recur, loop, when, letfn
 
+Below are two example uses of this function along with the correct output:
 ```clojure
-(defn #problem-name#
+(#problem-name# #example-inputs1#) => #example-output1#
+
+(#problem-name# #example-inputs2#) => #example-output2#
+```
+Here is the function to implement:
+```clojure
+(defn solve-#problem-name#
   \"#problem-description#
    This function outputs a #output-type#.
-   Below are two example uses of this function along with the correct output:
-   (#problem-name# #example-inputs1#) => #example-output1#
-   (#problem-name# #example-inputs2#) => #example-output2#
    \"
   [#parameter-list#]
    ; your code here
@@ -139,8 +172,7 @@ This function should follow these restrictions:
 (defn list->string
   "Helper; turns a list into a string of those things"
   [lst]
-  (apply str
-         (interpose " " lst)))
+  (apply pr-str lst))
 
 (defn get-parameters-str
   "From a problem-info map, extract the parameters into a string"
@@ -155,9 +187,9 @@ This function should follow these restrictions:
         problem-info (get-problem-info problem)
         train-examples (take 2 (shuffle train))
         inputs1 (list->string (:inputs (first train-examples)))
-        output1 (str (:output (first train-examples)))
+        output1 (pr-str (:output (first train-examples)))
         inputs2 (list->string (:inputs (second train-examples)))
-        output2 (str (:output (second train-examples)))]
+        output2 (pr-str (:output (second train-examples)))]
     (-> core-prompt
         (clojure.string/replace "#problem-name#" problem)
         (clojure.string/replace "#problem-description#" problem-description)
@@ -184,7 +216,7 @@ This function should follow these restrictions:
    If fails, returns nil"
   [fn-string]
   (try
-    (eval (read-string fn-string))
+    (eval (safe-read-string fn-string))
     (catch Exception _ nil)))
 
 (defn evaluate-llm-program-strings
@@ -197,7 +229,7 @@ This function should follow these restrictions:
                                                           :cases train
                                                           :func func))
                                       :code-string %
-                                      :code (try (read-string %)
+                                      :code (try (safe-read-string %)
                                                  (catch Exception _ nil))
                                       :func func))
                             llm-generated-program-strings)
@@ -217,7 +249,7 @@ This function should follow these restrictions:
           (map (fn [program-string]
                  (try
                    (-> program-string
-                       read-string
+                       safe-read-string
                        ana.jvm/analyze
                        decompile/decompile-ast)
                    (catch Exception _ nil)))
@@ -315,7 +347,37 @@ This function should follow these restrictions:
     #_(map #(dissoc % :behavior :exception) llm-solutions)
     factory))
 
+
+
+
+
+
+
+
 (comment
+  
+
+  (let [s (pr-str '(defn hello
+                     "docstring \"with\" quotes and \"/?O&\" weird  "
+                     [x]
+                     (+ x 2)))]
+    (extract-first-parens-and-pad-end s))
+
+  (let [s "(defn asx
+           [a]
+           (+ a 3))
+
+           (defn asdawawd
+           [b]
+           (+ b 3))"]
+;    (re-find #"(?m)^\s*$" s)
+    (re-find #"(?m)^(\s*)$" s))
+
+  (r/read {:read-eval false} (rt/push-back-reader "#=(+ 1 2)"))
+
+  (binding [*read-eval* false] (r/read "#=(def x 3)"))
+
+  (safe-read-string "#=(+ 1 2)")
 
   (decompile-llm-program-strings-to-genomes '("(defn what
   [input1]
@@ -331,7 +393,7 @@ This function should follow these restrictions:
   ;;     {:gene :lit, :val 2, :type {:type int?}}
   ;;     {:gene :var, :name ->vector1}
   ;;     {:gene :apply}))
-
+  
   (run {:suite-ns 'erp12.cbgp-lite.benchmark.suite.composite
         :problem "sets-with-element"}
        (list prog-with-flatten
@@ -353,10 +415,22 @@ This function should follow these restrictions:
          "(defn yay-solution [[x1 y1] [x2 y2]] (* (- x2 x1) (- y2 y1)))"
          "(defn not-solution [[x1 y1] [x2 y2]] (+ (- x2 x1) (- y2 y1)))"))
 
+  (map clean-llm-program-string
+       '("(defn its-a-fn [x] (+ x 5))"
+         "(defn [x] (+ x 5))"
+         "(defn not-enough-parens [x] (+ x 5"
+         "(defn too-many-parens [x] (+ x 5)))))"
+         "(defn yay-solution [[x1 y1] [x2 y2]] (* (- x2 x1) (- y2 y1)))"
+         "(defn not-solution [[x1 y1] [x2 y2]] (+ (- x2 x1) (- y2 y1)))"
+         "(defn parens-in-docstring-and-char \"Paren in docstring ) <- there \" [x] (str \\) x))"))
+
+  (eval (read-string "(defn parens-in-docstring-and-char \"Paren in docstring ) <- there \" [x] (str \\) x))"))
+  (parens-in-docstring-and-char "hi")
+
   ((convert-llm-string-to-fn "(defn itsafn [x] (+ x 5))")
    100)
   ;;=> 105
-
+  
   (convert-llm-string-to-fn "(defn itsafn [x] (+ x 5")
 
   (convert-llm-string-to-fn "(defn [x] (+ x 5))")
@@ -369,9 +443,20 @@ This function should follow these restrictions:
 
   (get-problem-info "filter-bounds")
 
+  (repeatedly 5 (:case-generator (get-problem-info "simple-encryption")))
+
   (println
    (build-prompt {:problem "area-of-rectangle"
                   :train '({:inputs [[84.46441553605138 58.03525828694745] [56.86341183312811 -86.5646160858711]], :output 3991.101668006403} {:inputs [[99.20429281101187 44.57268987878183] [60.51958748043097 -99.92651173185263]], :output 5589.909034811594} {:inputs [[77.71616722922556 80.57726215470203] [23.95803183732876 -63.81297012313281]], :output 7762.149656059272} {:inputs [[-47.46796683738652 87.22753517151466] [-87.36570031974694 8.952953322082323]], :output 3122.978405071857} {:inputs [[76.60755064800512 64.45702535466398] [-72.45161220096614 -39.54152070648034]], :output 15501.93621338435} {:inputs [[30.153442023085972 27.806408008782185] [21.093630971300655 -44.44849954565848]], :output 654.615810007448} {:inputs [[-56.30262627057736 75.91596781329656] [-94.94132052533269 -50.24515676065309]], :output 4874.701119248939} {:inputs [[95.65518979318767 83.4441371194612] [30.2112041369395 -49.63866435094517]], :output 8709.468950522598} {:inputs [[60.620130143297985 59.72022354354377] [-47.522181130905004 -71.92982984068625]], :output 14236.941052342845} {:inputs [[99.45318392082149 -51.21387159252255] [-48.12408904518246 -76.55630393069382]], :output 3739.967054792786} {:inputs [[84.97307069674022 -4.826930700284237] [46.153160249446245 -21.46155198756705]], :output 645.7545086969689} {:inputs [[47.36237280491483 45.426956401407466] [41.7883961511956 -74.33796758724283]], :output 667.5668902471947})}))
+
+  (println
+   (build-prompt {:problem "simple-encryption"
+                  :train (repeatedly 5 (:case-generator (get-problem-info "simple-encryption")))}))
+  
+  (println
+   (build-prompt {:problem "min-key"
+                  :train (repeatedly 5 (:case-generator (get-problem-info "min-key")))}))
+
 
   (println
    (build-prompt {:problem "filter-bounds"
