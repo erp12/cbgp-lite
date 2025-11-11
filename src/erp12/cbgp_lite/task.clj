@@ -12,11 +12,6 @@
   [{:keys [input->type]}]
   (vec (sort (keys input->type))))
 
-(arg-symbols {:input->type {'input1 {:type :vector
-                                     :child {:type 'int?}}
-                            'input2 {:type 'int?}}
-              })
-
 (defn task-type-ctors
   [{:keys [input->type ret-type other-type-ctors] :or {other-type-ctors #{}}}]
   (->> (schema/schema-terms {:type :=>
