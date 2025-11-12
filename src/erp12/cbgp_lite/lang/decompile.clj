@@ -493,11 +493,11 @@
                          (-> ast :fn)) ; catch nested invoke 
            raw-decompiled-args (map #(decompile-ast* % task locals) args)
            decompiled-args (flatten (reverse raw-decompiled-args))]
-           
+
        (concat decompiled-args
                (cond
                  (= (ast-fn-name :op) :invoke)
-                     (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
+                 (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= (ast-fn-name :op) :local)
                  (concat (decompile-ast* ast-fn-name task locals) (list {:gene :apply}))
                  (= (ast-fn-name :op) :fn)
@@ -505,7 +505,7 @@
                  (= op :var)
                  (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)})
                  :else (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
-                                                                      {:gene :apply}))))
+                             {:gene :apply}))))
 
 ;; Handle quote for lists; translate into vector
      (= op :quote)
@@ -513,6 +513,23 @@
        (list {:gene :lit
               :val the-vector
               :type (find-type the-vector (assoc ast :type :vector))}))
+
+;; Handle vector fn inputs 
+     (= op :vector)
+     (let [vec-args (-> ast :children :items)
+           vector-fn (symbol (str "'->vector" (count vec-args)))]
+       (concat (map #(decompile-ast* % task locals) vec-args)
+               (list {:gene :var :name vector-fn} {:gene :apply}))
+       ) ;; SC - to test
+       ;; make this default to ->vector3 if vec-args > 3
+     
+     ;; (= op :set)
+     ;; (let [set-args])
+     (= op :set)
+     (let [set-args (-> ast :children :items)
+           set-fn (symbol (str "'->set" (count set-args)))]
+       (concat (map #(decompile-ast* % task locals) set-args)
+               (list {:gene :var :name set-fn} {:gene :apply})))
 
 ;; Handle if
      (= op :if)
@@ -541,7 +558,7 @@
 
 ;; Handle anonymous function abstraction
      (= op :fn)
-     (let [param-names (map :name (:params (first (:methods ast)))) 
+     (let [param-names (map :name (:params (first (:methods ast))))
            parity-offset (if (get @locals :locals-parity-offset) 1 0)
            _ (add-to-locals-map locals param-names parity-offset)
 
@@ -553,7 +570,7 @@
                          (get ground-type-alias-map (.getName (:return-tag ast)) (lib/s-var (gensym "s-"))))]
        (remove-from-locals-map locals param-names)
        (flatten (list {:gene :fn :arg-types arg-types :ret-type return-type} decompiled-body {:gene :close})))
-     
+
      (= op :def)
      (decompile-ast* (-> ast
                          :init
