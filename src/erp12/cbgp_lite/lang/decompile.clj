@@ -456,9 +456,10 @@
   ([ast] (decompile-ast* ast {}))
   ([ast task] (decompile-ast* ast task {}))
   ([{:keys [op val tag args children] :as ast} task locals]
+  ;;  (println (read-line))
   ;;  (println "--------------------------")
   ;;  (println "[DECOMPILE INFO]")
-  ;; ;;  (println "-> AST: " ast)
+  ;;  (println "-> AST: " ast)
   ;; ;;  (println "-> TASK: " task)
   ;;  (println "-> LOCALS: " @locals)
   ;;  (println "-> OFFSET? " (get @locals :locals-parity-offset))
@@ -466,9 +467,12 @@
    (cond
     ;; Handle constants
      (= :const op)
-     (list {:gene :lit
-            :val val
-            :type (find-type val ast)})
+     (let [x 0]
+      ;;  (println "-> AST: " ast)
+       (list {:gene :lit
+              :val val
+              :type (find-type val ast)})
+       )
 
      ;; Handle locals
      (= :local op)
@@ -517,17 +521,17 @@
 ;; Handle vector fn inputs 
      (= op :vector)
      (let [vec-args (-> ast :children :items)
-           vector-fn (symbol (str "'->vector" (count vec-args)))]
+           vector-fn (symbol (if (> (count vec-args) 3)
+                               (str "'->vector" (count vec-args))
+                               "'->vector3"))]
        (concat (map #(decompile-ast* % task locals) vec-args)
-               (list {:gene :var :name vector-fn} {:gene :apply}))
-       ) ;; SC - to test
-       ;; make this default to ->vector3 if vec-args > 3
+               (list {:gene :var :name vector-fn} {:gene :apply}))) ;; SC - to test
      
-     ;; (= op :set)
-     ;; (let [set-args])
      (= op :set)
      (let [set-args (-> ast :children :items)
-           set-fn (symbol (str "'->set" (count set-args)))]
+           set-fn (symbol (if (> (count set-args) 3)
+                            (str "'->set" (count set-args))
+                            "'->set3"))]
        (concat (map #(decompile-ast* % task locals) set-args)
                (list {:gene :var :name set-fn} {:gene :apply})))
 
@@ -593,14 +597,21 @@
        (println "not handled yet AST op:" op)
       ;;  (println "failing AST: \n" ast)
        (println "---------------------------")
-       nil))))
+       {:gene :no-op}))))
 
 (defn decompile-ast
   "Decompiles AST into a CBGP genome."
   ([ast] (decompile-ast ast {}))
   ([ast task]
-   (let [locals-map (atom {:locals-parity-offset false})]
-     (decompile-ast* ast task locals-map)))
+   (let [locals-map (atom {:locals-parity-offset false})
+         genome (decompile-ast* ast task locals-map)]
+     (map (fn [gene] (let [gene-type (get gene :gene)]
+                       (if (= gene-type :var)
+                          (if (contains? lib/type-env gene-type) ; WIP
+                            gene
+                            gene) ; {:gene :no-op}) ; swap once conditional works
+                          gene)))
+          genome)))
   ; [!] TO DO: make this work w/ verbose
   #_([ast task verbose]
      (let [locals-map (atom {})]
@@ -610,47 +621,48 @@
 ;;; Testing
 (comment
 ;;;; THESE DON'T WORK 
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(< 4 5 8)))
+  (compile-debugging (decompile-ast (ana.jvm/analyze '(< 4 5 8))) 
                      {:type 'boolean?}) ; no multi-arity for comparison funcs
   
   (compile-debugging (decompile-ast (ana.jvm/analyze '(or true false)))
                      {:type 'boolean?})
   (compile-debugging (decompile-ast (ana.jvm/analyze '(and 0 1))) {:type 'boolean?})
 
-  ; and AST composition:
-  ; :op :let
-  ; :children [:bindings :body]
-  ; :bindings [{ <children/locals> }]
-  ; :body {:op :if :children [:test :then :else]}
-  ; --> :test {:name and... :op :local} *binds 'and' to 'true' cond? (first truthy value)
-  ; --> :then {:op :const :val false}
-  ; --> :else {:name and... :op :local} *does same as else?
-  
-  ; accessing "and"
-  (decompile-ast (ana.jvm/analyze '(and true true)))
-  (clojure.string/includes?
-   (-> (ana.jvm/analyze '(or true true)) :bindings first :name str)
-   "or")
-
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; LET/FN TESTING
-  (log/set-min-level! :trace) 
+  ;;
+  
+  (str "'->vector" (count {:key 1 :key2 2 :key3 3}))
+
+  (decompile-ast (ana.jvm/analyze '(defn min-key-test
+                                     [input]
+                                     (let [values (map :v input)]
+                                       (reduce (fn [[k v] [kk vv]]
+                                                 (if (> v vv)
+                                                   [k v]
+                                                   [kk vv]))
+                                               [(first values) (second values)])))))
+  (decompile-ast (ana.jvm/analyze '(fn [[k v] [z]]
+                        k))) ;; wild local ast, does return nil literals
+
+;; LET/FN TESTING
+  (log/set-min-level! :trace)
 
   ;; testing llm code
   ; niche defn issue:
   ; analyzing a called defn breaks b/c no condition in handle methods for :op :invoke -> :op :def
   (decompile-ast (ana.jvm/analyze '((defn combine-fns [a b c]
-                                        (let [x 3]
-                                          (+ x b c))) -1 10 9)))
+                                      (let [x 3]
+                                        (+ x b c))) -1 10 9)))
   (-> (ana.jvm/analyze '((defn combine-fns [a b c]
                            (let [x 3]
-                             (+ x b c))) -1 10 9)) 
+                             (+ x b c))) -1 10 9))
       :fn
-      keys
-      )
+      keys)
   
-  (compile-debugging (decompile-ast (ana.jvm/analyze '(let [x [3 0 2 0 1 0]
-                                                            y (fn [z] (mapv inc ((fn [z3] (conj z3 4)) ((fn [z2] (remove zero? z2)) z))))]
-                                                        (y x))))
-                     {:type :vector :child {:type 'int?}} true)
+  (decompile-ast (ana.jvm/analyze '(+ 10 11)))
+  (decompile-ast (ana.jvm/analyze '(pos? 11)))
+  (decompile-ast (ana.jvm/analyze '(`str/join "hi" "bye")))
+  (contains? lib/type-env (quote (get {:name +} :name)))
   )
+
+

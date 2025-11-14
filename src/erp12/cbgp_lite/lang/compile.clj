@@ -324,6 +324,10 @@
 
 (defmulti compile-step (fn [{:keys [push-unit]}] (:gene push-unit)))
 
+(defmethod compile-step :no-op
+  [{:keys [state]}]
+  state)
+
 (defmethod compile-step :lit
   [{:keys [push-unit state]}]
   ;; Literals are pushed directly to the AST stack.

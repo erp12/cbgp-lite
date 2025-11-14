@@ -248,8 +248,8 @@
   (cond 
     (set? coll)
     ((comp set conj) coll target)
-    ;; (nil? coll)
-    ;; (throw (Exception. "Conj' called on nil"))
+    (nil? coll)
+    (throw (Exception. "Conj' called on nil"))
     :else
     ((comp vec conj) coll target)))
 
