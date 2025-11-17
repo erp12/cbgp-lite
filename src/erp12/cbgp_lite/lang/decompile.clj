@@ -521,16 +521,16 @@
      (= op :vector)
      (let [vec-args (-> ast :children :items)
            vector-fn (symbol (if (> (count vec-args) 3)
-                               (str "'->vector" (count vec-args))
-                               "'->vector3"))]
+                               (str "->vector" (count vec-args))
+                               "->vector3"))]
        (concat (map #(decompile-ast* % task locals) vec-args)
                (list {:gene :var :name vector-fn} {:gene :apply}))) ;; SC - to test
 
      (= op :set)
      (let [set-args (-> ast :children :items)
            set-fn (symbol (if (> (count set-args) 3)
-                            (str "'->set" (count set-args))
-                            "'->set3"))]
+                            (str "->set" (count set-args))
+                            "->set3"))]
        (concat (map #(decompile-ast* % task locals) set-args)
                (list {:gene :var :name set-fn} {:gene :apply})))
 
@@ -610,7 +610,7 @@
                        (if (= gene-type :var)
                           (if (contains? lib/type-env (get gene :name))
                             gene
-                            {:gene :no-op})
+                            (println "no-op: " gene));{:gene :no-op})
                           gene)))
           genome)))
   
@@ -631,21 +631,6 @@
   (compile-debugging (decompile-ast (ana.jvm/analyze '(and 0 1))) {:type 'boolean?})
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;;
-  
-  (str "'->vector" (count {:key 1 :key2 2 :key3 3}))
-
-  (decompile-ast (ana.jvm/analyze '(defn min-key-test
-                                     [input]
-                                     (let [values (map :v input)]
-                                       (reduce (fn [[k v] [kk vv]]
-                                                 (if (> v vv)
-                                                   [k v]
-                                                   [kk vv]))
-                                               [(first values) (second values)])))))
-  (decompile-ast (ana.jvm/analyze '(fn [[k v] [z]]
-                        k))) ;; wild local ast, does return nil literals
-
 ;; LET/FN TESTING
   (log/set-min-level! :trace)
 
@@ -659,11 +644,7 @@
                            (let [x 3]
                              (+ x b c))) -1 10 9))
       :fn
-      keys)
-  
-  (decompile-ast (ana.jvm/analyze '(+ 10 11))) ; shouldn't no-op
-  (decompile-ast (ana.jvm/analyze '(pos? 11))) ; should no-op
-  (decompile-ast (ana.jvm/analyze '(str "hi" "bye"))) ; shouldn't no-op
+      keys) 
   )
 
 
