@@ -327,12 +327,12 @@
   #{'remove
     'assoc})
 
+; Note: and & or are handled by replacing them before decompile
 (def special-case-aliasing
   [])
    ;; Boolean
    ; `lib/and (macro)
    ; `lib/or (macro)
-   
 
 (def ground-type-alias-map
   {nil {:type :s-var :sym 'a}
@@ -456,11 +456,10 @@
   ([ast] (decompile-ast* ast {}))
   ([ast task] (decompile-ast* ast task {}))
   ([{:keys [op val tag args children] :as ast} task locals]
-  ;;  (println (read-line))
   ;;  (println "--------------------------")
   ;;  (println "[DECOMPILE INFO]")
   ;;  (println "-> AST: " ast)
-  ;; ;;  (println "-> TASK: " task)
+  ;;  (println "-> TASK: " task)
   ;;  (println "-> LOCALS: " @locals)
   ;;  (println "-> OFFSET? " (get @locals :locals-parity-offset))
   ;;  (println "-> CURR OP: " op "\n")
@@ -610,7 +609,7 @@
                        (if (= gene-type :var)
                           (if (contains? lib/type-env (get gene :name))
                             gene
-                            (println "no-op: " gene));{:gene :no-op})
+                            {:gene :no-op})
                           gene)))
           genome)))
   
