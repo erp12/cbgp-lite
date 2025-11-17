@@ -471,8 +471,7 @@
       ;;  (println "-> AST: " ast)
        (list {:gene :lit
               :val val
-              :type (find-type val ast)})
-       )
+              :type (find-type val ast)}))
 
      ;; Handle locals
      (= :local op)
@@ -482,7 +481,7 @@
            local_val (get @locals (:name ast) 0)]
        (list {:gene :local :idx local_val}))
 
-;; Handle static method or invoke or var
+     ;; Handle static method or invoke or var
      (or (= op :static-call)
          (= op :invoke)
          (= op :var))
@@ -511,14 +510,14 @@
                  :else (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
                              {:gene :apply}))))
 
-;; Handle quote for lists; translate into vector
+     ;; Handle quote for lists; translate into vector
      (= op :quote)
      (let [the-vector (vec (-> ast :expr :val))]
        (list {:gene :lit
               :val the-vector
               :type (find-type the-vector (assoc ast :type :vector))}))
 
-;; Handle vector fn inputs 
+     ;; Handle vector fn inputs 
      (= op :vector)
      (let [vec-args (-> ast :children :items)
            vector-fn (symbol (if (> (count vec-args) 3)
@@ -526,7 +525,7 @@
                                "'->vector3"))]
        (concat (map #(decompile-ast* % task locals) vec-args)
                (list {:gene :var :name vector-fn} {:gene :apply}))) ;; SC - to test
-     
+
      (= op :set)
      (let [set-args (-> ast :children :items)
            set-fn (symbol (if (> (count set-args) 3)
@@ -535,7 +534,7 @@
        (concat (map #(decompile-ast* % task locals) set-args)
                (list {:gene :var :name set-fn} {:gene :apply})))
 
-;; Handle if
+     ;; Handle if
      (= op :if)
      (let [ast-fn-name 'if
            raw-decompiled-args (map #(decompile-ast* % task locals) (map ast children))
@@ -544,7 +543,7 @@
                (list {:gene :var :name (get-fn-symbol ast-fn-name tag args task)}
                      {:gene :apply})))
 
-;; Handle let
+     ;; Handle let
      (= op :let)
      (let [_ (swap! locals update :locals-parity-offset not)
            [final-locals init-forms]
@@ -560,7 +559,7 @@
            decompiled-body (decompile-ast* (:body ast) task locals)]
        (flatten (concat init-forms decompiled-body (repeat (count (:bindings ast)) {:gene :close}))))
 
-;; Handle anonymous function abstraction
+     ;; Handle anonymous function abstraction
      (= op :fn)
      (let [param-names (map :name (:params (first (:methods ast))))
            parity-offset (if (get @locals :locals-parity-offset) 1 0)
@@ -585,7 +584,7 @@
                      task
                      locals)
 
-     ; handle do -- not working :Y
+     ; handle do -- not working yet
      (= op :do)
      (do (println "DO - not tested AST op")
          (flatten (list (map #(decompile-ast* % task locals) (:statements ast))
@@ -605,13 +604,16 @@
   ([ast task]
    (let [locals-map (atom {:locals-parity-offset false})
          genome (decompile-ast* ast task locals-map)]
+     
+     ; overwrite invalid functions with no-op
      (map (fn [gene] (let [gene-type (get gene :gene)]
                        (if (= gene-type :var)
-                          (if (contains? lib/type-env gene-type) ; WIP
+                          (if (contains? lib/type-env (get gene :name))
                             gene
-                            gene) ; {:gene :no-op}) ; swap once conditional works
+                            {:gene :no-op})
                           gene)))
           genome)))
+  
   ; [!] TO DO: make this work w/ verbose
   #_([ast task verbose]
      (let [locals-map (atom {})]
@@ -659,10 +661,9 @@
       :fn
       keys)
   
-  (decompile-ast (ana.jvm/analyze '(+ 10 11)))
-  (decompile-ast (ana.jvm/analyze '(pos? 11)))
-  (decompile-ast (ana.jvm/analyze '(`str/join "hi" "bye")))
-  (contains? lib/type-env (quote (get {:name +} :name)))
+  (decompile-ast (ana.jvm/analyze '(+ 10 11))) ; shouldn't no-op
+  (decompile-ast (ana.jvm/analyze '(pos? 11))) ; should no-op
+  (decompile-ast (ana.jvm/analyze '(str "hi" "bye"))) ; shouldn't no-op
   )
 
 
