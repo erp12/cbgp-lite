@@ -98,7 +98,7 @@
        (if (zero? total-freq)
          {:mean nil
           :dont-include-in-stats dont-include}
-         {:mean (float (/ (reduce + (map (fn [[x freq]] (* x freq)) x->freq))
+         {:mean (float (/ (reduce + (map (fn [[x freq]] (* (float x) freq)) x->freq))
                           total-freq))
           :min  (reduce min (keys x->freq))
           :25%  (some (fn [[x c-freq]] (when (> c-freq quart) x)) cfh)
