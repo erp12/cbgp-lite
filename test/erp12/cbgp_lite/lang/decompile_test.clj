@@ -1132,14 +1132,16 @@
                                {:type 'boolean?})
          true))
   ; multitype test?
-
-  ; printing 
-  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(print "hi")))
-                               {:type 'nil?})
-         nil))
-  (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(println "hi")))
-                               {:type 'nil?})
-         nil)))
+  
+  ; printing. Using with-out-string to capture printed result, so that it doesn't affect test output
+  (with-out-str
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(print "hi")))
+                                 {:type 'nil?})
+           nil)))
+  (with-out-str
+    (is (= (de/compile-debugging (de/decompile-ast (ana.jvm/analyze '(println "hi")))
+                                 {:type 'nil?})
+           nil))))
 
 (deftest decompile-locals-collection-test
   ;; first w/ locals

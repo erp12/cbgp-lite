@@ -832,14 +832,6 @@
     (is (= (func 1000) "same"))
     (is (= (func 2000) "different"))))
 
-
-#_(list {::c/ast  {:op :const :val [[4 2 5] [9 1 6 1] [2 3]]}
-       ::c/type {:type :vector :child {:type :vector :child {:type 'int?}}}}
-      {::c/ast  {:op :var :var `lib/sortv-by}
-       ::c/type (schema/instantiate (lib/type-env `lib/sortv-by))}
-      {::c/ast  {:op :var :var 'count}
-       ::c/type (schema/instantiate (lib/type-env 'count))})
-
 (deftest vector-fn-test
   (testing "sortv-by"
     (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      [{:gene :lit :val [[4 2 5] [9 1 6 1] [2 3]] :type {:type :vector :child {:type :vector :child {:type 'int?}}}}
@@ -1085,8 +1077,9 @@
         _ (is (= 'int? (:type type)))
         form (a/ast->form ast)
         func (eval `(fn [] ~form))
-        _ (println "\n form: " form)
-        _ (println "\n ast: " ast)]
+        ;; _ (println "\n form: " form)
+        ;; _ (println "\n ast: " ast)
+        ]
     (is (= (func) 8))))
 
 
@@ -1106,9 +1099,9 @@
                                                    :type-env  lib/type-env
                                                    :dealiases lib/dealiases}))
          _ (is (= :s-var (:type type)))
-         _ (println "\n AST: " ast)
+        ;;  _ (println "\n AST: " ast)
          form (a/ast->form ast)
-         _ (println "FORM: " form)
+        ;;  _ (println "FORM: " form)
          func (eval `(fn [] ~form))]
      (is (= (func) 9))))
 
@@ -1137,9 +1130,9 @@
                                                   :type-env  lib/type-env
                                                   :dealiases lib/dealiases}))
         _ (is (= type {:type 'int?, :typeclasses #{:number}})) 
-        _ (println "\n AST: " ast)
+        ;; _ (println "\n AST: " ast)
         form (a/ast->form ast)
-        _ (println "FORM: " form)
+        ;; _ (println "FORM: " form)
         func (eval `(fn [] ~form))]
     (is (= (func) 9))))
 
@@ -1160,9 +1153,9 @@
                                                   :type-env lib/type-env
                                                   :dealiases lib/dealiases}))
         _ (is (= 'string? (:type type)))
-        _ (println "\n AST: " ast)
+        ;; _ (println "\n AST: " ast)
         form (a/ast->form ast)
-         _ (println "FORM: " form)
+        ;;  _ (println "FORM: " form)
         func (eval `(fn [] ~form))]
     (is (= (func) "bye!"))))
 

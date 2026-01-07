@@ -1281,7 +1281,6 @@
                                         :type-env  lib/type-env
                                         :dealiases lib/dealiases}))
           _ (is (= :vector (:type type)))
-          _ (println)
           _ (when verbose (println "REAL-AST: " ast))
           form (a/ast->form ast)
           _ (when verbose (println "FORM: " form))
