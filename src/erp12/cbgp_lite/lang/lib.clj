@@ -750,8 +750,8 @@
    'range1             (scheme (fn-of [INT] (vector-of INT)))
    'range2             (scheme (fn-of [INT INT] (vector-of INT)))
    'range3             (scheme (fn-of [INT INT INT] (vector-of INT)))
-   `mapv-indexed       (scheme (fn-of [(fn-of [INT {:type :s-var :sym 'a :typeclasses #{:indexable}}] (s-var 'b))
-                                       (vector-of {:type :s-var :sym 'a :typeclasses #{:indexable}})]
+   `mapv-indexed       (scheme (fn-of [(fn-of [INT (s-var 'a)] (s-var 'b))
+                                       (vector-of (s-var 'a))]
                                       (vector-of (s-var 'b))))
    `distinctv          (scheme (fn-of [(vector-of (s-var 'e))]
                                       (vector-of (s-var 'e))))

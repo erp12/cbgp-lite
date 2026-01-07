@@ -832,6 +832,44 @@
     (is (= (func 1000) "same"))
     (is (= (func 2000) "different"))))
 
+
+#_(list {::c/ast  {:op :const :val [[4 2 5] [9 1 6 1] [2 3]]}
+       ::c/type {:type :vector :child {:type :vector :child {:type 'int?}}}}
+      {::c/ast  {:op :var :var `lib/sortv-by}
+       ::c/type (schema/instantiate (lib/type-env `lib/sortv-by))}
+      {::c/ast  {:op :var :var 'count}
+       ::c/type (schema/instantiate (lib/type-env 'count))})
+
+(deftest vector-fn-test
+  (testing "sortv-by"
+    (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      [{:gene :lit :val [[4 2 5] [9 1 6 1] [2 3]] :type {:type :vector :child {:type :vector :child {:type 'int?}}}}
+                                                                {:gene :var :name 'count}
+                                                                {:gene :var :name `lib/sortv-by}
+                                                                {:gene :apply}]
+                                                    :locals    []
+                                                    :ret-type  {:type :vector :child {:type :vector :child {:type 'int?}}}
+                                                    :type-env  lib/type-env
+                                                    :dealiases lib/dealiases}))
+          _ (is (= type {:type :vector :child {:type :vector :child {:type 'int?} :typeclasses #{:countable}}}))
+          form (a/ast->form ast)
+          _ (is (= form (list `lib/sortv-by 'count [[4 2 5] [9 1 6 1] [2 3]])))
+          func (eval `(fn [] ~form))]
+      (is (= [[2 3] [4 2 5] [9 1 6 1]] (func)))))
+  (testing "mapv-indexed"
+    (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      [{:gene :lit :val [10 100 1000 10000] :type {:type :vector :child {:type 'int?}}}
+                                                                {:gene :var :name '+}
+                                                                {:gene :var :name `lib/mapv-indexed}
+                                                                {:gene :apply}]
+                                                    :locals    []
+                                                    :ret-type  {:type :vector :child {:type 'int?}}
+                                                    :type-env  lib/type-env
+                                                    :dealiases lib/dealiases}))
+          _ (is (= type {:type :vector :child {:type 'int? :typeclasses #{:number}}}))
+          form (a/ast->form ast)
+          _ (is (= form (list `lib/mapv-indexed '+ [10 100 1000 10000])))
+          func (eval `(fn [] ~form))]
+      (is (= [10 101 1002 10003] (func))))))
+
 (deftest hof-with-anonymous-fn-test
   ;; Map `inc` over the elements of a vector
   (let [{::c/keys [ast type]} (:ast (c/push->ast {:push      [{:gene :lit :val [1 2 3] :type {:type :vector :child {:type 'int?}}}
