@@ -755,8 +755,8 @@
                                       (vector-of (s-var 'b))))
    `distinctv          (scheme (fn-of [(vector-of (s-var 'e))]
                                       (vector-of (s-var 'e))))
-   `sortv-by           (scheme (fn-of [(fn-of [{:type :s-var :sym 'e :typeclasses #{:comparable}}] (s-var 'k))
-                                       (vector-of {:type :s-var :sym 'e :typeclasses #{:comparable}})]
+   `sortv-by           (scheme (fn-of [(fn-of [(s-var 'e)] {:type :s-var :sym 'k :typeclasses #{:comparable}})
+                                       (vector-of (s-var 'e))]
                                       (vector-of (s-var 'e))))
    'group-by           (scheme (fn-of [(fn-of [(s-var 'e)] (s-var 'k))
                                        (vector-of (s-var 'e))]

@@ -411,7 +411,7 @@
                                                                   ::c/type {:type 'string?}}
                                                                  {::c/ast  {:op :var :var '=}
                                                                   ::c/type (schema/instantiate (lib/type-env '=))}))
-                                   :type-env  lib/type-env}))) 
+                                   :type-env  lib/type-env})))
     (is (partial= {:asts   (list {::c/ast  {:op   :invoke
                                             :fn   {:op :var :var 'not=}
                                             :args [{:op :const :val 15}
@@ -419,15 +419,15 @@
                                   ::c/type {:type 'boolean?}})
                    :push   []
                    :locals []}
-              (c/compile-step {:push-unit {:gene :apply}
-                               :state     (assoc c/empty-state
-                                                 :asts (list {::c/ast  {:op :const :val 15}
-                                                              ::c/type {:type 'int?}}
-                                                             {::c/ast  {:op :const :val 16}
-                                                              ::c/type {:type 'int?}}
-                                                             {::c/ast  {:op :var :var 'not=}
-                                                              ::c/type (schema/instantiate (lib/type-env 'not=))}))
-                               :type-env  lib/type-env})))
+                  (c/compile-step {:push-unit {:gene :apply}
+                                   :state     (assoc c/empty-state
+                                                     :asts (list {::c/ast  {:op :const :val 15}
+                                                                  ::c/type {:type 'int?}}
+                                                                 {::c/ast  {:op :const :val 16}
+                                                                  ::c/type {:type 'int?}}
+                                                                 {::c/ast  {:op :var :var 'not=}
+                                                                  ::c/type (schema/instantiate (lib/type-env 'not=))}))
+                                   :type-env  lib/type-env})))
     (is (partial= {:asts   (list {::c/ast  {:op   :invoke
                                             :fn   {:op :var :var `lib/min'}
                                             :args [{:op :const :val 2}
@@ -504,6 +504,42 @@
                                                                   ::c/type (schema/instantiate (lib/type-env 'int))}))
                                    :type-env  lib/type-env}))))
 
+  (testing "compile apply vector functions"
+    (testing "sortv-by works with fn that has comparable types of input and output"
+      (is (partial= {:asts   (list {::c/ast  {:op   :invoke
+                                              :fn   {:op :var :var `lib/sortv-by}
+                                              :args [{:op :var :var 'inc}
+                                                     {:op :const :val [4 2 5 9 1 6]}]}
+                                    ::c/type {:type :vector :child {:type 'int?}}})
+                     :push   []
+                     :locals []}
+                    (c/compile-step {:push-unit {:gene :apply}
+                                     :state     (assoc c/empty-state
+                                                       :asts (list {::c/ast  {:op :const :val [4 2 5 9 1 6]}
+                                                                    ::c/type {:type :vector :child {:type 'int?}}}
+                                                                   {::c/ast  {:op :var :var 'inc}
+                                                                    ::c/type (schema/instantiate (lib/type-env 'inc))}
+                                                                   {::c/ast  {:op :var :var `lib/sortv-by}
+                                                                    ::c/type (schema/instantiate (lib/type-env `lib/sortv-by))}))
+                                     :type-env  lib/type-env}))))
+    (testing "sortv-by works with fn that has comparable types of output only"
+      (is (partial= {:asts   (list {::c/ast  {:op   :invoke
+                                              :fn   {:op :var :var `lib/sortv-by}
+                                              :args [{:op :var :var 'count}
+                                                     {:op :const :val [[4 2 5] [9 1 6 1] [2 3]]}]}
+                                    ::c/type {:type :vector :child {:type :vector :child {:type 'int?}}}})
+                     :push   []
+                     :locals []}
+                    (c/compile-step {:push-unit {:gene :apply}
+                                     :state     (assoc c/empty-state
+                                                       :asts (list {::c/ast  {:op :const :val [[4 2 5] [9 1 6 1] [2 3]]}
+                                                                    ::c/type {:type :vector :child {:type :vector :child {:type 'int?}}}}
+                                                                   {::c/ast  {:op :var :var `lib/sortv-by}
+                                                                    ::c/type (schema/instantiate (lib/type-env `lib/sortv-by))}
+                                                                   {::c/ast  {:op :var :var 'count}
+                                                                    ::c/type (schema/instantiate (lib/type-env 'count))}))
+                                     :type-env  lib/type-env})))))
+
   (testing "compile apply"
     (is (partial= {:asts   (list {::c/ast  {:op   :invoke
                                             :fn   {:op :var :var '-}
@@ -543,7 +579,7 @@
                                    :type-env  (assoc lib/type-env
                                                      'x {:type 'boolean?})}))))
     ;; @todo Test when args are missing
-    
+  
   (testing "compile fn"
     #_{:clj-kondo/ignore [:invalid-arity :unresolved-symbol]}
     (is (matches? {:asts   ({::c/ast  {:op      :fn
