@@ -56,9 +56,6 @@
     ;; Intable
     (is (= #{#{'double? 'char?} 'int? :cat :s-var :=> :scheme}
            (sch/schema-terms (get lib/type-env 'int))))
-    ;; Keyable
-    (is (= #{#{:set :map-of} 'boolean? :cat :s-var :=> :scheme}
-           (sch/schema-terms (get lib/type-env 'contains?))))
     ;; Stringable
     (is (= #{#{'char? 'string?} :vector 'string? :cat :s-var :=> :scheme}
            (sch/schema-terms (get lib/type-env `str/join)))))
@@ -78,8 +75,14 @@
     (is (= #{:=> :cat 'boolean? 'string?}
            (sch/schema-terms (first (:alternatives (get lib/type-env `lib/in?))))))
 
+    ;; contains?, now that I've made it use overloading
+    (is (= #{:map-of 'boolean? :cat :s-var :=> :scheme}
+           (sch/schema-terms (first (:alternatives (get lib/type-env 'contains?))))))
+    (is (= #{:set 'boolean? :cat :s-var :=> :scheme}
+           (sch/schema-terms (second (:alternatives (get lib/type-env 'contains?))))))
+
     ;; Reduce, in lib order
-     (is (= #{:=> :cat :s-var :scheme :map-of :tuple}
+    (is (= #{:=> :cat :s-var :scheme :map-of :tuple}
            (sch/schema-terms (first (:alternatives (get lib/type-env 'reduce))))))
     (is (= #{:=> :cat :s-var :scheme :set}
            (sch/schema-terms (second (:alternatives (get lib/type-env 'reduce))))))

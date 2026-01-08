@@ -19,7 +19,7 @@
                                      :children (vec (vals input->type))}
                              :output ret-type})
        (set/union (set other-type-ctors) #{:vector :map-of :set :tuple})
-       (remove #{:cat :s-var :scheme})
+       (remove #{:cat :s-var :scheme :t-var})
        (set)))
 
 (defn type-environment

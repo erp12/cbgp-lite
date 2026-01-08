@@ -1151,6 +1151,7 @@
   (testing "contains? Map"
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push      [{:gene :lit :val 1 :type {:type 'int?}}
+                                                    {:gene :lit :val "this will be skipped" :type {:type 'string?}}
                                                     {:gene :lit :val {1 2 3 4} :type {:type :map-of :key {:type 'int?} :value {:type 'int?}}}
                                                     {:gene :var :name 'contains?}
                                                     {:gene :apply}]
@@ -1163,11 +1164,46 @@
           form (a/ast->form ast)
           _ (when verbose (println "FORM: " form))
           func (eval `(fn [] ~form))]
-      (is (= true (func)))))
+      (is (= true (func))))
+    (let [{::c/keys [ast type]} (:ast (c/push->ast
+                                       {:push      [{:gene :lit :val 7 :type {:type 'int?}}
+                                                    {:gene :lit :val "this will be skipped" :type {:type 'string?}}
+                                                    {:gene :lit :val {1 2 3 4} :type {:type :map-of :key {:type 'int?} :value {:type 'int?}}}
+                                                    {:gene :var :name 'contains?}
+                                                    {:gene :apply}]
+                                        :locals    []
+                                        :ret-type  {:type 'boolean?}
+                                        :type-env  lib/type-env
+                                        :dealiases lib/dealiases}))
+          _ (is (= type {:type 'boolean?}))
+          _ (when verbose (println "REAL-AST: " ast))
+          form (a/ast->form ast)
+          _ (when verbose (println "FORM: " form))
+          func (eval `(fn [] ~form))]
+      (is (= false (func)))))
 
   (testing "contains? Set"
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push      [{:gene :lit :val 4 :type {:type 'int?}}
+                                                    {:gene :lit :val "this will be skipped" :type {:type 'string?}}
+                                                    {:gene :lit :val #{1 2 3 4} :type {:type :set :child {:type 'int?}}}
+                                                    {:gene :var :name 'contains?}
+                                                    {:gene :apply}]
+                                        :locals    []
+                                        :ret-type  {:type 'boolean?}
+                                        :type-env  lib/type-env
+                                        :dealiases lib/dealiases}))
+          _ (is (= type {:type 'boolean?}))
+          _ (when verbose (println "REAL-AST: " ast))
+          form (a/ast->form ast)
+          _ (when verbose (println "FORM: " form))
+          func (eval `(fn [] ~form))]
+      (is (= true (func)))))
+  
+  (testing "contains? Set with wrong type"
+    (let [{::c/keys [ast type]} (:ast (c/push->ast
+                                       {:push      [{:gene :lit :val true :type {:type 'boolean?}}
+                                                    {:gene :lit :val "this should be skipped, meaning contains? can't be applied" :type {:type 'string?}}
                                                     {:gene :lit :val #{1 2 3 4} :type {:type :set :child {:type 'int?}}}
                                                     {:gene :var :name 'contains?}
                                                     {:gene :apply}]

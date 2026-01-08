@@ -632,7 +632,11 @@
                                        (fn-of [STRING CHAR] BOOLEAN) ; char-in?
                                        (scheme (fn-of [(vector-of (s-var 'a)) (s-var 'a)] BOOLEAN))]}  ; in?  
    `index-of           (scheme (fn-of [(s-var 'c) (s-var 'a)] INT) {'c #{:indexable}})
-   'contains?          (scheme (fn-of [(s-var 'c) (s-var 'a)] BOOLEAN) {'c #{:keyable}})
+   'contains?          {:type :overloaded
+                        :alternatives [(scheme (fn-of [(map-of (s-var 'k) (s-var 'v)) (s-var 'k)] ; map-contains?
+                                                      BOOLEAN))
+                                       (scheme (fn-of [(set-of (s-var 'k)) (s-var 'k)] ; set-contains?
+                                                      BOOLEAN))]}
    `filter'            {:type :overloaded
                         :alternatives [(scheme (fn-of [(fn-of [(tuple-of (s-var 'k) (s-var 'v))] BOOLEAN) ; filter-map
                                                        (map-of (s-var 'k) (s-var 'v))]
@@ -875,7 +879,7 @@
   "Checks if all of typ's :types are in type-ctors"
   [typ type-ctors]
   (let [schema-types (->> (schema/schema-terms typ)
-                          (remove #{:cat :s-var :scheme}))
+                          (remove #{:cat :s-var :scheme :t-var}))
         schema-typeclass-types (filter set? schema-types)
         all-typeclass-types-valid (empty?
                                    (remove #(not (empty? (set/intersection type-ctors %)))
