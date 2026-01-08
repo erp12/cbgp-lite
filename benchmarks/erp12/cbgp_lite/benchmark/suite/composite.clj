@@ -563,8 +563,10 @@
    "count-collection-then-add-10"
    {:description    (str "Given a countable thing, count it, and return that plus 10"
                          "BROKEN BECAUSE RETURN TYPE SOMETIMES ISN'T INT
-                               To fix this, probably would need an :overloaded as input type")
-    :input->type    {'input1 {:type {:type :s-var
+                               To fix this, probably would need an :overloaded as input type
+                          Later: I tried changing the input type to t-var; it now runs, but
+                          won't apply count to input1 still.")
+    :input->type    {'input1 {:type {:type :t-var
                                      :sym 'c
                                      :typeclasses #{:countable}}}}
     :ret-type       {:type 'int?}
@@ -578,7 +580,7 @@
     :loss-fns       [bu/absolute-distance]}
 
    "cause-crash"
-   {:description    "Given map of {key => int}, return the key with the min value."
+   {:description    "Diagnosing crashes in the loss function."
     :input->type    {'input1 {:type :s-var :sym 'T}}
     :ret-type       {:type :s-var :sym 'T}
     :other-type-ctors    #{'boolean? 'int? 'double? 'string? 'char?}
