@@ -451,9 +451,8 @@
    "min-key"
    {:description    "Given map of {key => int}, return the key with the min value."
     :input->type    {'input1 {:type :map-of, :key {:type :t-var :sym 'T}, :value {:type 'int?}}}
-    :ret-type       {:type :s-var :sym 'T}
+    :ret-type       {:type :t-var :sym 'T}
     :other-type-ctors    #{'boolean? 'int?}
-
     :extra-genes    []
     :case-generator (let [generators [(bu/string-generator 10)
                                       bu/rand-char
