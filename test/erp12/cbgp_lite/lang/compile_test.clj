@@ -1001,6 +1001,141 @@
         func (eval `(fn [~'in1 ~'in2] ~form))] 
     (is (= [5 3 300] (func [4 7 100] [1 -4 200])))))
 
+(deftest simple-reduce-test
+  (let [{::c/keys [ast type]}
+        (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [2 3 24]}
+                                             {:gene :var :name '+}
+                                             {:gene :var :name 'reduce}
+                                             {:gene :apply})
+                            :locals    []
+                            :ret-type  {:type 'int?}
+                            :type-env  lib/type-env
+                            :dealiases lib/dealiases}))
+        _ (is (= type {:type 'int? :typeclasses #{:number}}))
+        form (a/ast->form ast)
+        _ (println "\nFORM: " form)
+        func (eval `(fn [] ~form))]
+    (is (= 29 (func)))))
+
+(deftest sum-2D-test
+  (let [{::c/keys [ast type]}
+        (:ast (c/push->ast {:push      (list {:gene :lit :type {:type 'int?} :val -1} ;; just put here to make it return an int if it fails
+
+                                             {:gene :local :idx 0}
+                                             {:gene :var :name `lib/concat'}
+                                             {:gene :var :name 'reduce}
+                                             {:gene :apply}
+
+                                            ;;  {:gene :var :name 'count}
+                                            ;;  {:gene :apply}
+
+                                             ;; why doesn't this work?
+                                             {:gene :var :name '+}
+                                             {:gene :var :name 'reduce}
+                                             {:gene :apply}
+                                             )
+                            :locals    ['input1]
+                            :ret-type  {:type 'int?}
+                            :type-env  (assoc lib/type-env
+                                              'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                            :dealiases lib/dealiases}))
+        _ (is (= type {:type 'int?}))
+        _ (println)
+        _ (println "ast:" ast)
+        form (a/ast->form ast)
+        _ (println "FORM: " form)
+        func (eval `(fn [~'input1] ~form))]
+    (is (= 64 (func [[4 7 1] [5 5 5] [2 3 10] [1 1 20]])))))
+
+(comment
+  (require '[taoensso.timbre :as log])
+  (log/set-level! :trace)
+  (log/set-level! :debug)
+
+  ;; full reduce of concat
+  (:ast (c/push->ast {:push      (list {:gene :lit :type {:type 'int?} :val -1} ;; just put here to make it return an int if it fails
+                                       
+                                       {:gene :local :idx 0}
+                                       {:gene :var :name `lib/concat'}
+                                       {:gene :var :name 'reduce}
+                                       {:gene :apply}
+                                       
+                                              ;;  {:gene :var :name 'count}
+                                              ;;  {:gene :apply}
+                                       
+                                               ;; why doesn't this work?
+                                       {:gene :var :name '+}
+                                       {:gene :var :name 'reduce}
+                                       {:gene :apply})
+                      :locals    []
+                      :ret-type  {:type 'int?}
+                      :type-env  (assoc lib/type-env
+                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                      :dealiases lib/dealiases}))
+
+    ;; simpler reduce on concat of a vector of vectors of ints - this doesn't work, but does work if the vector alternative is first in the list of options for concat!!!!
+  (let [{::c/keys [ast type]}
+        (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type :vector :child {:type 'int?}}} :val [[4 7 1] [5 5 5] [2 3 10] [1 1 20]]}
+                                             ;{:gene :local :idx 0}
+                                             {:gene :var :name `lib/concat'}
+                                             {:gene :var :name 'reduce}
+                                             {:gene :apply})
+                            :locals    ['input1]
+                            :ret-type  {:type :vector :child {:type 'int?}}
+                            :type-env  (assoc lib/type-env
+                                              'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                            :dealiases lib/dealiases}))
+        _ (println "ast:" ast)
+        form (a/ast->form ast)
+        _ (println "FORM: " form)
+        func (eval `(fn [~'input1] ~form))]
+    (func [[4 7 1] [5 5 5] [2 3 10] [1 1 20]]))
+
+  ;; simpler reduce on concat of a vector of strings - this works
+  (let [{::c/keys [ast type]}
+        (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
+                                             {:gene :var :name `lib/concat'}
+                                             {:gene :var :name 'reduce}
+                                             {:gene :apply})
+                            :locals    ['input1]
+                            :ret-type  {:type 'string?}
+                            :type-env  (assoc lib/type-env
+                                              'input1 {:type :vector :child {:type 'string?}})
+                            :dealiases lib/dealiases}))
+        _ (println "ast:" ast)
+        form (a/ast->form ast)
+        _ (println "FORM: " form)
+        func (eval `(fn [~'input1] ~form))]
+    (func ["hello" " space " "there"]))
+
+  ;; simpler reduce - this works
+  (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [2 3 24]}
+                                       {:gene :var :name '+}
+                                       {:gene :var :name 'reduce}
+                                       {:gene :apply})
+                      :locals    ['input1]
+                      :ret-type  {:type 'int?}
+                      :type-env  (assoc lib/type-env
+                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                      :dealiases lib/dealiases}))
+  
+  ;; simpler concat - does this work - yes
+  (let [{::c/keys [ast type]}
+        (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [2 3 24]}
+                                             {:gene :lit :type {:type :vector :child {:type 'int?}} :val [-4 -8]}
+                                             {:gene :var :name `lib/concat'}
+                                             {:gene :apply})
+                            :locals    []
+                            :ret-type  {:type :vector :child {:type 'int?}}
+                            :type-env  lib/type-env
+                            :dealiases lib/dealiases}))
+        _ (println "ast:" ast)
+        form (a/ast->form ast)
+        _ (println "FORM: " form)]
+    form)
+  
+  )
+
 (deftest polymorphic-output-test
   (let [{::c/keys [ast type]} (:ast
                                (c/push->ast {:push      [{:gene :local :idx 0}

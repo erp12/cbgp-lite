@@ -3,7 +3,9 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [erp12.cbgp-lite.benchmark.utils :as bu]
-            [erp12.cbgp-lite.lang.lib :as lib]))
+            [erp12.cbgp-lite.lang.lib :as lib]
+            [erp12.cbgp-lite.search.individual :as i]
+            [erp12.cbgp-lite.task :as task]))
 
 (defn rand-int-range
   "Returns random int between low and high, both inclusive."
@@ -207,7 +209,50 @@
                             output (reduce + (map #(reduce + %) input-matrix))]
                         {:inputs [input-matrix]
                          :output output}))
-    :loss-fns       [bu/absolute-distance]}
+    :loss-fns       [bu/absolute-distance]
+
+    ;; (reduce + (reduce erp12.cbgp-lite.lang.lib/concatv input1))
+    
+    :solution (list {:gene :local :idx 0}
+                    {:gene :var :name `lib/concat'}
+                    {:gene :var :name 'reduce}
+                    {:gene :apply}
+                    
+
+                    {:gene :var :name 'count}
+                    {:gene :apply}
+                    
+                    ;; why doesn't this work?
+                    ;; {:gene :var :name '+}
+                    ;; {:gene :var :name 'reduce}
+                    ;; {:gene :apply}
+
+                    
+                    ;; {:gene :fn
+                    ;;  :arg-types [lib/INT]
+                    ;;  :ret-type lib/BOOLEAN}
+                    ;; {:gene :lit
+                    ;;  :val 2
+                    ;;  :type {:type 'int?}}
+                    ;; {:gene :local
+                    ;;  :idx 1}
+                    ;; {:gene :var
+                    ;;  :name 'mod}
+                    ;; {:gene :apply}
+                    ;; {:gene :lit
+                    ;;  :val 1
+                    ;;  :type {:type 'int?}}
+                    ;; {:gene :var
+                    ;;  :name '=}
+                    ;; {:gene :apply}
+                    ;; {:gene :close}
+                    ;; {:gene :var
+                    ;;  :name `lib/filter'}
+                    ;; {:gene :apply}
+                    ;; {:gene :var
+                    ;;  :name 'count}
+                    ;; {:gene :apply}
+                    )}
 
    "centimeters-to-meters"
    {:description    (str "Given a length in centimeters, return a tuple of (meters, centimeters) "
@@ -618,3 +663,33 @@
                             (str/replace desc #"\s\s+" " "))]
               (map cleaner descriptions))]
     (println d)))
+
+(defn validate-solutions
+  [{:keys [num-cases]}]
+  (let [suite (problems {:penalty 1000})]
+    (doseq [[problem-name task] (filter (fn [[_ task]] (contains? task :solution)) suite)]
+      (println "\nStarting" problem-name)
+      (let [factory    (i/make-evaluator (-> task
+                                             task/enhance-task
+                                             (assoc :evaluate-fn i/evaluate-full-behavior
+                                                    :cases (:test (read-cases {:problem  problem-name
+                                                                               :n-test   num-cases
+                                                                               :n-train  0})))))
+            start-time (System/currentTimeMillis)
+            evaluation (factory (:solution task) nil)
+            duration   (/ (- (System/currentTimeMillis) start-time) 1000.0)]
+        (cond
+          (> (:total-error evaluation) 0)
+          (throw (ex-info (str problem-name " solution has non-zero error.") {:eval evaluation}))
+
+          (some? (:exception evaluation))
+          (throw (ex-info (str problem-name " solution threw an error.") {:eval evaluation} (:exception evaluation)))
+
+          :else
+          (println problem-name "passed in" duration "seconds."))))))
+
+(comment
+  
+  (validate-solutions {:num-cases 100})
+  
+  )
