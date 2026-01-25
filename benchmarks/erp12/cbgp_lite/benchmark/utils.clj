@@ -135,6 +135,15 @@
                     (ex-message exception)))
      exs)))
 
+(defn exceed-mem-guard-stat
+  ;; Init
+  ([] 0)
+  ;; Finalize
+  ([n] n)
+  ;; Reduce
+  ([n {:keys [exceeded-mem]}]
+   (if exceeded-mem (inc n) n)))
+
 ;; @todo (defn selections-per-parent)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
