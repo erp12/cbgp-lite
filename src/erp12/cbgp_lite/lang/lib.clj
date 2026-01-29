@@ -1,9 +1,9 @@
 (ns erp12.cbgp-lite.lang.lib
   (:refer-clojure :exclude [and or vector-of])
-  (:require [clojure.core :as core]
+  (:require [clj-memory-meter.core :as mm]
+            [clojure.core :as core]
             [clojure.set :as set]
             [clojure.string :as str]
-            [clj-memory-meter.core :as mm]
             [erp12.cbgp-lite.lang.schema :as schema]))
 
 (def VALUE-MAX-BYTES 50000) ;; 50 KiB
@@ -23,7 +23,6 @@
    (reduce (comp guard f) coll))
   ([f init coll]
    (reduce (comp guard f) init coll)))
-
 
 ;; @todo What do do about nil?
 ;; first, last, etc. return nil on empty collections.
@@ -263,7 +262,6 @@
   [^Character c]
   (Character/toLowerCase c))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Collections
 
@@ -343,6 +341,7 @@
 (def conj-set (comp guard set conj))
 (def map-set (comp guard set map))
 (defn filter-set [pred s] (into #{} (filter pred s)))
+(def set-union (comp guard set/union))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Map
@@ -356,6 +355,7 @@
 (def keys-set (comp set keys))
 (def vals-vec (comp vec vals))
 (def safe-assoc (comp guard assoc))
+(def safe-merge (comp guard merge))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tuple
@@ -578,7 +578,7 @@
    'index-of-str       (fn-of [STRING STRING] INT)
    'char-occurrences   (fn-of [STRING CHAR] INT)
    `str-replace        (fn-of [STRING STRING STRING] STRING)
-`str-replace-first  (fn-of [STRING STRING STRING] STRING)
+   `str-replace-first  (fn-of [STRING STRING STRING] STRING)
    `replace-char       (fn-of [STRING CHAR CHAR] STRING)
    `replace-first-char (fn-of [STRING CHAR CHAR] STRING)
    `remove-char        (fn-of [STRING CHAR] STRING)
@@ -762,7 +762,7 @@
                                       (set-of (s-var 'e))))
    'map->set           (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))]
                                       (set-of (tuple-of (s-var 'k) (s-var 'v)))))
-   `set/union          (scheme (fn-of [(set-of (s-var 'e))
+   `set-union          (scheme (fn-of [(set-of (s-var 'e))
                                        (set-of (s-var 'e))]
                                       (set-of (s-var 'e))))
    `set/difference     (scheme (fn-of [(set-of (s-var 'e))
@@ -832,7 +832,7 @@
                                       (set-of (s-var 'k))))
    `vals-vec           (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))]
                                       (vector-of (s-var 'v))))
-   'merge              (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))
+   `safe-merge         (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))
                                        (map-of (s-var 'k) (s-var 'v))]
                                       (map-of (s-var 'k) (s-var 'v))))
    'count-map          (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))]
@@ -903,8 +903,8 @@
     empty-str?        empty?
     first-str         first
     fold-vec          erp12.cbgp-lite.lang.lib/guarded-reduce
-fold-map          erp12.cbgp-lite.lang.lib/guarded-reduce
-fold-set          erp12.cbgp-lite.lang.lib/guarded-reduce
+    fold-map          erp12.cbgp-lite.lang.lib/guarded-reduce
+    fold-set          erp12.cbgp-lite.lang.lib/guarded-reduce
     get-or-else       get
     index-of-char     clojure.string/index-of
     index-of-str      clojure.string/index-of
@@ -926,10 +926,10 @@ fold-set          erp12.cbgp-lite.lang.lib/guarded-reduce
     map->vec          vec
     map-contains?     contains?
     map-map           erp12.cbgp-lite.lang.lib/safe-mapv
-map-str           erp12.cbgp-lite.lang.lib/safe-mapv
-map-vec           erp12.cbgp-lite.lang.lib/safe-mapv
-map2-vec          erp12.cbgp-lite.lang.lib/safe-mapv
-mapcat-str        erp12.cbgp-lite.lang.lib/safe-mapcatv
+    map-str           erp12.cbgp-lite.lang.lib/safe-mapv
+    map-vec           erp12.cbgp-lite.lang.lib/safe-mapv
+    map2-vec          erp12.cbgp-lite.lang.lib/safe-mapv
+    mapcat-str        erp12.cbgp-lite.lang.lib/safe-mapcatv
     nth-or-else       nth
     nth-str           erp12.cbgp-lite.lang.lib/safe-nth
     partial1-fn2      partial
@@ -939,8 +939,8 @@ mapcat-str        erp12.cbgp-lite.lang.lib/safe-mapcatv
     range2            erp12.cbgp-lite.lang.lib/rangev
     range3            erp12.cbgp-lite.lang.lib/rangev
     reduce-vec        erp12.cbgp-lite.lang.lib/guarded-reduce
-reduce-map        erp12.cbgp-lite.lang.lib/guarded-reduce
-reduce-set        erp12.cbgp-lite.lang.lib/guarded-reduce
+    reduce-map        erp12.cbgp-lite.lang.lib/guarded-reduce
+    reduce-set        erp12.cbgp-lite.lang.lib/guarded-reduce
     right             second
     set->map          erp12.cbgp-lite.lang.lib/->map
     set->vec          vec
@@ -973,10 +973,3 @@ reduce-set        erp12.cbgp-lite.lang.lib/guarded-reduce
                       (set)
                       (set/superset? type-ctors))))
        (into {})))
-
-(comment
-
-  (type-env 'not)
-
-  (set/difference (set (keys (lib-for-type-ctors #{:=> 'boolean?})))
-                  (set (keys (lib-for-type-ctors #{:=>})))))

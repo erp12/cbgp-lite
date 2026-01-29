@@ -28,7 +28,7 @@
 (defmethod ast->form :fn
   [{:keys [methods]}]
   (let [{:keys [params body]} (first methods)]
-    (list `guarded-fn 
+    (list `guarded-fn
           (mapv ast->form params)
           (ast->form body))))
 

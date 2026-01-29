@@ -432,8 +432,7 @@
                                             :dealiases lib/dealiases})
         _ (is (= type {:type :vector :child {:type 'int?}}))
         form (a/ast->form ast)
-        _ (println "!!!" form)
-_ (is (matches? (erp12.cbgp-lite.lang.lib/safe-mapv (erp12.cbgp-lite.lang.ast/guarded-fn [?a] (inc ?a)) [1 2 3])
+        _ (is (matches? (erp12.cbgp-lite.lang.lib/safe-mapv (erp12.cbgp-lite.lang.ast/guarded-fn [?a] (inc ?a)) [1 2 3])
                         form))
         func (eval `(fn [] ~form))]
     (is (= [2 3 4] (func)))))
