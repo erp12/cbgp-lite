@@ -178,7 +178,7 @@
   (char (mod i 128)))
 
 (def concat-str (comp guard str))
-(def append-str (comp guard str))
+(def append-str str)
 (def take-str (comp str/join take))
 (def rest-str (comp str/join rest))
 (def butlast-str (comp str/join butlast))
