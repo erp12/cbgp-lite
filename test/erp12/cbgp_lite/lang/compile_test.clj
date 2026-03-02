@@ -1054,21 +1054,108 @@
 
   ;; full reduce of concat
   (:ast (c/push->ast {:push      (list {:gene :lit :type {:type 'int?} :val -1} ;; just put here to make it return an int if it fails
-                                       
+
                                        {:gene :local :idx 0}
+
+                                       ;; This tries to reduce concat, which doesn't work because
+                                       ;; concat on vectors is the second option, not the first,
+                                       ;; in the overload
                                        {:gene :var :name `lib/concat'}
                                        {:gene :var :name 'reduce}
                                        {:gene :apply}
-                                       
-                                              ;;  {:gene :var :name 'count}
-                                              ;;  {:gene :apply}
-                                       
-                                               ;; why doesn't this work?
+
+                                       ;; This works, because count isn't overloaded
+                                      ;;  {:gene :var :name 'count}
+                                      ;;  {:gene :var :name 'mapv}
+                                      ;;  {:gene :apply}
+
                                        {:gene :var :name '+}
                                        {:gene :var :name 'reduce}
                                        {:gene :apply})
-                      :locals    []
+                      :locals    ['input1]
                       :ret-type  {:type 'int?}
+                      :type-env  (assoc lib/type-env
+                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                      :dealiases lib/dealiases}))
+
+  ;; TMH simpler, just reduce on concat
+  (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
+
+                                       ;; This tries to reduce concat, which doesn't work because
+                                       ;; concat on vectors is the second option, not the first,
+                                       ;; in the overload
+                                       {:gene :var :name `lib/concat'}
+                                       {:gene :var :name 'reduce}
+                                       {:gene :apply})
+                      :locals    ['input1]
+                      :ret-type  {:type :vector :child {:type 'int?}}
+                      :type-env  (assoc lib/type-env
+                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                      :dealiases lib/dealiases}))
+
+  ;; TMH ok, here, the vector is higher than the set
+  ;; so, this should apply mapv to count (same index in stack) and the vector local
+  ;; (which is higher in the stack), instead of to count and the lit set of strings,
+  ;; which is lower in the stack.
+  ;; Right now, it applies to the set, because it's first in overloaded
+  (:ast (c/push->ast {:push      (list {:gene :lit :val #{"hello" "there" "tom"} :type (lib/set-of lib/STRING)} ;; map over vector or set
+                                       {:gene :local :idx 0}
+
+                                       ;; This works, because count isn't overloaded
+                                       {:gene :var :name 'count}
+                                       {:gene :var :name 'mapv}
+                                       {:gene :apply})
+                      :locals    ['input1]
+                      :ret-type  {:type :vector :child {:type 'int?}}
+                      :type-env  (assoc lib/type-env
+                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                      :dealiases lib/dealiases}))
+
+  ;; can I add an :arg-depths key to the maps below, that could be used to tiebreak applying one overloaded function to different arguments?
+
+  ;; an applied fn -- mapv applied to count and set of strings
+  '{:fn-not-applied 0,
+    :push (),
+    :overloaded-id #uuid "0974f375-4050-4509-813e-fda8e3c34dc9",
+    :locals [input1],
+    :fn-applied 0,
+    :biggest #:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :const, :val #{hello tom there}}]}, :type {:type :vector, :child {:type int?}}},
+    :newest #:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :const, :val #{hello tom there}}]}, :type {:type :vector, :child {:type int?}}},
+    :ret-type {:type :vector, :child {:type int?}},
+    :apply-it nil,
+    :fn-not-applied-because-no-functions 0,
+    :dna 0,
+    :asts (#:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :const, :val #{hello tom there}}]}, :type {:type :vector, :child {:type int?}}}
+           #:erp12.cbgp-lite.lang.compile{:ast {:op :local, :name input1}, :type {:type :vector, :child {:type :vector, :child {:type int?}}}}),
+    :total-apply-attempts 0}
+
+  ;; an applied fn -- mapv applied to count and vector of vectors of ints
+  '{:fn-not-applied 0
+    :push ()
+    :overloaded-id #uuid "0974f375-4050-4509-813e-fda8e3c34dc9"
+    :locals [input1]
+    :fn-applied 0
+    :biggest #:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :local, :name input1}]}, :type {:type :vector, :child {:type int?}}},
+    :newest #:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :local, :name input1}]}, :type {:type :vector, :child {:type int?}}},
+    :ret-type {:type :vector, :child {:type int?}},
+    :apply-it nil,
+    :fn-not-applied-because-no-functions 0
+    :dna 0
+    :asts (#:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :local, :name input1}]}, :type {:type :vector, :child {:type int?}}}
+           #:erp12.cbgp-lite.lang.compile{:ast {:op :const, :val #{hello tom there}}, :type {:type :set, :child {:type string?}}}),
+    :total-apply-attempts 0}
+
+  ;; This was to test order of fn application tries
+  (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
+
+                                         ;; This works, because count isn't overloaded
+                                       {:gene :var :name 'count}
+                                       {:gene :var :name `lib/filter'}
+                                       {:gene :var :name 'mapv}
+                                       {:gene :var :name '+}
+                                       {:gene :apply})
+                      :locals    ['input1]
+                      :ret-type  {:type :vector :child {:type 'int?}}
                       :type-env  (assoc lib/type-env
                                         'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
                       :dealiases lib/dealiases}))
@@ -1118,7 +1205,7 @@
                       :type-env  (assoc lib/type-env
                                         'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
                       :dealiases lib/dealiases}))
-  
+
   ;; simpler concat - does this work - yes
   (let [{::c/keys [ast type]}
         (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [2 3 24]}
@@ -1133,7 +1220,6 @@
         form (a/ast->form ast)
         _ (println "FORM: " form)]
     form)
-  
   )
 
 (deftest polymorphic-output-test

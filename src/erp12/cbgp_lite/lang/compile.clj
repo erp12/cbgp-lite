@@ -269,19 +269,23 @@
                  (= schema-type :=>)
                  (conj funclist {:ast   ast
                                  :state (assoc state :asts (concat acc (rest remaining)))})
-                 (= schema-type :overloaded)
+                 
+                 (= schema-type :overloaded) ;; TMH overloaded handled here when looking for functions to apply
                  (let [
                       ;;  _ (println "AST:" ast)
                       ;;  _ (println "Alts: " (get-in ast [::type :alternatives]))
+                       overload-uuid (random-uuid)
                        mapped-alts (reverse (map (fn [alternative-schema]
                                                    {:ast {::ast (get ast ::ast) ::type alternative-schema}
-                                                    :state (assoc state :asts (concat acc (rest remaining)))})
+                                                    :state (assoc state :asts (concat acc (rest remaining)))
+                                                    :overloaded-id overload-uuid})
                                                  (get-in ast [::type :alternatives])))
                       ;;  _ (println "mapped-alts:" mapped-alts)
-                       output (concat funclist mapped-alts)
+                       output (concat mapped-alts funclist)
                       ;;  _ (println "Output:" output)
                        ]
                    output)
+                 
                  :else funclist))))))
 
 (defn pop-all-unifiable-asts
@@ -292,16 +296,19 @@
   ([unify-with state bindings {:keys [allow-macros] :or {allow-macros false}}]
    (loop [remaining (:asts state)
           acc []
-          unifiable-list '()]
+          unifiable-list '()
+          ast-index (dec (count remaining))]
      (if (empty? remaining)
        (reverse unifiable-list)
        (let [ast (first remaining)
              subs (schema/mgu unify-with (::type ast))]
-         ;; If the bindings doesn't change, we don't need to try backtracking, and we only need to return the first unified AST.
+         ;; TMH: Around here might be where needs to change to handle (reduce concat ...) issue
+         ;; If the bindings doesn't change, we don't need to try backtracking, and we only need to return the first unified AST. 
          (if (and (= subs bindings) (empty? unifiable-list))
-           (list {:ast      ast
-                  :state    (assoc state :asts (concat acc (rest remaining)))
-                  :bindings subs}) ;; TMH can we put depth of arguments in this map and the one below?
+           (list {:ast       ast
+                  :state     (assoc state :asts (concat acc (rest remaining)))
+                  :bindings  subs
+                  :arg-index ast-index}) ;; TMH can we put depth of arguments in this map and the one below?
            (recur (rest remaining)
                   (conj acc ast)
                   (if (and (not (schema/mgu-failure? subs))
@@ -309,8 +316,10 @@
                                (not (macro? (::ast ast)))))
                     (conj unifiable-list {:ast      ast
                                           :state    (assoc state :asts (concat acc (rest remaining)))
-                                          :bindings subs})
-                    unifiable-list))))))))
+                                          :bindings subs
+                                          :arg-index ast-index})
+                    unifiable-list)
+                  (dec ast-index))))))))
 
 (defn pop-push-unit
   [state]
@@ -360,8 +369,12 @@
                 state))))
 
 (defn try-apply-fn-to-arguments
-  "Attempts to apply fn-ast to all args in remaining-arg-types."
-  [remaining-arg-types bindings args new-state fn-ast fn-type]
+  "Recursive helper function for try-apply.
+   Attempts to apply fn-ast to all args in remaining-arg-types.
+   If fails, returns nil
+   arg-indices is an initially empty vector, which is passed through, and
+   contains the indices of all arguments that have been applied, for overloaded tiebreaking"
+  [remaining-arg-types bindings args new-state fn-ast fn-type arg-indices]
   (if (empty? remaining-arg-types)
             ;; Push an AST which calls the function to the arguments and
             ;; box the AST with the return type of the function.
@@ -374,11 +387,12 @@
       (if (schema/mgu-failure? subs)
         nil
 
-        (push-ast {::ast  {:op   :invoke
-                           :fn   fn-ast
-                           :args (mapv ::ast args)}
-                   ::type (schema/substitute subs ret-s-var)}
-                  new-state)))
+        (assoc (push-ast {::ast  {:op   :invoke
+                            :fn   fn-ast
+                            :args (mapv ::ast args)}
+                    ::type (schema/substitute subs ret-s-var)}
+                   new-state)
+               :arg-indices arg-indices)))
 
     ;; Grab next arg we need to find. If we know what the bindings are, we need to substitute those in.
     (let [arg-type (first remaining-arg-types)
@@ -391,41 +405,96 @@
                   ;; If arg-type is still a t-var, pop an ast of any type.
                   ;; Otherwise, pop the AST of the expected type.
                   ;; The ARG ast. :bindings may contain the new bindings for things like type A, B etc.
-          all-unifiable (pop-all-unifiable-asts arg-type new-state bindings)
+          all-unifiable (pop-all-unifiable-asts arg-type new-state bindings) ;; TMH pop-all-unifiable-asts is probably where I need to fix HOF applying to overloaded fns, since they aren't being unifiable corrrectly?
           _ (log/trace "ALL UNIFIABLE: " all-unifiable)]
 
       (loop [all-unifiable all-unifiable]
         (if (empty? all-unifiable)
           nil ;; didn't find an argument that works
 
-          (let [{arg :ast state-arg-popped :state new-subs :bindings} (first all-unifiable)
+          (let [{arg :ast state-arg-popped :state new-subs :bindings arg-index :arg-index} 
+                (first all-unifiable)
+                
                 _ (log/trace "Trying arg:" arg)
                 _ (log/trace "With bindings:" new-subs)
                 result (try-apply-fn-to-arguments (rest remaining-arg-types)
                        ;; If arg-type is has unbound t-vars that were bound during unification,
                        ;; add them to the set of bindings.
                        ;; merge these two together.
-                                      (schema/compose-substitutions new-subs bindings)
-                                      (conj args arg)
-                                      state-arg-popped
-                                      fn-ast
-                                      fn-type)]
+                                                  (schema/compose-substitutions new-subs bindings)
+                                                  (conj args arg)
+                                                  state-arg-popped
+                                                  fn-ast
+                                                  fn-type
+                                                  (conj arg-indices arg-index))]
             (if (some? result)
               result
               (recur (rest all-unifiable)))))))))
 
 (defn try-apply
-  "Tries to apply a function to the state. If fails, returns the original state."
-  [{boxed-ast :ast state-fn-popped :state :as current-fn}]
+  "Tries to apply a function to the state. If fails, returns nil."
+  [{boxed-ast :ast
+    state-fn-popped :state
+    overloaded-id :overloaded-id
+    :as current-fn}]
   ;; (println "-------try-apply---------")
   ;; (println "Current-FN:" current-fn)
   ;; (println "Boxed-ast:" boxed-ast)
   (log/trace "Applying function:" boxed-ast)
   ;; function ast: clojure code that returns function. the data type of that function to find the right asts.
   (let [{fn-ast ::ast fn-type ::type} boxed-ast
-        remaining-arg-types (schema/fn-arg-schemas fn-type)]
+        remaining-arg-types (schema/fn-arg-schemas fn-type)
+        applied-state-or-nil (try-apply-fn-to-arguments remaining-arg-types {} [] state-fn-popped fn-ast fn-type [])]
     ;(println "Remaining-arg-types:" remaining-arg-types)
-    (try-apply-fn-to-arguments remaining-arg-types {} [] state-fn-popped fn-ast fn-type)))
+    (if (nil? applied-state-or-nil)
+      nil
+      ;; if there is an overloaded-id, assoc it to the result
+      (cond-> applied-state-or-nil
+        overloaded-id (assoc :overloaded-id overloaded-id)))))
+
+(defn lexicographic-compare
+  "Like compare, except works with different length vectors."
+  [v1 v2]
+  (loop [s1 (seq v1)
+         s2 (seq v2)]
+    (cond
+      (and (nil? s1) (nil? s2)) 0
+      (nil? s1) -1
+      (nil? s2) 1
+      :else
+      (let [c (compare (first s1) (first s2))]
+        (if (zero? c)
+          (recur (next s1) (next s2))
+          c)))))
+
+(defn max-key-that-works-on-vectors
+  "Since max-key can't compare vectors, this one can. Compares them lexicographically.
+   Note that compare doesn't do what you'd expect on vectors of difference sizes,
+   which needs to work, so I had to implement that separately."
+  [key-fn & coll]
+  (reduce #(if (pos? (lexicographic-compare (key-fn %1) (key-fn %2)))
+             %1
+             %2)
+          coll))
+
+(defn select-fn-to-apply
+  "Picks which state to use for the applied fn. This is usually the first one,
+   unless the first one is an overloaded fn that has multiple successful applications.
+   In that case, those alternatives will all have the same :overloaded-id, and will have :arg-indices
+   set to the indices of the arguments in the stack. For that situation, the alternative
+   with the largest arg-indices lexicographically will be chosen, since its first
+   arg was largest in the stack, then its second arg largest in the stack, etc."
+  [applied-funcs-state-list]
+  (let [first-state (first applied-funcs-state-list)
+        first-overloaded-id (:overloaded-id first-state)]
+    (if (nil? (:overloaded-id first-state))
+      first-state
+      (let [states-with-same-overloaded-fn (filter #(= (:overloaded-id %) first-overloaded-id)
+                                                   applied-funcs-state-list)
+            state-with-largest-arg-indices (apply max-key-that-works-on-vectors
+                                                  :arg-indices
+                                                  states-with-same-overloaded-fn)]
+        state-with-largest-arg-indices))))
 
 (defn original-compile-step-apply
   "For compile-steping :apply genes if backtracking is turned off.
@@ -496,22 +565,51 @@
   [{:keys [state] :as wholemap}]
   ;; Checks the backtracking atom. If it is true, then backtracking will be used, otherwise, the original apply function is used.
   (cond
-    ;; The backtracking method
-    (= @backtracking true)
-    (let [;_ (println "\n------------------------")
-          allfuncs (pop-all-function-asts state)
-          ;_ (println "Allfuncs:" allfuncs)
-          allfuncsinfo (map try-apply allfuncs)
-          ;_ (println "allfuncsinfo:" allfuncsinfo)
-          able-to-be-applied (filter some? allfuncsinfo)
-          ;_ (println "able-to-be-applied:" able-to-be-applied)
-          firstapplied (first able-to-be-applied)
-          ;_ (println "firstapplied:" firstapplied)
-          ;_ (println "------------------------\n")
+    ;; The backtracking method, now working for ad-hoc polymorphism
+    (= @backtracking true)                                                  ;; TMH working here
+    (let [;; _ (println "\n------------------------")
+          all-funcs-and-states (pop-all-function-asts state)                ;; Returns a list of all function ASTs in state, paired with the state with them popped. Elements are maps with keys {:ast :state}. For overloaded, puts all options in the returned list separately in their order of consideration. Will need to change this to have overloadeds considered in alternatives-before-stack order
+          ;; _ (println "All funcs and states")
+          ;; _ (doseq [fn-and-state all-funcs-and-states]
+          ;;     (println fn-and-state "\n"))
+          ;; _ (println "\n-------")
+          applied-funcs-or-nil-if-failed (map try-apply all-funcs-and-states) ;; try-apply tries to apply a function to the state. If fails, returns nil.
+                                                                              ;; map call returns a sequence of applying each function, with nil if the apply didn't work
+          ;; _ (println "applied-funcs-or-nil-if-failed")
+          ;; _ (doseq [app-fn applied-funcs-or-nil-if-failed]
+          ;;     (println app-fn))
+          ;; _ (println "\n-------")
+          applied-funcs (remove nil? applied-funcs-or-nil-if-failed)          ;; remove nils, so that only actual function applications remain
+          ;; _ (println "applied-funcs\n" applied-funcs)
+          ;; _ (println "\n-------")
+          applied-fn-state (select-fn-to-apply applied-funcs)            ;; (???) first of the applied functions, fully applied, state and all
+          ;; _ (println "first applied\n" applied-fn-state)
+          ;; _ (println "------------------------\n")
           ]
-      (if (empty? able-to-be-applied)
+      (if (empty? applied-funcs)
         (update (update state :fn-not-applied inc) :total-apply-attempts inc)
-        (update (update firstapplied :fn-applied inc) :total-apply-attempts inc)))
+        (update (update applied-fn-state :fn-applied inc) :total-apply-attempts inc)))
+    
+    ;; This is the previous, mostly-working version for ad-hoc polymorphism. TMH remove later
+    ;; (= @backtracking "old-true")
+    ;; (let [_ (println "\n------------------------")
+    ;;       all-funcs-and-states (pop-all-function-asts state)                 ;; Returns a list of all function ASTs in state, paired with the state with them popped. Elements are maps with keys {:ast :state}. For overloaded, puts all options in the returned list separately in their order of consideration. Will need to change this to have overloadeds considered in alternatives-before-stack order
+    ;;       _ (println "All funcs\n" all-funcs-and-states)
+    ;;       _ (println "\n-------")
+    ;;       applied-funcs-or-nil-if-failed (map try-apply all-funcs-and-states)                  ;; try-apply tries to apply a function to the state. If fails, returns nil.
+    ;;                                                              ;; map call returns a sequence of applying each function, with nil if the apply didn't work
+    ;;       _ (println "all funcs info\n" applied-funcs-or-nil-if-failed)
+    ;;       _ (println "\n-------")
+    ;;       applied-funcs (remove nil? applied-funcs-or-nil-if-failed)          ;; remove nils, so that only actual function applications remain
+    ;;       _ (println "applied-funcs\n" applied-funcs)
+    ;;       _ (println "\n-------")
+    ;;       first-applied (first applied-funcs)                ;; first of the applied functions, fully applied, state and all
+    ;;       _ (println "first applied\n" first-applied)
+    ;;       _ (println "------------------------\n")
+    ;;       ]
+    ;;   (if (empty? applied-funcs)
+    ;;     (update (update state :fn-not-applied inc) :total-apply-attempts inc)
+    ;;     (update (update first-applied :fn-applied inc) :total-apply-attempts inc)))
 
     ;; No backtracking
     (= @backtracking false)
