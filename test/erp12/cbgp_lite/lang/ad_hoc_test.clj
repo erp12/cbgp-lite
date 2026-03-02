@@ -1112,7 +1112,23 @@
           form (a/ast->form ast)
           _ (when verbose (println "FORM: " form))
           func (eval `(fn [] ~form))]
-      (is (= [3 2 1 98 6 55] (func))))))
+      (is (= [6 5 9] (func)))) ;; this one reverses the vector of vectors, and returns the vector on the bottom
+    (let [{::c/keys [ast type]} (:ast (c/push->ast
+                                       {:push      [{:gene :lit :val [6 5 9] :type {:type :vector :child {:type 'int?}}}
+                                                    {:gene :var :name `lib/reverse'}
+                                                    {:gene :var :name `lib/mapcat'}
+                                                    {:gene :lit :val [[1 2 3] [55 6 98]] :type {:type :vector :child {:type :vector :child {:type 'int?}}}}
+                                                    {:gene :apply}]
+                                        :locals    []
+                                        :ret-type  {:type :vector :child {:type 'int?}}
+                                        :type-env  lib/type-env
+                                        :dealiases lib/dealiases}))
+          _ (is (= :vector (:type type)))
+          _ (when verbose (println "REAL-AST: " ast))
+          form (a/ast->form ast)
+          _ (when verbose (println "FORM: " form))
+          func (eval `(fn [] ~form))]
+      (is (= [3 2 1 98 6 55] (func)))))) ;; this one applies mapcat to reverse and the vector of vectors, which is returned
 
 (deftest sort-test
   (testing "Sort Vector"

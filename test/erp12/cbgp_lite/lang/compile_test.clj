@@ -1013,7 +1013,7 @@
                             :dealiases lib/dealiases}))
         _ (is (= type {:type 'int? :typeclasses #{:number}}))
         form (a/ast->form ast)
-        _ (println "\nFORM: " form)
+        ;; _ (println "\nFORM: " form)
         func (eval `(fn [] ~form))]
     (is (= 29 (func)))))
 
@@ -1040,10 +1040,10 @@
                                               'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
                             :dealiases lib/dealiases}))
         _ (is (= type {:type 'int?}))
-        _ (println)
-        _ (println "ast:" ast)
+        ;; _ (println)
+        ;; _ (println "ast:" ast)
         form (a/ast->form ast)
-        _ (println "FORM: " form)
+        ;; _ (println "FORM: " form)
         func (eval `(fn [~'input1] ~form))]
     (is (= 64 (func [[4 7 1] [5 5 5] [2 3 10] [1 1 20]])))))
 
