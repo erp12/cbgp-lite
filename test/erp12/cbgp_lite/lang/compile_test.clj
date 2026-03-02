@@ -1047,10 +1047,81 @@
         func (eval `(fn [~'input1] ~form))]
     (is (= 64 (func [[4 7 1] [5 5 5] [2 3 10] [1 1 20]])))))
 
+(deftest compile-order-of-alternatives-test
+  (testing "alternatives should select option with arguments nearest the top of the stack"
+    (let [{::c/keys [ast type]}
+          (:ast (c/push->ast {:push      (list {:gene :lit :val #{"hello" "there" "tom"} :type (lib/set-of lib/STRING)}
+                                               {:gene :local :idx 0}
+                                               {:gene :var :name 'count}
+                                               {:gene :var :name 'mapv}
+                                               {:gene :apply})
+                              :locals    ['input1]
+                              :ret-type  {:type :vector :child {:type 'int?}}
+                              :type-env  (assoc lib/type-env
+                                                'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                              :dealiases lib/dealiases}))]
+      (is (= {:type :vector :child {:type 'int?}} type))
+      (is (= '{:args [{:op :var, :var count} {:name input1, :op :local}], ;; since the local is nearer the top of the stack, it is the argument to mapv
+               :fn {:op :var, :var mapv},
+               :op :invoke}
+             ast)))
+    (let [{::c/keys [ast type]}
+          (:ast (c/push->ast {:push      (list {:gene :local :idx 0} ;; only diff is swapping this and following genes
+                                               {:gene :lit :val #{"hello" "there" "tom"} :type (lib/set-of lib/STRING)}
+                                               {:gene :var :name 'count}
+                                               {:gene :var :name 'mapv}
+                                               {:gene :apply})
+                              :locals    ['input1]
+                              :ret-type  {:type :vector :child {:type 'int?}}
+                              :type-env  (assoc lib/type-env
+                                                'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                              :dealiases lib/dealiases}))]
+      (is (= {:type :vector :child {:type 'int?}} type))
+      (is (= '{:args [{:op :var, :var count}
+                      {:op :const, :val #{"hello" "there" "tom"}}], ;; since the set is nearer the top of the stack, it is the argument to mapv
+               :fn {:op :var, :var mapv},
+               :op :invoke}
+             ast))))
+  (testing "order of applied functions"
+    (let [{::c/keys [ast type]}
+          (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [1 8 1 2]} ;; test which function is applied first. This one should be mapv to count
+                                               {:gene :local :idx 0}
+                                               {:gene :var :name 'count}
+                                               {:gene :var :name `lib/filter'}
+                                               {:gene :var :name 'mapv}
+                                               {:gene :var :name '+}
+                                               {:gene :apply})
+                              :locals    ['input1]
+                              :ret-type  {:type :vector :child {:type 'int?}}
+                              :type-env  (assoc lib/type-env
+                                                'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                              :dealiases lib/dealiases}))]
+      (is (= {:type :vector :child {:type 'int?}} type))
+      (is (= '{:args [{:op :var, :var count} {:name input1, :op :local}],
+               :fn {:op :var, :var mapv},
+               :op :invoke}
+             ast)))
+    (let [{::c/keys [ast type]}
+          (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [1 8 1 2]} ;; test which function is applied first. This one should be count to local, returning vec of ints from bottom of stack
+                                               {:gene :local :idx 0}
+                                               {:gene :var :name `lib/filter'}
+                                               {:gene :var :name 'mapv}
+                                               {:gene :var :name 'count}
+                                               {:gene :var :name '+}
+                                               {:gene :apply})
+                              :locals    ['input1]
+                              :ret-type  {:type :vector :child {:type 'int?}}
+                              :type-env  (assoc lib/type-env
+                                                'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                              :dealiases lib/dealiases}))]
+      (is (= {:type :vector :child {:type 'int?}} type))
+      (is (= {:op :const, :val [1 8 1 2]}
+             ast)))))
+
 (comment
   (require '[taoensso.timbre :as log])
-  (log/set-level! :trace)
-  (log/set-level! :debug)
+  (log/set-level! :trace) ;; use this if I want to see more details of compilation
+  (log/set-level! :debug) ;; the default
 
   ;; full reduce of concat
   (:ast (c/push->ast {:push      (list {:gene :lit :type {:type 'int?} :val -1} ;; just put here to make it return an int if it fails
@@ -1078,7 +1149,7 @@
                                         'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
                       :dealiases lib/dealiases}))
 
-  ;; TMH simpler, just reduce on concat
+  ;; TMH simpler, just reduce on concat, still broken
   (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
 
                                        ;; This tries to reduce concat, which doesn't work because
@@ -1110,40 +1181,6 @@
                       :type-env  (assoc lib/type-env
                                         'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
                       :dealiases lib/dealiases}))
-
-  ;; can I add an :arg-depths key to the maps below, that could be used to tiebreak applying one overloaded function to different arguments?
-
-  ;; an applied fn -- mapv applied to count and set of strings
-  '{:fn-not-applied 0,
-    :push (),
-    :overloaded-id #uuid "0974f375-4050-4509-813e-fda8e3c34dc9",
-    :locals [input1],
-    :fn-applied 0,
-    :biggest #:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :const, :val #{hello tom there}}]}, :type {:type :vector, :child {:type int?}}},
-    :newest #:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :const, :val #{hello tom there}}]}, :type {:type :vector, :child {:type int?}}},
-    :ret-type {:type :vector, :child {:type int?}},
-    :apply-it nil,
-    :fn-not-applied-because-no-functions 0,
-    :dna 0,
-    :asts (#:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :const, :val #{hello tom there}}]}, :type {:type :vector, :child {:type int?}}}
-           #:erp12.cbgp-lite.lang.compile{:ast {:op :local, :name input1}, :type {:type :vector, :child {:type :vector, :child {:type int?}}}}),
-    :total-apply-attempts 0}
-
-  ;; an applied fn -- mapv applied to count and vector of vectors of ints
-  '{:fn-not-applied 0
-    :push ()
-    :overloaded-id #uuid "0974f375-4050-4509-813e-fda8e3c34dc9"
-    :locals [input1]
-    :fn-applied 0
-    :biggest #:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :local, :name input1}]}, :type {:type :vector, :child {:type int?}}},
-    :newest #:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :local, :name input1}]}, :type {:type :vector, :child {:type int?}}},
-    :ret-type {:type :vector, :child {:type int?}},
-    :apply-it nil,
-    :fn-not-applied-because-no-functions 0
-    :dna 0
-    :asts (#:erp12.cbgp-lite.lang.compile{:ast {:op :invoke, :fn {:op :var, :var mapv}, :args [{:op :var, :var count} {:op :local, :name input1}]}, :type {:type :vector, :child {:type int?}}}
-           #:erp12.cbgp-lite.lang.compile{:ast {:op :const, :val #{hello tom there}}, :type {:type :set, :child {:type string?}}}),
-    :total-apply-attempts 0}
 
   ;; This was to test order of fn application tries
   (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
@@ -1244,7 +1281,7 @@
 
 ;; let testing
 (deftest let-test-1-input
-  ;; let [x] (+ x 3)
+  ;; (let [x] (+ x 3))
  (let [{::c/keys [ast type]} (:ast (c/push->ast {:push [{:gene :local :idx 0}
                                                         {:gene :let}
                                                         [{:gene :local :idx 1}
