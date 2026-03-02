@@ -270,7 +270,7 @@
                  (conj funclist {:ast   ast
                                  :state (assoc state :asts (concat acc (rest remaining)))})
                  
-                 (= schema-type :overloaded) ;; TMH overloaded handled here when looking for functions to apply
+                 (= schema-type :overloaded) ;; This handles overloaded functions when funding all function ASTs
                  (let [
                       ;;  _ (println "AST:" ast)
                       ;;  _ (println "Alts: " (get-in ast [::type :alternatives]))
@@ -308,7 +308,7 @@
            (list {:ast       ast
                   :state     (assoc state :asts (concat acc (rest remaining)))
                   :bindings  subs
-                  :arg-index ast-index}) ;; TMH can we put depth of arguments in this map and the one below?
+                  :arg-index ast-index})
            (recur (rest remaining)
                   (conj acc ast)
                   (if (and (not (schema/mgu-failure? subs))
@@ -444,8 +444,8 @@
   ;; function ast: clojure code that returns function. the data type of that function to find the right asts.
   (let [{fn-ast ::ast fn-type ::type} boxed-ast
         remaining-arg-types (schema/fn-arg-schemas fn-type)
+        ;; _ (println "Remaining-arg-types:" remaining-arg-types \newline)
         applied-state-or-nil (try-apply-fn-to-arguments remaining-arg-types {} [] state-fn-popped fn-ast fn-type [])]
-    ;(println "Remaining-arg-types:" remaining-arg-types)
     (if (nil? applied-state-or-nil)
       nil
       ;; if there is an overloaded-id, assoc it to the result
@@ -565,10 +565,10 @@
   [{:keys [state] :as wholemap}]
   ;; Checks the backtracking atom. If it is true, then backtracking will be used, otherwise, the original apply function is used.
   (cond
-    ;; The backtracking method, now working for ad-hoc polymorphism
-    (= @backtracking true)                                                  ;; TMH working here
+    ;; The backtracking method
+    (= @backtracking true)                                                  ;; TMH working here. Remove this later
     (let [;; _ (println "\n------------------------")
-          all-funcs-and-states (pop-all-function-asts state)                ;; Returns a list of all function ASTs in state, paired with the state with them popped. Elements are maps with keys {:ast :state}. For overloaded, puts all options in the returned list separately in their order of consideration. Will need to change this to have overloadeds considered in alternatives-before-stack order
+          all-funcs-and-states (pop-all-function-asts state)                ;; Returns a list of all function ASTs in state, paired with the state with them popped. Elements are maps with keys {:ast :state}.
           ;; _ (println "All funcs and states")
           ;; _ (doseq [fn-and-state all-funcs-and-states]
           ;;     (println fn-and-state "\n"))
@@ -582,7 +582,7 @@
           applied-funcs (remove nil? applied-funcs-or-nil-if-failed)          ;; remove nils, so that only actual function applications remain
           ;; _ (println "applied-funcs\n" applied-funcs)
           ;; _ (println "\n-------")
-          applied-fn-state (select-fn-to-apply applied-funcs)            ;; (???) first of the applied functions, fully applied, state and all
+          applied-fn-state (select-fn-to-apply applied-funcs)            ;; first of the applied functions, fully applied, state and all. Or, for overloadeds, one with topmost arguments
           ;; _ (println "first applied\n" applied-fn-state)
           ;; _ (println "------------------------\n")
           ]
@@ -590,27 +590,6 @@
         (update (update state :fn-not-applied inc) :total-apply-attempts inc)
         (update (update applied-fn-state :fn-applied inc) :total-apply-attempts inc)))
     
-    ;; This is the previous, mostly-working version for ad-hoc polymorphism. TMH remove later
-    ;; (= @backtracking "old-true")
-    ;; (let [_ (println "\n------------------------")
-    ;;       all-funcs-and-states (pop-all-function-asts state)                 ;; Returns a list of all function ASTs in state, paired with the state with them popped. Elements are maps with keys {:ast :state}. For overloaded, puts all options in the returned list separately in their order of consideration. Will need to change this to have overloadeds considered in alternatives-before-stack order
-    ;;       _ (println "All funcs\n" all-funcs-and-states)
-    ;;       _ (println "\n-------")
-    ;;       applied-funcs-or-nil-if-failed (map try-apply all-funcs-and-states)                  ;; try-apply tries to apply a function to the state. If fails, returns nil.
-    ;;                                                              ;; map call returns a sequence of applying each function, with nil if the apply didn't work
-    ;;       _ (println "all funcs info\n" applied-funcs-or-nil-if-failed)
-    ;;       _ (println "\n-------")
-    ;;       applied-funcs (remove nil? applied-funcs-or-nil-if-failed)          ;; remove nils, so that only actual function applications remain
-    ;;       _ (println "applied-funcs\n" applied-funcs)
-    ;;       _ (println "\n-------")
-    ;;       first-applied (first applied-funcs)                ;; first of the applied functions, fully applied, state and all
-    ;;       _ (println "first applied\n" first-applied)
-    ;;       _ (println "------------------------\n")
-    ;;       ]
-    ;;   (if (empty? applied-funcs)
-    ;;     (update (update state :fn-not-applied inc) :total-apply-attempts inc)
-    ;;     (update (update first-applied :fn-applied inc) :total-apply-attempts inc)))
-
     ;; No backtracking
     (= @backtracking false)
     (original-compile-step-apply wholemap)

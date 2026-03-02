@@ -1181,6 +1181,15 @@
                       :type-env  (assoc lib/type-env
                                         'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
                       :dealiases lib/dealiases}))
+  
+
+  '#:erp12.cbgp-lite.lang.compile{:ast {:op :var, :var mapv}, 
+                                  :type {:type :=>, :input {:type :cat, 
+                                                            ;; this children vector should be Remaining-arg-types
+                                                            :children [{:type :=>, :input {:type :cat, :children [{:type :tuple, :children [{:type :s-var, :sym s-50960} {:type :s-var, :sym s-50961}]}]}, :output {:type :s-var, :sym s-50959}}
+                                                                       {:type :map-of, :key {:type :s-var, :sym s-50960}, :value {:type :s-var, :sym s-50961}}]
+                                                            },
+                                         :output {:type :vector, :child {:type :s-var, :sym s-50959}}}}
 
   ;; This was to test order of fn application tries
   (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
