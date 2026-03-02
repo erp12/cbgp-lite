@@ -489,8 +489,8 @@
         first-overloaded-id (:overloaded-id first-state)]
     (if (nil? (:overloaded-id first-state))
       first-state
-      (let [states-with-same-overloaded-fn (filter #(= (:overloaded-id %) first-overloaded-id)
-                                                   applied-funcs-state-list)
+      (let [states-with-same-overloaded-fn (take-while #(= (:overloaded-id %) first-overloaded-id)
+                                                       applied-funcs-state-list)
             state-with-largest-arg-indices (apply max-key-that-works-on-vectors
                                                   :arg-indices
                                                   states-with-same-overloaded-fn)]
