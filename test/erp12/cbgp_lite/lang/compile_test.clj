@@ -1181,15 +1181,59 @@
                       :type-env  (assoc lib/type-env
                                         'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
                       :dealiases lib/dealiases}))
-  
 
-  '#:erp12.cbgp-lite.lang.compile{:ast {:op :var, :var mapv}, 
-                                  :type {:type :=>, :input {:type :cat, 
+  '#:erp12.cbgp-lite.lang.compile{:ast {:op :var, :var mapv},
+                                  :type {:type :=>, :input {:type :cat,
                                                             ;; this children vector should be Remaining-arg-types
                                                             :children [{:type :=>, :input {:type :cat, :children [{:type :tuple, :children [{:type :s-var, :sym s-50960} {:type :s-var, :sym s-50961}]}]}, :output {:type :s-var, :sym s-50959}}
-                                                                       {:type :map-of, :key {:type :s-var, :sym s-50960}, :value {:type :s-var, :sym s-50961}}]
-                                                            },
+                                                                       {:type :map-of, :key {:type :s-var, :sym s-50960}, :value {:type :s-var, :sym s-50961}}]},
                                          :output {:type :vector, :child {:type :s-var, :sym s-50959}}}}
+
+  (flatten '({:hello (1 2 3) :world "asdasd"}
+             nil
+             nil
+             ({:a 5 :b 1}
+              {:c (1 2 (3 4))})))
+  
+  
+  (some? '())
+  ;;=> true
+  (some? nil)
+  ;;=> false
+
+  ;; type of take'
+  '{:type :overloaded, 
+    :alternatives [{:type :=>, :input {:type :cat, :children [{:type int?} {:type string?}]}, :output {:type string?}}
+                   {:type :=>, :input {:type :cat, :children [{:type int?} {:type :vector, :child {:type :s-var, :sym s-54823}}]}, :output {:type :vector, :child {:type :s-var, :sym s-54823}}}
+                   ]}
+
+  ;; this should apply mapv-indexed to take and the vector of vector of ints,
+  ;; but it applies it to take and the vector of strings
+  ;; TMH make this a test after working
+  (:ast (c/push->ast {:push      (list {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+                                       {:gene :lit :val [[1 2 3] [4 5] [6 7 8 9] [10]] :type (lib/vector-of (lib/vector-of lib/INT))}
+
+                                       {:gene :var :name `lib/take'}
+                                       {:gene :var :name `lib/mapv-indexed}
+                                       {:gene :apply})
+                      :locals    []
+                      :ret-type  (lib/vector-of lib/STRING)
+                      :type-env  lib/type-env
+                      :dealiases lib/dealiases}))
+  
+  ;; this should apply mapv-indexed to take and the vector of strings, and does, 
+  ;; but not for the right reason
+  ;; TMH make this a test after working
+  (:ast (c/push->ast {:push      (list {:gene :lit :val [[1 2 3] [4 5] [6 7 8 9] [10]] :type (lib/vector-of (lib/vector-of lib/INT))}
+                                       {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+
+                                       {:gene :var :name `lib/take'}
+                                       {:gene :var :name `lib/mapv-indexed}
+                                       {:gene :apply})
+                      :locals    []
+                      :ret-type  (lib/vector-of lib/STRING)
+                      :type-env  lib/type-env
+                      :dealiases lib/dealiases}))
 
   ;; This was to test order of fn application tries
   (:ast (c/push->ast {:push      (list {:gene :local :idx 0}

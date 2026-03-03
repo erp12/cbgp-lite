@@ -294,6 +294,7 @@
   ([unify-with state bindings]
    (pop-all-unifiable-asts unify-with state bindings {}))
   ([unify-with state bindings {:keys [allow-macros] :or {allow-macros false}}]
+   (println "BINDINGS: " bindings)
    (loop [remaining (:asts state)
           acc []
           unifiable-list '()
@@ -301,8 +302,46 @@
      (if (empty? remaining)
        (reverse unifiable-list)
        (let [ast (first remaining)
-             subs (schema/mgu unify-with (::type ast))]
-         ;; TMH: Around here might be where needs to change to handle (reduce concat ...) issue
+             ;; TMH: Around here might be where needs to change to handle (reduce concat ...) issue
+             ;; The problem here is that schema/mgu just returns the first alternative that unifies
+             ;; In the case of (reduce concat [...]), the first alternative of  concat will unify,
+             ;; but then won't be able to find an argument of the right type with the second argument
+             ;; to reduce. But, if the second alternative of concat were tried, it would work to
+             ;; unify the second argument with the vector of vectors.
+
+             ;; Could we instead somehow return all alternatives in the returned unifiable-list,
+             ;; so that they could all be tried? And, if we did so, it should work to consider
+             ;; all alternatives at the same arg-index, but other args will determine which alternative
+             ;; gets used depending on what's closer to the top of the stack. I should test this after
+             ;; I think it's working. (Does this work when the HOF function calling it is not overloaded? 
+             ;; Is that even a thing? If so, wouldn't have an overloaded-id to find the args closest to the top of the stack with)
+
+             ; `mapv-indexed has the following type, which is not overloaded and is a HOF
+             #_(scheme (fn-of [(fn-of [INT (s-var 'a)] (s-var 'b))
+                               (vector-of (s-var 'a))]
+                              (vector-of (s-var 'b))))
+
+             ;; `take' has the following type. Could either one be used with  mapv-indexed?
+             #_{:type :overloaded
+                :alternatives [(fn-of [INT STRING] STRING) ; take-str
+                               (scheme (fn-of [INT (vector-of (s-var 'a))]
+                                              (vector-of (s-var 'a))))]} ; take-vec
+             ;; yes, could do 
+             #_(mapv-indexed take ["hi" "there" "string"])
+             ;; or
+             #_(mapv-indexed take [[1 2 3] [4 5] [6 7 8 9]])
+             ;; so, would want it to do whichever second argument is higher up the stack
+
+             ;; Can I add an overloaded-id here to make it clear that these are tied?
+
+             ;; (map try-apply all-funcs-and-states)
+             ;; this expects all things returned to be single states with fns applied.
+             ;; Could I return multiple things in a list, and flatten them here before checking for nils?
+
+             _ (println "::type ast: " (::type ast))
+
+             subs (schema/mgu unify-with (::type ast))
+             _ (println "subs " subs "\n")]
          ;; If the bindings doesn't change, we don't need to try backtracking, and we only need to return the first unified AST. 
          (if (and (= subs bindings) (empty? unifiable-list))
            (list {:ast       ast
@@ -401,10 +440,7 @@
                   ;; bind it to the actual same type as before.
           arg-type (schema/substitute bindings arg-type)
           _ (log/trace "In-context arg type:" arg-type)
-                  ;; is-s-var (= (:type arg-type) :s-var)
-                  ;; If arg-type is still a t-var, pop an ast of any type.
-                  ;; Otherwise, pop the AST of the expected type.
-                  ;; The ARG ast. :bindings may contain the new bindings for things like type A, B etc.
+                  ;; pop all unifiable ASTs of the correct type
           all-unifiable (pop-all-unifiable-asts arg-type new-state bindings) ;; TMH pop-all-unifiable-asts is probably where I need to fix HOF applying to overloaded fns, since they aren't being unifiable corrrectly?
           _ (log/trace "ALL UNIFIABLE: " all-unifiable)]
 
@@ -427,6 +463,12 @@
                                                   fn-ast
                                                   fn-type
                                                   (conj arg-indices arg-index))]
+            ;; TMH would need here to check if (first all-unifiable) has an overloaded-id, and if so, 
+            ;; take-while all-unifiable has same overloaded-id, and make a list of the results
+            ;; of try-apply-fn-to-arguments on them
+            ;; OH NO it's recursive, and would be a pain to deal with recursive results -- would have to check if recursive call returns a list, and flatten them?
+            
+            ;; >> actually, could just make it always return a list, and the recursive calls don't look bad
             (if (some? result)
               result
               (recur (rest all-unifiable)))))))))
@@ -448,6 +490,9 @@
         applied-state-or-nil (try-apply-fn-to-arguments remaining-arg-types {} [] state-fn-popped fn-ast fn-type [])]
     (if (nil? applied-state-or-nil)
       nil
+      ;; TMH: here, if returning a list for applied-state-or-nil, could make sure all maps in the list
+      ;; have the same :overloaded-id
+
       ;; if there is an overloaded-id, assoc it to the result
       (cond-> applied-state-or-nil
         overloaded-id (assoc :overloaded-id overloaded-id)))))
@@ -575,6 +620,7 @@
           ;; _ (println "\n-------")
           applied-funcs-or-nil-if-failed (map try-apply all-funcs-and-states) ;; try-apply tries to apply a function to the state. If fails, returns nil.
                                                                               ;; map call returns a sequence of applying each function, with nil if the apply didn't work
+                                                                              ;; returned is a sequence of states and nils
           ;; _ (println "applied-funcs-or-nil-if-failed")
           ;; _ (doseq [app-fn applied-funcs-or-nil-if-failed]
           ;;     (println app-fn))
