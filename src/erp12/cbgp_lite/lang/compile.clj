@@ -288,19 +288,38 @@
                  
                  :else funclist))))))
 
+(defn produce-unifiable-list
+  "Given an ast, a state, a list of one or more subs, 
+   acc, remaining, ast-index, and allow-macros
+   produce a new unifiable-list, which has all new options concatenated onto
+   the end."
+  [ast state list-of-subs acc remaining ast-index allow-macros]
+  (let [viable-alternative-subs (filter (fn [subs]
+                                          (and (not (schema/mgu-failure? subs))
+                                               (or allow-macros
+                                                   (not (macro? (::ast ast))))))
+                                        list-of-subs)
+        additions-to-unifiable-list (map (fn [subs]
+                                           {:ast      ast
+                                            :state    (assoc state :asts (concat acc (rest remaining)))
+                                            :bindings subs
+                                            :arg-index ast-index})
+                                         viable-alternative-subs)]
+    additions-to-unifiable-list))
+
 (defn pop-all-unifiable-asts
   "Pops every ast that is unifiable with the given schema. Does the same thing as pop-unifiable-ast, but instead of
    returning a map of the ast, the state, and bindings, it adds this map to a list. When every ast is checked and none remain, the list of maps is reversed and returned."
   ([unify-with state bindings]
    (pop-all-unifiable-asts unify-with state bindings {}))
   ([unify-with state bindings {:keys [allow-macros] :or {allow-macros false}}]
-   (println "BINDINGS: " bindings)
+  ;;  (println "\n\nBINDINGS: " bindings)
    (loop [remaining (:asts state)
           acc []
           unifiable-list '()
           ast-index (dec (count remaining))]
      (if (empty? remaining)
-       (reverse unifiable-list)
+       unifiable-list
        (let [ast (first remaining)
              ;; TMH: Around here might be where needs to change to handle (reduce concat ...) issue
              ;; The problem here is that schema/mgu just returns the first alternative that unifies
@@ -308,14 +327,14 @@
              ;; but then won't be able to find an argument of the right type with the second argument
              ;; to reduce. But, if the second alternative of concat were tried, it would work to
              ;; unify the second argument with the vector of vectors.
-
+             
              ;; Could we instead somehow return all alternatives in the returned unifiable-list,
              ;; so that they could all be tried? And, if we did so, it should work to consider
              ;; all alternatives at the same arg-index, but other args will determine which alternative
              ;; gets used depending on what's closer to the top of the stack. I should test this after
              ;; I think it's working. (Does this work when the HOF function calling it is not overloaded? 
              ;; Is that even a thing? If so, wouldn't have an overloaded-id to find the args closest to the top of the stack with)
-
+             
              ; `mapv-indexed has the following type, which is not overloaded and is a HOF
              #_(scheme (fn-of [(fn-of [INT (s-var 'a)] (s-var 'b))
                                (vector-of (s-var 'a))]
@@ -331,33 +350,31 @@
              ;; or
              #_(mapv-indexed take [[1 2 3] [4 5] [6 7 8 9]])
              ;; so, would want it to do whichever second argument is higher up the stack
-
+             
              ;; Can I add an overloaded-id here to make it clear that these are tied?
-
+             
              ;; (map try-apply all-funcs-and-states)
              ;; this expects all things returned to be single states with fns applied.
              ;; Could I return multiple things in a list, and flatten them here before checking for nils?
-
-             _ (println "::type ast: " (::type ast))
-
-             subs (schema/mgu unify-with (::type ast))
-             _ (println "subs " subs "\n")]
-         ;; If the bindings doesn't change, we don't need to try backtracking, and we only need to return the first unified AST. 
-         (if (and (= subs bindings) (empty? unifiable-list))
-           (list {:ast       ast
-                  :state     (assoc state :asts (concat acc (rest remaining)))
-                  :bindings  subs
-                  :arg-index ast-index})
+             
+            ;;  _ (println "ast: "  ast)
+             list-of-subs (if (= :overloaded (:type (::type ast)))
+                              ;; If overloaded, handle each alternative separately, and make a list
+                            (map (fn [alternative-type]
+                                   (schema/mgu unify-with alternative-type))
+                                 (:alternatives (::type ast)))
+                              ;; Otherwise, just make a list with the 1 mgu in a list
+                            (list (schema/mgu unify-with (::type ast))))
+             new-unifiable-list (produce-unifiable-list ast state list-of-subs acc remaining ast-index allow-macros)]
+         (if (and (= 1 (count list-of-subs))
+                  (= (first list-of-subs) bindings)
+                  (empty? unifiable-list))
+           ;; If the bindings doesn't change, we don't need to try backtracking (because not polymorphic), and we only need to return new-unifiable-list, which only contains one element
+           new-unifiable-list
+           ;; Otherwise, we add all new-unifiable-list to unifiable-list
            (recur (rest remaining)
                   (conj acc ast)
-                  (if (and (not (schema/mgu-failure? subs))
-                           (or allow-macros
-                               (not (macro? (::ast ast)))))
-                    (conj unifiable-list {:ast      ast
-                                          :state    (assoc state :asts (concat acc (rest remaining)))
-                                          :bindings subs
-                                          :arg-index ast-index})
-                    unifiable-list)
+                  (concat unifiable-list new-unifiable-list)
                   (dec ast-index))))))))
 
 (defn pop-push-unit
