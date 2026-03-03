@@ -1039,7 +1039,7 @@
                             :type-env  (assoc lib/type-env
                                               'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
                             :dealiases lib/dealiases}))
-        _ (is (= type {:type 'int?}))
+        _ (is (= type {:type 'int?, :typeclasses #{:number}}))
         ;; _ (println)
         ;; _ (println "ast:" ast)
         form (a/ast->form ast)
