@@ -1026,10 +1026,6 @@
                                              {:gene :var :name 'reduce}
                                              {:gene :apply}
 
-                                            ;;  {:gene :var :name 'count}
-                                            ;;  {:gene :apply}
-
-                                             ;; why doesn't this work?
                                              {:gene :var :name '+}
                                              {:gene :var :name 'reduce}
                                              {:gene :apply}
@@ -1118,88 +1114,57 @@
       (is (= {:op :const, :val [1 8 1 2]}
              ast)))))
 
+(deftest compile-HOF-argument-that-has-alternatives-test
+  (testing "the (reduce concat [[...]]) problem that made the bug aparent"
+    (let [{::c/keys [ast type]}
+          (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
+
+                                               ;; This tries to reduce concat, which used to not work because
+                                               ;; concat on vectors is the second option, not the first,
+                                               ;; in the overload. Now works!
+                                               {:gene :var :name `lib/concat'}
+                                               {:gene :var :name 'reduce}
+                                               {:gene :apply})
+                              :locals    ['input1]
+                              :ret-type  {:type :vector :child {:type 'int?}}
+                              :type-env  (assoc lib/type-env
+                                                'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
+                              :dealiases lib/dealiases}))
+          form (a/ast->form ast)
+          func (eval `(fn [~'input1] ~form))]
+      (is (= {:type :vector :child {:type 'int?}} type))
+      (is (= '{:args [{:op :var, :var erp12.cbgp-lite.lang.lib/concat'}
+                      {:name input1, :op :local}],
+               :fn {:op :var, :var reduce},
+               :op :invoke}
+             ast))
+      (is (= [4 7 1 5 5 5 2 3 10 1 1 20]
+             (func [[4 7 1] [5 5 5] [2 3 10] [1 1 20]]))))
+    (let [{::c/keys [ast]}
+          (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
+                                               {:gene :var :name `lib/concat'}
+                                               {:gene :var :name 'reduce}
+                                               {:gene :apply})
+                              :locals    ['input1]
+                              :ret-type  {:type 'string?}
+                              :type-env  (assoc lib/type-env
+                                                'input1 {:type :vector :child {:type 'string?}})
+                              :dealiases lib/dealiases}))
+          form (a/ast->form ast)
+          _ (is (= '(reduce erp12.cbgp-lite.lang.lib/concat' input1)
+                   form))
+          func (eval `(fn [~'input1] ~form))]
+      (is (= "hello space there"
+             (func ["hello" " space " "there"])))))
+  
+  (testing "other HOFs on overloaded fns"
+    ;; put test here for mapv-indexed over take once it works
+    ))
+
 (comment
   (require '[taoensso.timbre :as log])
   (log/set-level! :trace) ;; use this if I want to see more details of compilation
   (log/set-level! :debug) ;; the default
-
-  ;; full reduce of concat
-  (:ast (c/push->ast {:push      (list {:gene :lit :type {:type 'int?} :val -1} ;; just put here to make it return an int if it fails
-
-                                       {:gene :local :idx 0}
-
-                                       ;; This tries to reduce concat, which doesn't work because
-                                       ;; concat on vectors is the second option, not the first,
-                                       ;; in the overload
-                                       {:gene :var :name `lib/concat'}
-                                       {:gene :var :name 'reduce}
-                                       {:gene :apply}
-
-                                       ;; This works, because count isn't overloaded
-                                      ;;  {:gene :var :name 'count}
-                                      ;;  {:gene :var :name 'mapv}
-                                      ;;  {:gene :apply}
-
-                                       {:gene :var :name '+}
-                                       {:gene :var :name 'reduce}
-                                       {:gene :apply})
-                      :locals    ['input1]
-                      :ret-type  {:type 'int?}
-                      :type-env  (assoc lib/type-env
-                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
-                      :dealiases lib/dealiases}))
-
-  ;; TMH simpler, just reduce on concat, still broken
-  (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
-
-                                       ;; This tries to reduce concat, which doesn't work because
-                                       ;; concat on vectors is the second option, not the first,
-                                       ;; in the overload
-                                       {:gene :var :name `lib/concat'}
-                                       {:gene :var :name 'reduce}
-                                       {:gene :apply})
-                      :locals    ['input1]
-                      :ret-type  {:type :vector :child {:type 'int?}}
-                      :type-env  (assoc lib/type-env
-                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
-                      :dealiases lib/dealiases}))
-
-  ;; TMH ok, here, the vector is higher than the set
-  ;; so, this should apply mapv to count (same index in stack) and the vector local
-  ;; (which is higher in the stack), instead of to count and the lit set of strings,
-  ;; which is lower in the stack.
-  ;; Right now, it applies to the set, because it's first in overloaded
-  (:ast (c/push->ast {:push      (list {:gene :lit :val #{"hello" "there" "tom"} :type (lib/set-of lib/STRING)} ;; map over vector or set
-                                       {:gene :local :idx 0}
-
-                                       ;; This works, because count isn't overloaded
-                                       {:gene :var :name 'count}
-                                       {:gene :var :name 'mapv}
-                                       {:gene :apply})
-                      :locals    ['input1]
-                      :ret-type  {:type :vector :child {:type 'int?}}
-                      :type-env  (assoc lib/type-env
-                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
-                      :dealiases lib/dealiases}))
-
-  '#:erp12.cbgp-lite.lang.compile{:ast {:op :var, :var mapv},
-                                  :type {:type :=>, :input {:type :cat,
-                                                            ;; this children vector should be Remaining-arg-types
-                                                            :children [{:type :=>, :input {:type :cat, :children [{:type :tuple, :children [{:type :s-var, :sym s-50960} {:type :s-var, :sym s-50961}]}]}, :output {:type :s-var, :sym s-50959}}
-                                                                       {:type :map-of, :key {:type :s-var, :sym s-50960}, :value {:type :s-var, :sym s-50961}}]},
-                                         :output {:type :vector, :child {:type :s-var, :sym s-50959}}}}
-
-  (flatten '({:hello (1 2 3) :world "asdasd"}
-             nil
-             nil
-             ({:a 5 :b 1}
-              {:c (1 2 (3 4))})))
-  
-  
-  (some? '())
-  ;;=> true
-  (some? nil)
-  ;;=> false
 
   ;; type of take'
   '{:type :overloaded, 
@@ -1235,81 +1200,6 @@
                       :type-env  lib/type-env
                       :dealiases lib/dealiases}))
 
-  ;; This was to test order of fn application tries
-  (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
-
-                                         ;; This works, because count isn't overloaded
-                                       {:gene :var :name 'count}
-                                       {:gene :var :name `lib/filter'}
-                                       {:gene :var :name 'mapv}
-                                       {:gene :var :name '+}
-                                       {:gene :apply})
-                      :locals    ['input1]
-                      :ret-type  {:type :vector :child {:type 'int?}}
-                      :type-env  (assoc lib/type-env
-                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
-                      :dealiases lib/dealiases}))
-
-    ;; simpler reduce on concat of a vector of vectors of ints - this doesn't work, but does work if the vector alternative is first in the list of options for concat!!!!
-  (let [{::c/keys [ast type]}
-        (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type :vector :child {:type 'int?}}} :val [[4 7 1] [5 5 5] [2 3 10] [1 1 20]]}
-                                             ;{:gene :local :idx 0}
-                                             {:gene :var :name `lib/concat'}
-                                             {:gene :var :name 'reduce}
-                                             {:gene :apply})
-                            :locals    ['input1]
-                            :ret-type  {:type :vector :child {:type 'int?}}
-                            :type-env  (assoc lib/type-env
-                                              'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
-                            :dealiases lib/dealiases}))
-        _ (println "ast:" ast)
-        form (a/ast->form ast)
-        _ (println "FORM: " form)
-        func (eval `(fn [~'input1] ~form))]
-    (func [[4 7 1] [5 5 5] [2 3 10] [1 1 20]]))
-
-  ;; simpler reduce on concat of a vector of strings - this works
-  (let [{::c/keys [ast type]}
-        (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
-                                             {:gene :var :name `lib/concat'}
-                                             {:gene :var :name 'reduce}
-                                             {:gene :apply})
-                            :locals    ['input1]
-                            :ret-type  {:type 'string?}
-                            :type-env  (assoc lib/type-env
-                                              'input1 {:type :vector :child {:type 'string?}})
-                            :dealiases lib/dealiases}))
-        _ (println "ast:" ast)
-        form (a/ast->form ast)
-        _ (println "FORM: " form)
-        func (eval `(fn [~'input1] ~form))]
-    (func ["hello" " space " "there"]))
-
-  ;; simpler reduce - this works
-  (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [2 3 24]}
-                                       {:gene :var :name '+}
-                                       {:gene :var :name 'reduce}
-                                       {:gene :apply})
-                      :locals    ['input1]
-                      :ret-type  {:type 'int?}
-                      :type-env  (assoc lib/type-env
-                                        'input1 {:type :vector :child {:type :vector :child {:type 'int?}}})
-                      :dealiases lib/dealiases}))
-
-  ;; simpler concat - does this work - yes
-  (let [{::c/keys [ast type]}
-        (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [2 3 24]}
-                                             {:gene :lit :type {:type :vector :child {:type 'int?}} :val [-4 -8]}
-                                             {:gene :var :name `lib/concat'}
-                                             {:gene :apply})
-                            :locals    []
-                            :ret-type  {:type :vector :child {:type 'int?}}
-                            :type-env  lib/type-env
-                            :dealiases lib/dealiases}))
-        _ (println "ast:" ast)
-        form (a/ast->form ast)
-        _ (println "FORM: " form)]
-    form)
   )
 
 (deftest polymorphic-output-test
