@@ -239,6 +239,8 @@
   [^Character c]
   (Character/toLowerCase c))
 
+(def str-join (comp guard str/join))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Collections
 
@@ -576,7 +578,7 @@
    'zero?              (scheme (fn-of [(s-var 'a)] BOOLEAN) {'a #{:number}})
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;; Text
-   `str/join           (scheme (fn-of [(vector-of (s-var 'c))] STRING) {'c #{:stringable}})
+   `str-join           (scheme (fn-of [(vector-of (s-var 'c))] STRING) {'c #{:stringable}})
    'str                (scheme (fn-of [(s-var 't)] STRING))
    `int->char          (fn-of [INT] CHAR)
    `whitespace?        (unary-pred CHAR)
@@ -898,7 +900,7 @@
     range2            erp12.cbgp-lite.lang.lib/rangev
     range3            erp12.cbgp-lite.lang.lib/rangev
     right             second
-    str-join-sep      clojure.string/join})
+    str-join-sep      erp12.cbgp-lite.lang.lib/str-join})
 
 (def macros
   #{'if 'do2 'do3})
