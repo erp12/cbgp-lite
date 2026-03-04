@@ -869,7 +869,7 @@
                                                               [{:gene :local :idx 0}
                                                                {:gene :var :name 'inc}
                                                                {:gene :apply}]
-                                                              {:gene :var :name 'mapv}
+                                                              {:gene :var :name `lib/mapv'}
                                                               {:gene :apply}]
                                                   :locals    []
                                                   :ret-type  {:type :vector :child {:type 'int?}}
@@ -877,7 +877,7 @@
                                                   :dealiases lib/dealiases}))
         _ (is (= type {:type :vector :child {:type 'int? :typeclasses #{:number}}}))
         form (a/ast->form ast)
-        _ (is (matches? (erp12.cbgp-lite.lang.lib/safe-mapv (erp12.cbgp-lite.lang.ast/guarded-fn [?a] (inc ?a)) [1 2 3])
+        _ (is (matches? (erp12.cbgp-lite.lang.lib/mapv' (erp12.cbgp-lite.lang.ast/guarded-fn [?a] (inc ?a)) [1 2 3])
                         form))
         func (eval `(fn [] ~form))]
     (is (= [2 3 4] (func)))))
@@ -1005,7 +1005,7 @@
   (let [{::c/keys [ast type]}
         (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [2 3 24]}
                                              {:gene :var :name '+}
-                                             {:gene :var :name 'reduce}
+                                             {:gene :var :name `lib/reduce'}
                                              {:gene :apply})
                             :locals    []
                             :ret-type  {:type 'int?}
@@ -1023,11 +1023,11 @@
 
                                              {:gene :local :idx 0}
                                              {:gene :var :name `lib/concat'}
-                                             {:gene :var :name 'reduce}
+                                             {:gene :var :name `lib/reduce'}
                                              {:gene :apply}
 
                                              {:gene :var :name '+}
-                                             {:gene :var :name 'reduce}
+                                             {:gene :var :name `lib/reduce'}
                                              {:gene :apply}
                                              )
                             :locals    ['input1]
@@ -1049,7 +1049,7 @@
           (:ast (c/push->ast {:push      (list {:gene :lit :val #{"hello" "there" "tom"} :type (lib/set-of lib/STRING)}
                                                {:gene :local :idx 0}
                                                {:gene :var :name 'count}
-                                               {:gene :var :name 'mapv}
+                                               {:gene :var :name `lib/mapv'}
                                                {:gene :apply})
                               :locals    ['input1]
                               :ret-type  {:type :vector :child {:type 'int?}}
@@ -1058,14 +1058,14 @@
                               :dealiases lib/dealiases}))]
       (is (= {:type :vector :child {:type 'int?}} type))
       (is (= '{:args [{:op :var, :var count} {:name input1, :op :local}], ;; since the local is nearer the top of the stack, it is the argument to mapv
-               :fn {:op :var, :var mapv},
+               :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv'},
                :op :invoke}
              ast)))
     (let [{::c/keys [ast type]}
           (:ast (c/push->ast {:push      (list {:gene :local :idx 0} ;; only diff is swapping this and following genes
                                                {:gene :lit :val #{"hello" "there" "tom"} :type (lib/set-of lib/STRING)}
                                                {:gene :var :name 'count}
-                                               {:gene :var :name 'mapv}
+                                               {:gene :var :name `lib/mapv'}
                                                {:gene :apply})
                               :locals    ['input1]
                               :ret-type  {:type :vector :child {:type 'int?}}
@@ -1075,7 +1075,7 @@
       (is (= {:type :vector :child {:type 'int?}} type))
       (is (= '{:args [{:op :var, :var count}
                       {:op :const, :val #{"hello" "there" "tom"}}], ;; since the set is nearer the top of the stack, it is the argument to mapv
-               :fn {:op :var, :var mapv},
+               :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv'},
                :op :invoke}
              ast))))
   (testing "order of applied functions"
@@ -1084,7 +1084,7 @@
                                                {:gene :local :idx 0}
                                                {:gene :var :name 'count}
                                                {:gene :var :name `lib/filter'}
-                                               {:gene :var :name 'mapv}
+                                               {:gene :var :name `lib/mapv'}
                                                {:gene :var :name '+}
                                                {:gene :apply})
                               :locals    ['input1]
@@ -1094,14 +1094,14 @@
                               :dealiases lib/dealiases}))]
       (is (= {:type :vector :child {:type 'int?}} type))
       (is (= '{:args [{:op :var, :var count} {:name input1, :op :local}],
-               :fn {:op :var, :var mapv},
+               :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv'},
                :op :invoke}
              ast)))
     (let [{::c/keys [ast type]}
           (:ast (c/push->ast {:push      (list {:gene :lit :type {:type :vector :child {:type 'int?}} :val [1 8 1 2]} ;; test which function is applied first. This one should be count to local, returning vec of ints from bottom of stack
                                                {:gene :local :idx 0}
                                                {:gene :var :name `lib/filter'}
-                                               {:gene :var :name 'mapv}
+                                               {:gene :var :name `lib/mapv'}
                                                {:gene :var :name 'count}
                                                {:gene :var :name '+}
                                                {:gene :apply})
@@ -1123,7 +1123,7 @@
                                                ;; concat on vectors is the second option, not the first,
                                                ;; in the overload. Now works!
                                                {:gene :var :name `lib/concat'}
-                                               {:gene :var :name 'reduce}
+                                               {:gene :var :name `lib/reduce'}
                                                {:gene :apply})
                               :locals    ['input1]
                               :ret-type  {:type :vector :child {:type 'int?}}
@@ -1135,7 +1135,7 @@
       (is (= {:type :vector :child {:type 'int?}} type))
       (is (= '{:args [{:op :var, :var erp12.cbgp-lite.lang.lib/concat'}
                       {:name input1, :op :local}],
-               :fn {:op :var, :var reduce},
+               :fn {:op :var, :var erp12.cbgp-lite.lang.lib/reduce'},
                :op :invoke}
              ast))
       (is (= [4 7 1 5 5 5 2 3 10 1 1 20]
@@ -1143,7 +1143,7 @@
     (let [{::c/keys [ast]}
           (:ast (c/push->ast {:push      (list {:gene :local :idx 0}
                                                {:gene :var :name `lib/concat'}
-                                               {:gene :var :name 'reduce}
+                                               {:gene :var :name `lib/reduce'}
                                                {:gene :apply})
                               :locals    ['input1]
                               :ret-type  {:type 'string?}
@@ -1151,7 +1151,7 @@
                                                 'input1 {:type :vector :child {:type 'string?}})
                               :dealiases lib/dealiases}))
           form (a/ast->form ast)
-          _ (is (= '(reduce erp12.cbgp-lite.lang.lib/concat' input1)
+          _ (is (= '(erp12.cbgp-lite.lang.lib/reduce' erp12.cbgp-lite.lang.lib/concat' input1)
                    form))
           func (eval `(fn [~'input1] ~form))]
       (is (= "hello space there"
@@ -1253,7 +1253,7 @@
                                                  {:gene :lit :val #{#{1 2} #{3 4 5 6 7}} :type (lib/set-of (lib/set-of lib/INT))}
 
                                                  {:gene :var :name 'vec}
-                                                 {:gene :var :name 'mapv}
+                                                 {:gene :var :name `lib/mapv'}
                                                  {:gene :apply})
                                 :locals    []
                                 :ret-type  (lib/vector-of (lib/vector-of lib/INT))
@@ -1261,7 +1261,7 @@
                                 :dealiases lib/dealiases}))]
         (is (= (lib/vector-of (lib/vector-of lib/INT)) type))
         (is (= '{:op :invoke
-                 :fn {:op :var, :var mapv}
+                 :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv'}
                  :args [{:op :var, :var vec}
                         {:op :const, :val #{#{1 2} #{3 4 5 6 7}}}]}
                ast)))
@@ -1272,7 +1272,7 @@
                                                  {:gene :lit :val [#{1 2 3} #{4 5} #{6 7 8 9} #{10}] :type (lib/vector-of (lib/set-of lib/INT))}
 
                                                  {:gene :var :name 'vec}
-                                                 {:gene :var :name 'mapv}
+                                                 {:gene :var :name `lib/mapv'}
                                                  {:gene :apply})
                                 :locals    []
                                 :ret-type  (lib/vector-of (lib/vector-of lib/INT))
@@ -1280,7 +1280,7 @@
                                 :dealiases lib/dealiases}))]
         (is (= (lib/vector-of (lib/vector-of lib/INT)) type))
         (is (= '{:op :invoke
-                 :fn {:op :var, :var mapv}
+                 :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv'}
                  :args [{:op :var, :var vec}
                         {:op :const, :val [#{1 2 3} #{4 5} #{6 7 8 9} #{10}]}]}
                ast)))
@@ -1291,7 +1291,7 @@
                                                  {:gene :lit :val #{"hi" "someone"} :type (lib/set-of lib/STRING)}
 
                                                  {:gene :var :name 'vec}
-                                                 {:gene :var :name 'mapv}
+                                                 {:gene :var :name `lib/mapv'}
                                                  {:gene :apply})
                                 :locals    []
                                 :ret-type  (lib/vector-of (lib/vector-of lib/CHAR))
@@ -1299,7 +1299,7 @@
                                 :dealiases lib/dealiases}))]
         (is (= (lib/vector-of (lib/vector-of lib/CHAR)) type))
         (is (= '{:op :invoke
-                 :fn {:op :var, :var mapv}
+                 :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv'}
                  :args [{:op :var, :var vec}
                         {:op :const, :val #{"hi" "someone"}}]}
                ast)))
@@ -1310,7 +1310,7 @@
                                                  {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
 
                                                  {:gene :var :name 'vec}
-                                                 {:gene :var :name 'mapv}
+                                                 {:gene :var :name `lib/mapv'}
                                                  {:gene :apply})
                                 :locals    []
                                 :ret-type  (lib/vector-of (lib/vector-of lib/CHAR))
@@ -1318,7 +1318,7 @@
                                 :dealiases lib/dealiases}))]
         (is (= (lib/vector-of (lib/vector-of lib/CHAR)) type))
         (is (= '{:op :invoke
-                 :fn {:op :var, :var mapv}
+                 :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv'}
                  :args [{:op :var, :var vec}
                         {:op :const, :val ["hello" "there" "string"]}]}
                ast))))))

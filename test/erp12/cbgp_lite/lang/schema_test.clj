@@ -58,7 +58,7 @@
            (sch/schema-terms (get lib/type-env 'int))))
     ;; Stringable
     (is (= #{#{'char? 'string?} :vector 'string? :cat :s-var :=> :scheme}
-           (sch/schema-terms (get lib/type-env `str/join)))))
+           (sch/schema-terms (get lib/type-env `lib/str-join)))))
 
   (testing "Overloaded"
     ;; First, in lib order
@@ -83,8 +83,8 @@
 
     ;; Reduce, in lib order
     (is (= #{:=> :cat :s-var :scheme :map-of :tuple}
-           (sch/schema-terms (first (:alternatives (get lib/type-env 'reduce))))))
+           (sch/schema-terms (first (:alternatives (get lib/type-env `lib/reduce'))))))
     (is (= #{:=> :cat :s-var :scheme :set}
-           (sch/schema-terms (second (:alternatives (get lib/type-env 'reduce))))))
+           (sch/schema-terms (second (:alternatives (get lib/type-env `lib/reduce'))))))
     (is (= #{:=> :cat :s-var :scheme :vector}
-           (sch/schema-terms (last (:alternatives (get lib/type-env 'reduce))))))))
+           (sch/schema-terms (last (:alternatives (get lib/type-env `lib/reduce'))))))))

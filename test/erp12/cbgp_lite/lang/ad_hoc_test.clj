@@ -824,7 +824,7 @@
                                        {:push [{:gene :lit :val 0 :type {:type 'int?}}
                                                {:gene :lit :val [1 2 3 4 5] :type {:type :vector :child {:type 'int?}}}
                                                {:gene :var :name '+}
-                                               {:gene :var :name 'reduce}
+                                               {:gene :var :name `lib/reduce'}
                                                {:gene :apply}]
                                         :locals []
                                         :ret-type {:type 'int?}
@@ -842,7 +842,7 @@
                                        {:push [{:gene :lit :val 0 :type {:type 'int?}}
                                                {:gene :lit :val #{1 2 3 4 5} :type {:type :set :child {:type 'int?}}}
                                                {:gene :var :name '+}
-                                               {:gene :var :name 'reduce}
+                                               {:gene :var :name `lib/reduce'}
                                                {:gene :apply}]
                                         :locals []
                                         :ret-type {:type 'int?}
@@ -869,7 +869,7 @@
                                                   {:gene :var :name 'int}
                                                   {:gene :apply}
                                                   {}]
-                                                 {:gene :var :name 'reduce}
+                                                 {:gene :var :name `lib/reduce'}
                                                  {:gene :apply}]
                                           :locals []
                                           :ret-type {:type 'int?}
@@ -1258,7 +1258,7 @@
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push      [{:gene :var :name 'inc}
                                                     {:gene :lit :val [1 2 3] :type {:type :vector :child {:type 'int?}}}
-                                                    {:gene :var :name 'mapv}
+                                                    {:gene :var :name `lib/mapv'}
                                                     {:gene :apply}]
                                         :locals    []
                                         :ret-type  {:type :vector :child {:type 'int?}}
@@ -1275,7 +1275,7 @@
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push      [{:gene :lit :val #{5 6 7 8} :type {:type :set :child {:type 'int?}}}
                                                     {:gene :var :name 'inc}
-                                                    {:gene :var :name 'mapv}
+                                                    {:gene :var :name `lib/mapv'}
                                                     {:gene :apply}
                                                     {:gene :var :name `lib/sort'}
                                                     {:gene :apply}]
@@ -1294,7 +1294,7 @@
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push      [{:gene :var :name 'int}
                                                     {:gene :lit :val "hi there" :type {:type 'string?}}
-                                                    {:gene :var :name 'mapv}
+                                                    {:gene :var :name `lib/mapv'}
                                                     {:gene :apply}]
                                         :locals    []
                                         :ret-type  {:type :vector :child {:type 'int?}}
@@ -1326,7 +1326,7 @@
                                                      {:gene :apply}
                                                      {:gene :var :name `lib/>'}
                                                      {:gene :apply}]
-                                                    {:gene :var :name 'mapv}
+                                                    {:gene :var :name `lib/mapv'}
                                                     {:gene :apply}]
                                         :locals    []
                                         :ret-type  {:type :vector :child {:type 'boolean?}}
@@ -1503,7 +1503,7 @@
     (let [{::c/keys [ast type]} (:ast (c/push->ast
                                        {:push      [{:gene :local :idx 0}
                                                     {:gene :lit :val {\a 1 \b 2 \c 3} :type {:type :map-of :key {:type 'char?} :value {:type 'int?}}}
-                                                    {:gene :var :name 'assoc}
+                                                    {:gene :var :name `lib/safe-assoc}
                                                     {:gene :var :name 'partial}
                                                     {:gene :apply}
                                                     {:gene :lit :val \z :type {:type 'char?}}
@@ -1518,7 +1518,7 @@
           form (a/ast->form ast)
           _ (when verbose (println "FORM: " form))
           func (eval `(fn [~'in1] ~form))]
-      (is (= '((partial assoc {\a 1, \b 2, \c 3}) \z in1) form))
+      (is (= '((partial erp12.cbgp-lite.lang.lib/safe-assoc {\a 1, \b 2, \c 3}) \z in1) form))
       (is (= {\a 1 \b 2 \c 3 \z 42} (func 42)))))
 
  ; target form: ((partial assoc {\a 1 \b 2 \c 3} \z) 42)
@@ -1527,7 +1527,7 @@
                                        {:push      [{:gene :local :idx 0}
                                                     {:gene :lit :val \z :type {:type 'char?}}
                                                     {:gene :lit :val {\a 1 \b 2 \c 3} :type {:type :map-of :key {:type 'char?} :value {:type 'int?}}}
-                                                    {:gene :var :name 'assoc}
+                                                    {:gene :var :name `lib/safe-assoc}
                                                     {:gene :var :name 'partial}
                                                     {:gene :apply}
                                                     {:gene :apply}]
@@ -1541,7 +1541,7 @@
           form (a/ast->form ast)
           _ (when verbose (println "FORM: " form))
           func (eval `(fn [~'in1] ~form))]
-      (is (= '((partial assoc {\a 1, \b 2, \c 3} \z) in1) form))
+      (is (= '((partial erp12.cbgp-lite.lang.lib/safe-assoc {\a 1, \b 2, \c 3} \z) in1) form))
       (is (= {\a 1 \b 2 \c 3 \z 42} (func 42)))))
   
   ; target form: ((partial test3 param1 param2) param3)
@@ -1551,7 +1551,7 @@
                                        {:push      [{:gene :local :idx 1}
                                                     {:gene :local :idx 0}
                                                     {:gene :lit :val {0 42 1 2999 2 108} :type {:type :map-of :key {:type 'int?} :value {:type 'int?}}}
-                                                    {:gene :var :name 'assoc}
+                                                    {:gene :var :name `lib/safe-assoc}
                                                     {:gene :var :name 'partial}
                                                     {:gene :apply}
                                                     {:gene :apply}]
@@ -1573,7 +1573,7 @@
                                       {:push      [{:gene :lit, :type {:child {:type 'int?}, :type :vector}, :val [0 2 1 1]}
                                                     {:arg-types [{:sym 's-39761, :type :s-var}], :gene :fn, :ret-type {:sym 's-39760, :type :s-var}}
                                                     [{:gene :lit, :type {:type 'int?}, :val 1} {:gene :local, :idx 0} {:gene :var, :name '+} {:gene :apply}]
-                                                    {:gene :var, :name 'mapv}
+                                                    {:gene :var, :name `lib/mapv'}
                                                     {:gene :apply}]
                                        :locals    []
                                        :ret-type  {:type :vector :child {:type 'int?}}

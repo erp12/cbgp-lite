@@ -153,13 +153,11 @@
            fold
            inc
            last
-           mapv
            nth-or-else
            partial
            range1
            range2
            range3
-           reduce
            erp12.cbgp-lite.lang.lib/butlast'
            erp12.cbgp-lite.lang.lib/concat'
            erp12.cbgp-lite.lang.lib/conj'
@@ -167,12 +165,14 @@
            erp12.cbgp-lite.lang.lib/index-of
            erp12.cbgp-lite.lang.lib/map2v
            erp12.cbgp-lite.lang.lib/mapcat'
+           erp12.cbgp-lite.lang.lib/mapv'
            erp12.cbgp-lite.lang.lib/mapv-indexed
            erp12.cbgp-lite.lang.lib/max'
            erp12.cbgp-lite.lang.lib/min'
            erp12.cbgp-lite.lang.lib/neg
            erp12.cbgp-lite.lang.lib/occurrences-of
            erp12.cbgp-lite.lang.lib/pow
+           erp12.cbgp-lite.lang.lib/reduce'
            erp12.cbgp-lite.lang.lib/remove-element
            erp12.cbgp-lite.lang.lib/replace'
            erp12.cbgp-lite.lang.lib/replace-first'
@@ -200,11 +200,9 @@
                      fold
                      if
                      last
-                     mapv
                      not
                      not=
                      partial
-                     reduce
                      erp12.cbgp-lite.lang.lib/<'
                      erp12.cbgp-lite.lang.lib/<='
                      erp12.cbgp-lite.lang.lib/>'
@@ -218,9 +216,11 @@
                      erp12.cbgp-lite.lang.lib/in?
                      erp12.cbgp-lite.lang.lib/map2v
                      erp12.cbgp-lite.lang.lib/mapcat'
+                     erp12.cbgp-lite.lang.lib/mapv'
                      erp12.cbgp-lite.lang.lib/max'
                      erp12.cbgp-lite.lang.lib/min'
                      erp12.cbgp-lite.lang.lib/or
+                     erp12.cbgp-lite.lang.lib/reduce'
                      erp12.cbgp-lite.lang.lib/remove'
                      erp12.cbgp-lite.lang.lib/remove-element
                      erp12.cbgp-lite.lang.lib/replace'
