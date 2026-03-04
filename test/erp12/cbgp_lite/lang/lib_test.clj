@@ -249,3 +249,19 @@
          (sort
           (keys
            (l/lib-for-type-ctors #{'boolean? :=>}))))))
+
+(defn all-svars-as-maps
+  "Given a vector/list of s-vars, checks that all of them are of the form:
+   {:sym 'symbol}, and not 'symbol"
+  [svars]
+  (every? (fn [svar]
+            (and (map? svar)
+                 (contains? svar :sym)
+                 (symbol? (:sym svar))))
+          svars))
+
+;; Check that :s-vars in type-env types are correctly formatted
+(deftest check-svars-in-type-env
+  (doseq [[the-fn the-type] l/type-env]
+    (is (all-svars-as-maps (:s-vars the-type))
+        (str "Failed for function: " the-fn "\nWith type: " the-type))))
