@@ -327,47 +327,7 @@
      (if (empty? remaining)
        unifiable-list
        (let [ast (first remaining)
-             ;; TMH: Around here might be where needs to change to handle (reduce concat ...) issue
-             ;; The problem here is that schema/mgu just returns the first alternative that unifies
-             ;; In the case of (reduce concat [...]), the first alternative of  concat will unify,
-             ;; but then won't be able to find an argument of the right type with the second argument
-             ;; to reduce. But, if the second alternative of concat were tried, it would work to
-             ;; unify the second argument with the vector of vectors.
-             
-             ;; Could we instead somehow return all alternatives in the returned unifiable-list,
-             ;; so that they could all be tried? And, if we did so, it should work to consider
-             ;; all alternatives at the same arg-index, but other args will determine which alternative
-             ;; gets used depending on what's closer to the top of the stack. I should test this after
-             ;; I think it's working. (Does this work when the HOF function calling it is not overloaded? 
-             ;; Is that even a thing? If so, wouldn't have an overloaded-id to find the args closest to the top of the stack with)
-             
-             ; `mapv-indexed has the following type, which is not overloaded and is a HOF
-             #_(scheme (fn-of [(fn-of [INT (s-var 'a)] (s-var 'b))
-                               (vector-of (s-var 'a))]
-                              (vector-of (s-var 'b))))
-
-             ;; `take' has the following type. Could either one be used with  mapv-indexed?
-             #_{:type :overloaded
-                :alternatives [(fn-of [INT STRING] STRING) ; take-str
-                               (scheme (fn-of [INT (vector-of (s-var 'a))]
-                                              (vector-of (s-var 'a))))]} ; take-vec
-             ;; yes, could do 
-             #_(mapv-indexed take ["hi" "there" "string"])
-             ;; or
-             #_(mapv-indexed take [[1 2 3] [4 5] [6 7 8 9]])
-             ;; so, would want it to do whichever second argument is higher up the stack
-             
-             ;; !!!!!!!!!!!! TMH IN MORNING: This is the only thing not working still. Need above to work, probably
-             ;; by doing the below of adding overloaded-argument-id when there are alternatives,
-             ;; and then having those matter where this gets returned in try-apply-fn-to-arguments
-
-             ;; Can I add an overloaded-argument--id here to make it clear that these are tied?
-             
-             ;; (map try-apply all-funcs-and-states)
-             ;; this expects all things returned to be single states with fns applied.
-             ;; Could I return multiple things in a list, and flatten them here before checking for nils?
-             
-            ;;  _ (println "ast: "  ast)
+             ;;  _ (println "ast: "  ast)
              list-of-subs (if (= :overloaded (:type (::type ast)))
                               ;; If overloaded, handle each alternative separately, and make a list
                             (map (fn [alternative-type]
@@ -667,24 +627,35 @@
   ;; Checks the backtracking atom. If it is true, then backtracking will be used, otherwise, the original apply function is used.
   (cond
     ;; The backtracking method
-    (= @backtracking true)                                                  ;; TMH working here. Remove this later
+    (= @backtracking true)
     (let [;; _ (println "\n------------------------")
-          all-funcs-and-states (pop-all-function-asts state)                ;; Returns a list of all function ASTs in state, paired with the state with them popped. Elements are maps with keys {:ast :state}.
+
+          ;; Returns a list of all function ASTs in state, paired with the state with
+          ;; them popped. Elements are maps with keys {:ast :state}.
+          all-funcs-and-states (pop-all-function-asts state)
           ;; _ (println "All funcs and states")
           ;; _ (doseq [fn-and-state all-funcs-and-states]
           ;;     (println fn-and-state "\n"))
           ;; _ (println "\n-------")
-          applied-funcs-or-nil-if-failed (mapcat try-apply all-funcs-and-states) ;; try-apply tries to apply a function to the state. If fails, returns nil.
-                                                                              ;; map call returns a sequence of applying each function, with nil if the apply didn't work
-                                                                              ;; returned is a sequence of states and nils
+
+          ;; try-apply tries to apply a function to the state. If fails, returns nil (though with changes, might just not be included).
+          ;; map call returns a sequence of applying each function, with nil if the apply didn't work (again, nils might just be missing now)
+          ;; returned is a sequence of states and nils
           ;; _ (println "applied-funcs-or-nil-if-failed")
+          applied-funcs-or-nil-if-failed (mapcat try-apply all-funcs-and-states)
           ;; _ (doseq [app-fn applied-funcs-or-nil-if-failed]
           ;;     (println app-fn))
           ;; _ (println "\n-------")
-          applied-funcs (remove nil? applied-funcs-or-nil-if-failed)          ;; remove nils, so that only actual function applications remain
+
+          ;; remove nils, so that only actual function applications remain
+          ;; this may now be unnecessary, but isn't hurting anything
+          applied-funcs (remove nil? applied-funcs-or-nil-if-failed)
           ;; _ (println "applied-funcs\n" applied-funcs)
           ;; _ (println "\n-------")
-          applied-fn-state (select-fn-to-apply applied-funcs)            ;; first of the applied functions, fully applied, state and all. Or, for overloadeds, one with topmost arguments
+
+          ;; first of the applied functions, fully applied, state and all.
+          ;; Or, for overloadeds, one with topmost arguments
+          applied-fn-state (select-fn-to-apply applied-funcs)
           ;; _ (println "first applied\n" applied-fn-state)
           ;; _ (println "------------------------\n")
           ]
