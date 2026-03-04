@@ -1,7 +1,7 @@
 (ns erp12.cbgp-lite.lang.lib-test
-  (:require [clojure.test :refer [deftest is]]
-            [erp12.cbgp-lite.lang.lib :as l]
-            [clojure.set :as set])
+  (:require [clojure.set :as set]
+            [clojure.test :refer [deftest is]]
+            [erp12.cbgp-lite.lang.lib :as l])
   (:import (clojure.lang ExceptionInfo)))
 
 (deftest safe-sqrt-test

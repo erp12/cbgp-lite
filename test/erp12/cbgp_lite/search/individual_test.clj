@@ -27,8 +27,8 @@
            (i/evaluate-until-first-failure (assoc opts :func #(do (print %2) (+ %1 %2))))))
     (is (= {:cases-used 1}
            (i/evaluate-until-first-failure (assoc opts :func #(do (print %2) (* %1 %2))))))
-    (is (instance? ArithmeticException
-                   (:exception (i/evaluate-until-first-failure (assoc opts :func #(do (print %2) (/ %1 0)))))))))
+    (is (= "ArithmeticException: Divide by zero"
+         (:exception (i/evaluate-until-first-failure (assoc opts :func #(do (print %2) (/ %1 0)))))))))
 
 (deftest evaluate-full-behavior-test
   (let [opts {:cases    [{:inputs [1 2] :output 3 :std-out "2"}
@@ -44,8 +44,9 @@
             :errors      [0 0 0 0 0 0]
             :solution?   true
             :total-error 0
-            :exception   nil}))
-    #_(is (= (i/evaluate-full-behavior (assoc opts :func #(do (println %2) (* %1 %2))))
+            :exception   nil
+            :exceeded-mem false}))
+    (is (= (i/evaluate-full-behavior (assoc opts :func #(do (println %2) (* %1 %2))))
            {:behavior    (list {:output 2 :std-out "2\n"}
                                {:output -1 :std-out "1\n"}
                                {:output 0 :std-out "0\n"})
@@ -53,7 +54,8 @@
             :errors      [1 1 1 1 0 1]
             :solution?   false
             :total-error 5
-            :exception   nil}))))
+            :exception   nil
+            :exceeded-mem false}))))
 
 (deftest make-evaluator-test
   (let [evaluator (i/make-evaluator (-> {:input->type {'input1 {:type 'double?}
@@ -72,6 +74,7 @@
             :cases-used  1
             :solution?   false
             :exception   nil
+            :exceeded-mem false
             :ret-type    {:type 'double?}}
            (dissoc (evaluator (list {:gene :lit
                                      :val  1.0
@@ -131,7 +134,8 @@
               :cases-used  3
               :solution?   true
               :exception   nil
-              :ret-type {:type 'double?}}
+              :ret-type {:type 'double?}
+              :exceeded-mem false}
              (let [gn (list {:gene :var :name 'input1}
                             {:gene :var :name 'input2}
                             {:gene :var :name 'double}

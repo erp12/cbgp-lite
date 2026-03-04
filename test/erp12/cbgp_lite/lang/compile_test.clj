@@ -877,7 +877,7 @@
                                                   :dealiases lib/dealiases}))
         _ (is (= type {:type :vector :child {:type 'int? :typeclasses #{:number}}}))
         form (a/ast->form ast)
-        _ (is (matches? (mapv (fn [?a] (inc ?a)) [1 2 3])
+        _ (is (matches? (erp12.cbgp-lite.lang.lib/safe-mapv (erp12.cbgp-lite.lang.ast/guarded-fn [?a] (inc ?a)) [1 2 3])
                         form))
         func (eval `(fn [] ~form))]
     (is (= [2 3 4] (func)))))
@@ -908,7 +908,7 @@
                                                   :dealiases {}}))
         _ (is (= type {:type :vector :child {:type 'double?}}))
         form (a/ast->form ast)
-        _ (is (= form '(repeatedly 5 (fn [] (rand)))))
+        _ (is (= form '(repeatedly 5 (erp12.cbgp-lite.lang.ast/guarded-fn [] (rand)))))
         func (eval `(fn [] ~form))]
     (doseq [x (func)]
       (is (double? x)))))

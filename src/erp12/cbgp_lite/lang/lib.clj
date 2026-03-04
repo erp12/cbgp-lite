@@ -1,9 +1,28 @@
 (ns erp12.cbgp-lite.lang.lib
   (:refer-clojure :exclude [and or vector-of])
-  (:require [clojure.core :as core]
+  (:require [clj-memory-meter.core :as mm]
+            [clojure.core :as core]
             [clojure.set :as set]
             [clojure.string :as str]
             [erp12.cbgp-lite.lang.schema :as schema]))
+
+(def VALUE-MAX-BYTES 50000) ;; 50 KiB
+
+(defn guard
+  [x]
+  (let [num-bytes (mm/measure x :bytes true)]
+    (if (> num-bytes VALUE-MAX-BYTES)
+      (throw (ex-info "Value too large."
+                      ;; Don't put the full value in error data because it will OOM later.
+                      {:class (type x)
+                       :bytes num-bytes}))
+      x)))
+
+(defn reduce'
+  ([f coll]
+   (reduce (comp guard f) coll))
+  ([f init coll]
+   (reduce (comp guard f) init coll)))
 
 ;; @todo What do do about nil?
 ;; first, last, etc. return nil on empty collections.
@@ -172,8 +191,6 @@
   [i]
   (char (mod i 128)))
 
-(def concat-str (comp str/join concat))
-
 (def ^:private regex-char-esc-smap
   (let [esc-chars "()*&^%$#!"]
     (zipmap esc-chars
@@ -239,31 +256,36 @@
       (apply str removed)
       (into (empty coll) removed))))
 
+(def mapv' (comp guard mapv))
+
 (defn mapcat'
   [pred coll]
-  (vec (mapcat pred coll)))
+  (guard
+   (vec (mapcat pred coll))))
 
 (defn conj'
   [coll target]
-  (cond 
-    (set? coll)
-    ((comp set conj) coll target)
-    (nil? coll)
-    (throw (Exception. "Conj' called on nil"))
-    :else
-    ((comp vec conj) coll target)))
+  (guard
+   (cond 
+     (set? coll)
+     ((comp set conj) coll target)
+     (nil? coll)
+     (throw (Exception. "Conj' called on nil"))
+     :else
+     ((comp vec conj) coll target))))
 
 (defn concat'
   [coll1 coll2]
-  (if (string? coll1)
-    (apply str (concat coll1 coll2))
-    ((comp vec concat) coll1 coll2)))
+  (guard
+   (if (string? coll1)
+     (apply str (concat coll1 coll2))
+     ((comp vec concat) coll1 coll2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vector
 
 (def distinctv (comp vec distinct))
-(def mapv-indexed (comp vec map-indexed))
+(def mapv-indexed (comp guard vec map-indexed))
 (def sortv-by (comp vec sort-by))
 
 (def rangev
@@ -317,7 +339,8 @@
 
 (defn map2v
   [expr coll1 coll2]
-  (mapv expr coll1 coll2))
+  (guard
+   (mapv expr coll1 coll2)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fixing LazySeqs
@@ -336,18 +359,20 @@
 
 (defn replace'
   [coll target replacement]
-  (if (string? coll)
-    (str/replace coll target replacement)
-    (replace {target replacement} coll)))
+  (guard
+   (if (string? coll)
+     (str/replace coll target replacement)
+     (replace {target replacement} coll))))
 
 (defn replace-first'
   [coll target replacement]
-  (if (string? coll)
-    (str/replace-first coll target replacement)
-    (let [idx (.indexOf coll target)]
-      (if (< idx 0)
-        coll
-        (assoc coll idx replacement)))))
+  (guard
+   (if (string? coll)
+     (str/replace-first coll target replacement)
+     (let [idx (.indexOf coll target)]
+       (if (< idx 0)
+         coll
+         (assoc coll idx replacement))))))
 
 (defn take'
   [num coll]
@@ -370,7 +395,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Set
 
-(defn map-set [f s] (into #{} (map f s)))
+(def map-set (comp guard set map))
+(def set-union (comp guard set/union))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Map
@@ -382,6 +408,8 @@
 (def keys-vec (comp vec keys))
 (def keys-set (comp set keys))
 (def vals-vec (comp vec vals))
+(def safe-assoc (comp guard assoc))
+(def safe-merge (comp guard merge))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tuple
@@ -575,19 +603,19 @@
    ;; Polymorphic collection functions  
    'count              (scheme (fn-of [{:type (s-var 'c)}] INT)
                                {'c #{:countable}})
-   'mapv               {:type :overloaded
-                        :alternatives [(scheme (fn-of [(fn-of [(tuple-of (s-var 'k) (s-var 'v))] (s-var 'e)) ; map-map
-                                                       (map-of (s-var 'k) (s-var 'v))]
-                                                      (vector-of (s-var 'e))))
-                                       (scheme (fn-of [(fn-of [(s-var 'a)] (s-var 'b)) ; map-set
-                                                       (set-of (s-var 'a))]
-                                                      (vector-of (s-var 'b))))
-                                       (scheme (fn-of [(fn-of [CHAR] (s-var 'a)) ; map-str 
-                                                       STRING]
-                                                      (vector-of (s-var 'a))))
-                                       (scheme (fn-of [(fn-of [(s-var 'a)] (s-var 'b)) ; map-vec 
-                                                       (vector-of (s-var 'a))]
-                                                      (vector-of (s-var 'b))))]}
+   `mapv'               {:type :overloaded
+                         :alternatives [(scheme (fn-of [(fn-of [(tuple-of (s-var 'k) (s-var 'v))] (s-var 'e)) ; map-map
+                                                        (map-of (s-var 'k) (s-var 'v))]
+                                                       (vector-of (s-var 'e))))
+                                        (scheme (fn-of [(fn-of [(s-var 'a)] (s-var 'b)) ; map-set
+                                                        (set-of (s-var 'a))]
+                                                       (vector-of (s-var 'b))))
+                                        (scheme (fn-of [(fn-of [CHAR] (s-var 'a)) ; map-str 
+                                                        STRING]
+                                                       (vector-of (s-var 'a))))
+                                        (scheme (fn-of [(fn-of [(s-var 'a)] (s-var 'b)) ; map-vec 
+                                                        (vector-of (s-var 'a))]
+                                                       (vector-of (s-var 'b))))]}
    `map2v              {:type :overloaded
                         :alternatives [(scheme (fn-of [(fn-of [CHAR CHAR] (s-var 'a)) ; str 
                                                        STRING
@@ -663,18 +691,18 @@
                        :alternatives [(fn-of [STRING CHAR] STRING) ; remove-char 
                                       (scheme (fn-of [(vector-of (s-var 'a)) (s-var 'a)]
                                                      (vector-of (s-var 'a))))]}
-   'reduce             {:type :overloaded
-                        :alternatives [(scheme (fn-of [(fn-of [(tuple-of (s-var 'k) (s-var 'v)) ; reduce-map
-                                                               (tuple-of (s-var 'k) (s-var 'v))]
-                                                              (tuple-of (s-var 'k) (s-var 'v)))
-                                                       (map-of (s-var 'k) (s-var 'v))]
-                                                      (tuple-of (s-var 'k) (s-var 'v))))
-                                       (scheme (fn-of [(fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) ; reduce-set
-                                                       (set-of (s-var 'a))]
-                                                      (s-var 'a)))
-                                       (scheme (fn-of [(fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) ; reduce-vec
-                                                       (vector-of (s-var 'a))]
-                                                      (s-var 'a)))]}
+   `reduce'             {:type :overloaded
+                         :alternatives [(scheme (fn-of [(fn-of [(tuple-of (s-var 'k) (s-var 'v)) ; reduce-map
+                                                                (tuple-of (s-var 'k) (s-var 'v))]
+                                                               (tuple-of (s-var 'k) (s-var 'v)))
+                                                        (map-of (s-var 'k) (s-var 'v))]
+                                                       (tuple-of (s-var 'k) (s-var 'v))))
+                                        (scheme (fn-of [(fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) ; reduce-set
+                                                        (set-of (s-var 'a))]
+                                                       (s-var 'a)))
+                                        (scheme (fn-of [(fn-of [(s-var 'a) (s-var 'a)] (s-var 'a)) ; reduce-vec
+                                                        (vector-of (s-var 'a))]
+                                                       (s-var 'a)))]}
    'fold               {:type :overloaded
                         :alternatives [(scheme (fn-of [(fn-of [(s-var 'r)  ; fold-map
                                                                (tuple-of (s-var 'k) (s-var 'v))]
@@ -788,7 +816,7 @@
                                       (set-of (s-var 'e))))
    '->set3             (scheme (fn-of [(s-var 'e) (s-var 'e) (s-var 'e)]
                                       (set-of (s-var 'e))))
-   `set/union          (scheme (fn-of [(set-of (s-var 'e))
+   `set-union          (scheme (fn-of [(set-of (s-var 'e))
                                        (set-of (s-var 'e))]
                                       (set-of (s-var 'e))))
    `set/difference     (scheme (fn-of [(set-of (s-var 'e))
@@ -823,7 +851,7 @@
                                       (s-var 'v)))
    'get-or-else        (scheme (fn-of [(map-of (s-var 'k) (s-var 'v)) (s-var 'k) (s-var 'v)]
                                       (s-var 'v)))
-   'assoc              (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))
+   `safe-assoc         (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))
                                        (s-var 'k)
                                        (s-var 'v)]
                                       (map-of (s-var 'k) (s-var 'v))))
@@ -837,7 +865,7 @@
                                       (set-of (s-var 'k))))
    `vals-vec           (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))]
                                       (vector-of (s-var 'v))))
-   'merge              (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))
+   `safe-merge         (scheme (fn-of [(map-of (s-var 'k) (s-var 'v))
                                        (map-of (s-var 'k) (s-var 'v))]
                                       (map-of (s-var 'k) (s-var 'v))))
 
@@ -862,7 +890,7 @@
     append-str        str
     do2               do
     do3               do
-    fold              reduce
+    fold              erp12.cbgp-lite.lang.lib/reduce'
     get-or-else       get
     left              first
     nth-or-else       nth
@@ -899,8 +927,3 @@
                    (not (empty? (filter #(check-type-for-type-ctors % type-ctors)
                                         (:alternatives typ)))))))
        (into {})))
-
-(comment 
-  )
-               
-  
