@@ -210,49 +210,14 @@
                         {:inputs [input-matrix]
                          :output output}))
     :loss-fns       [bu/absolute-distance]
-
-    ;; (reduce + (reduce erp12.cbgp-lite.lang.lib/concatv input1))
-    
     :solution (list {:gene :local :idx 0}
                     {:gene :var :name `lib/concat'}
                     {:gene :var :name 'reduce}
                     {:gene :apply}
-                    
 
-                    {:gene :var :name 'count}
-                    {:gene :apply}
-                    
-                    ;; why doesn't this work?
-                    ;; {:gene :var :name '+}
-                    ;; {:gene :var :name 'reduce}
-                    ;; {:gene :apply}
-
-                    
-                    ;; {:gene :fn
-                    ;;  :arg-types [lib/INT]
-                    ;;  :ret-type lib/BOOLEAN}
-                    ;; {:gene :lit
-                    ;;  :val 2
-                    ;;  :type {:type 'int?}}
-                    ;; {:gene :local
-                    ;;  :idx 1}
-                    ;; {:gene :var
-                    ;;  :name 'mod}
-                    ;; {:gene :apply}
-                    ;; {:gene :lit
-                    ;;  :val 1
-                    ;;  :type {:type 'int?}}
-                    ;; {:gene :var
-                    ;;  :name '=}
-                    ;; {:gene :apply}
-                    ;; {:gene :close}
-                    ;; {:gene :var
-                    ;;  :name `lib/filter'}
-                    ;; {:gene :apply}
-                    ;; {:gene :var
-                    ;;  :name 'count}
-                    ;; {:gene :apply}
-                    )}
+                    {:gene :var :name '+}
+                    {:gene :var :name 'reduce}
+                    {:gene :apply})}
 
    "centimeters-to-meters"
    {:description    (str "Given a length in centimeters, return a tuple of (meters, centimeters) "
@@ -690,6 +655,6 @@
 
 (comment
   
-  (validate-solutions {:num-cases 100})
+  (validate-solutions {:num-cases 1000})
   
   )
