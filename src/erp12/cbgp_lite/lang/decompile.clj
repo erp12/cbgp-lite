@@ -188,7 +188,6 @@
    'last
    'empty?
    'contains?
-   'merge
    'disj
    'update])
 
@@ -260,6 +259,7 @@
 
    ;; Vector
    ; `lib/occurrences-of (doesn't exist in clojure?)
+   'map `lib/mapv'    ;; TMH: I added this, assuming we want to turn normal map into mapv
    'map-indexed `lib/mapv-indexed
    'distinct `lib/distinctv
    'sort-by `lib/sortv-by
@@ -267,13 +267,14 @@
    'zipmap 'zipmap
 
    ;; Set
-   'set/union `set/union
+   'set/union `lib/set-union
    'set/difference `set/difference
    'set/intersection `set/intersection
    'set/subset? `set/subset?
    'set/superset? `set/superset?
 
    ;; Map
+   'merge `lib/safe-merge
    'keys `lib/keys-vec
    ; `lib/keys-set (doesn't exist in clojure?)
    'vals `lib/vals-vec})
@@ -282,18 +283,18 @@
   {'minus {1 `lib/neg
            2 '-
            :default '-}
-   'str/join {1 `str/join
+   'str/join {1 `lib/str-join
               2 'str-join-sep
-              :default `str/join}
+              :default `lib/str-join}
    'str {1 'str
          2 `lib/concat'
          :default 'str}
    'str/split {1 `lib/split-str-on-ws
                2 `lib/split-str
                :default `lib/split-str}
-   'mapv {2 'mapv
+   'mapv {2 `lib/mapv'
           3 `lib/map2v
-          :default 'mapv}
+          :default `lib/mapv'}
    'hash-map {2 '->map1
               4 '->map2
               6 '->map3
@@ -310,9 +311,9 @@
            2 'range2
            3 'range3
            :default 'range1}
-   'reduce {2 'reduce
+   'reduce {2 `lib/reduce'
             3 'fold
-            :default 'reduce}
+            :default `lib/reduce'}
    'nth {2 `lib/safe-nth
          3 'nth-or-else
          :default `lib/safe-nth}
@@ -389,7 +390,7 @@
       (= 'assoc ast-fn-name)
       (if (= :vector (:type (first args)))
         `lib/safe-assoc-nth
-        'assoc))
+        `lib/safe-assoc))
 
     ;; main aliasing
     (contains? ast-aliasing ast-fn-name)

@@ -809,7 +809,7 @@
          '({:gene :lit, :type {:type int?}, :val 10}
            {:gene :lit, :type {:type string?}, :val "a"}
            {:gene :lit, :type {:key {:sym T, :type :s-var}, :type :map-of, :value {:sym S, :type :s-var}}, :val {}}
-           {:gene :var, :name assoc}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-assoc}
            {:gene :apply})))
 
   ;; vectors
@@ -872,7 +872,7 @@
   (is (= (de/decompile-ast (ana.jvm/analyze '(merge {"a" 1} {"b" 2})))
          '({:gene :lit, :type {:key {:type string?}, :type :map-of, :value {:type int?}}, :val {"b" 2}}
            {:gene :lit, :type {:key {:type string?}, :type :map-of, :value {:type int?}}, :val {"a" 1}}
-           {:gene :var, :name merge}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-merge}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(merge {[\a \a \a] 1} {[\b \b \b] 2})))
          '({:gene :lit,
@@ -881,7 +881,7 @@
            {:gene :lit,
             :type {:key {:child {:type char?}, :type :vector}, :type :map-of, :value {:type int?}},
             :val {[\a \a \a] 1}}
-           {:gene :var, :name merge}
+           {:gene :var, :name erp12.cbgp-lite.lang.lib/safe-merge}
            {:gene :apply})))
   (is (= (de/decompile-ast (ana.jvm/analyze '(str "hello" "world")))
          '({:gene :lit, :type {:type string?}, :val "world"}
@@ -922,7 +922,7 @@
          '({:gene :lit, :type {:type int?}, :val 42}
            {:gene :lit :val \z :type {:type char?}}
            {:gene :lit :val {\a 1 \b 2 \c 3} :type {:type :map-of :key {:type char?} :value {:type int?}}}
-           {:gene :var :name assoc}
+           {:gene :var :name erp12.cbgp-lite.lang.lib/safe-assoc}
            {:gene :var :name partial}
            {:gene :apply}
            {:gene :apply})))
@@ -931,7 +931,7 @@
          '({:gene :lit, :type {:type int?}, :val 42}
            {:gene :lit :val \z :type {:type char?}}
            {:gene :lit :val {\a 1 \b 2 \c 3} :type {:type :map-of :key {:type char?} :value {:type int?}}}
-           {:gene :var :name assoc}
+           {:gene :var :name erp12.cbgp-lite.lang.lib/safe-assoc}
            {:gene :var :name partial}
            {:gene :apply}
            {:gene :apply})))
@@ -939,7 +939,7 @@
          '({:gene :lit, :type {:type int?}, :val 42}
            {:gene :lit, :type {:type int?}, :val 3}
            {:gene :lit :val {0 42 1 2999 2 108} :type {:type :map-of :key {:type int?} :value {:type int?}}}
-           {:gene :var :name assoc}
+           {:gene :var :name erp12.cbgp-lite.lang.lib/safe-assoc}
            {:gene :var :name partial}
            {:gene :apply}
            {:gene :apply})))
