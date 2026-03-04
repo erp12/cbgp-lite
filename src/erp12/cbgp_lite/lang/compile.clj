@@ -304,8 +304,14 @@
                                             :state    (assoc state :asts (concat acc (rest remaining)))
                                             :bindings subs
                                             :arg-index ast-index})
-                                         viable-alternative-subs)]
-    additions-to-unifiable-list))
+                                         viable-alternative-subs)
+        overloaded-argument-id (random-uuid)]
+    (if (= (count additions-to-unifiable-list) 1)
+      additions-to-unifiable-list
+      ;; If multiple alternatives in the list, give them all the same :overloaded-argument-id
+      ;; This is for use when determining if an argument has multiple alternatives, to try them all
+      (map #(assoc % :overloaded-argument-id overloaded-argument-id)
+           additions-to-unifiable-list))))
 
 (defn pop-all-unifiable-asts
   "Pops every ast that is unifiable with the given schema. Does the same thing as pop-unifiable-ast, but instead of
@@ -351,7 +357,11 @@
              #_(mapv-indexed take [[1 2 3] [4 5] [6 7 8 9]])
              ;; so, would want it to do whichever second argument is higher up the stack
              
-             ;; Can I add an overloaded-id here to make it clear that these are tied?
+             ;; !!!!!!!!!!!! TMH IN MORNING: This is the only thing not working still. Need above to work, probably
+             ;; by doing the below of adding overloaded-argument-id when there are alternatives,
+             ;; and then having those matter where this gets returned in try-apply-fn-to-arguments
+
+             ;; Can I add an overloaded-argument--id here to make it clear that these are tied?
              
              ;; (map try-apply all-funcs-and-states)
              ;; this expects all things returned to be single states with fns applied.
@@ -427,13 +437,16 @@
 (defn try-apply-fn-to-arguments
   "Recursive helper function for try-apply.
    Attempts to apply fn-ast to all args in remaining-arg-types.
-   If fails, returns nil
+   Returns a list of one or more correctly applied function states -- can be multiple
+   to handle arguments that are overloaded with multiple alternatives, and otherwise
+   should just be 1.
+   If fails, returns empty list
    arg-indices is an initially empty vector, which is passed through, and
    contains the indices of all arguments that have been applied, for overloaded tiebreaking"
   [remaining-arg-types bindings args new-state fn-ast fn-type arg-indices]
   (if (empty? remaining-arg-types)
-            ;; Push an AST which calls the function to the arguments and
-            ;; box the AST with the return type of the function.
+    ;; Push an AST which calls the function to the arguments and
+    ;; box the AST with the return type of the function.
     (let [ret-s-var {:type :s-var :sym (gensym "s-")}
           subs (schema/mgu (schema/substitute bindings fn-type)
                            {:type   :=>
@@ -441,57 +454,68 @@
                                      :children (mapv ::type args)}
                             :output ret-s-var})]
       (if (schema/mgu-failure? subs)
-        nil
-
-        (assoc (push-ast {::ast  {:op   :invoke
-                            :fn   fn-ast
-                            :args (mapv ::ast args)}
-                    ::type (schema/substitute subs ret-s-var)}
-                   new-state)
-               :arg-indices arg-indices)))
+        '() ;; failed, return empty list
+        (list (assoc (push-ast {::ast  {:op   :invoke
+                                        :fn   fn-ast
+                                        :args (mapv ::ast args)}
+                                ::type (schema/substitute subs ret-s-var)}
+                               new-state)
+                     :arg-indices arg-indices))))
 
     ;; Grab next arg we need to find. If we know what the bindings are, we need to substitute those in.
     (let [arg-type (first remaining-arg-types)
           _ (log/trace "Searching for arg of type:" arg-type)
-                  ;; If arg-type is a t-var that we have seen before,
-                  ;; bind it to the actual same type as before.
+          ;; If arg-type is a t-var that we have seen before,
+          ;; bind it to the actual same type as before.
           arg-type (schema/substitute bindings arg-type)
           _ (log/trace "In-context arg type:" arg-type)
-                  ;; pop all unifiable ASTs of the correct type
-          all-unifiable (pop-all-unifiable-asts arg-type new-state bindings) ;; TMH pop-all-unifiable-asts is probably where I need to fix HOF applying to overloaded fns, since they aren't being unifiable corrrectly?
+          ;; pop all unifiable ASTs of the correct type 
+          all-unifiable (pop-all-unifiable-asts arg-type new-state bindings)
           _ (log/trace "ALL UNIFIABLE: " all-unifiable)]
 
       (loop [all-unifiable all-unifiable]
         (if (empty? all-unifiable)
-          nil ;; didn't find an argument that works
-
-          (let [{arg :ast state-arg-popped :state new-subs :bindings arg-index :arg-index} 
-                (first all-unifiable)
-                
-                _ (log/trace "Trying arg:" arg)
-                _ (log/trace "With bindings:" new-subs)
-                result (try-apply-fn-to-arguments (rest remaining-arg-types)
-                       ;; If arg-type is has unbound t-vars that were bound during unification,
-                       ;; add them to the set of bindings.
-                       ;; merge these two together.
-                                                  (schema/compose-substitutions new-subs bindings)
-                                                  (conj args arg)
-                                                  state-arg-popped
-                                                  fn-ast
-                                                  fn-type
-                                                  (conj arg-indices arg-index))]
-            ;; TMH would need here to check if (first all-unifiable) has an overloaded-id, and if so, 
-            ;; take-while all-unifiable has same overloaded-id, and make a list of the results
-            ;; of try-apply-fn-to-arguments on them
-            ;; OH NO it's recursive, and would be a pain to deal with recursive results -- would have to check if recursive call returns a list, and flatten them?
-            
-            ;; >> actually, could just make it always return a list, and the recursive calls don't look bad
-            (if (some? result)
-              result
-              (recur (rest all-unifiable)))))))))
+          '() ;; failed, return empty list - didn't find an argument that works 
+          (let [first-all-unifiable-id (:overloaded-argument-id (first all-unifiable))
+                ;; Check if overloaded, and return all alternatives applied if so
+                unifiable-to-try (if first-all-unifiable-id
+                                   (take-while #(= (:overloaded-argument-id %) first-all-unifiable-id)
+                                               all-unifiable)
+                                   (take 1 all-unifiable)) ;; if no :overloaded-argument-id, argument isn't overloaded, so just take 1
+                all-results  (flatten ;; flatten because of recursive calls (that may be nested or return empty lists)
+                              (map (fn [{arg :ast
+                                         state-arg-popped :state
+                                         new-subs :bindings
+                                         arg-index :arg-index}]
+                                     (log/trace "Trying arg:" arg)
+                                     (log/trace "With bindings:" new-subs)
+                                     (try-apply-fn-to-arguments (rest remaining-arg-types)
+                                                                ;; If arg-type is has unbound t-vars that were bound during unification,
+                                                                ;; add them to the set of bindings.
+                                                                ;; merge these two together.
+                                                                (schema/compose-substitutions new-subs bindings)
+                                                                (conj args arg)
+                                                                state-arg-popped
+                                                                fn-ast
+                                                                fn-type
+                                                                (conj arg-indices arg-index)))
+                                   unifiable-to-try))
+                all-results-final (cond->> all-results
+                                    ;; If overloaded, add :overloaded-argument-id
+                                    first-all-unifiable-id (map #(assoc % 
+                                                                        :overloaded-argument-id 
+                                                                        first-all-unifiable-id)))
+                ]
+            (if (empty? all-results-final)
+              ;; if empty, recur on next option in all-unifiable
+              (recur (rest all-unifiable))
+              ;; otherwise, return list of all-results-final
+              all-results-final)))))))
 
 (defn try-apply
-  "Tries to apply a function to the state. If fails, returns nil."
+  "Tries to apply a function to the state. If succeeds, returns list of 1 or more
+   successful states (more than 1 if alternatives in the arguments)
+   If fails, returns empty list."
   [{boxed-ast :ast
     state-fn-popped :state
     overloaded-id :overloaded-id
@@ -504,15 +528,14 @@
   (let [{fn-ast ::ast fn-type ::type} boxed-ast
         remaining-arg-types (schema/fn-arg-schemas fn-type)
         ;; _ (println "Remaining-arg-types:" remaining-arg-types \newline)
-        applied-state-or-nil (try-apply-fn-to-arguments remaining-arg-types {} [] state-fn-popped fn-ast fn-type [])]
-    (if (nil? applied-state-or-nil)
-      nil
-      ;; TMH: here, if returning a list for applied-state-or-nil, could make sure all maps in the list
-      ;; have the same :overloaded-id
 
+        ;; below is empty if failed, and may contain multiple options if arg was overloaded
+        list-of-applied-states (try-apply-fn-to-arguments remaining-arg-types {} [] state-fn-popped fn-ast fn-type [])]
+    (if (empty? list-of-applied-states)
+      '()
       ;; if there is an overloaded-id, assoc it to the result
-      (cond-> applied-state-or-nil
-        overloaded-id (assoc :overloaded-id overloaded-id)))))
+      (cond->> list-of-applied-states
+        overloaded-id (map #(assoc % :overloaded-id overloaded-id))))))
 
 (defn lexicographic-compare
   "Like compare, except works with different length vectors."
@@ -545,18 +568,34 @@
    In that case, those alternatives will all have the same :overloaded-id, and will have :arg-indices
    set to the indices of the arguments in the stack. For that situation, the alternative
    with the largest arg-indices lexicographically will be chosen, since its first
-   arg was largest in the stack, then its second arg largest in the stack, etc."
+   arg was largest in the stack, then its second arg largest in the stack, etc.
+   - Now also does same with :overloaded-argument-id if present."
   [applied-funcs-state-list]
   (let [first-state (first applied-funcs-state-list)
-        first-overloaded-id (:overloaded-id first-state)]
-    (if (nil? (:overloaded-id first-state))
-      first-state
+        first-overloaded-id (:overloaded-id first-state)
+        first-overloaded-argument-id (:overloaded-argument-id first-state)]
+    ;; Can have both :overloaded-id and :overloaded-argument-id
+    ;; In this case, should ignore :overloaded-argument-id and just do :overloaded-id
+    (cond
+      first-overloaded-id
       (let [states-with-same-overloaded-fn (take-while #(= (:overloaded-id %) first-overloaded-id)
                                                        applied-funcs-state-list)
             state-with-largest-arg-indices (apply max-key-that-works-on-vectors
                                                   :arg-indices
                                                   states-with-same-overloaded-fn)]
-        state-with-largest-arg-indices))))
+        state-with-largest-arg-indices)
+
+      ;; Only if no :overloaded-id should it use :overloaded-argument-id
+      first-overloaded-argument-id
+      (let [states-with-same-overloaded-fn (take-while #(= (:overloaded-argument-id %) first-overloaded-argument-id)
+                                                       applied-funcs-state-list)
+            state-with-largest-arg-indices (apply max-key-that-works-on-vectors
+                                                  :arg-indices
+                                                  states-with-same-overloaded-fn)]
+        state-with-largest-arg-indices)
+
+      ;; If neither id, then neither the fn or arguments are overloaded, so just use first one
+      :else first-state)))
 
 (defn original-compile-step-apply
   "For compile-steping :apply genes if backtracking is turned off.
@@ -635,7 +674,7 @@
           ;; _ (doseq [fn-and-state all-funcs-and-states]
           ;;     (println fn-and-state "\n"))
           ;; _ (println "\n-------")
-          applied-funcs-or-nil-if-failed (map try-apply all-funcs-and-states) ;; try-apply tries to apply a function to the state. If fails, returns nil.
+          applied-funcs-or-nil-if-failed (mapcat try-apply all-funcs-and-states) ;; try-apply tries to apply a function to the state. If fails, returns nil.
                                                                               ;; map call returns a sequence of applying each function, with nil if the apply didn't work
                                                                               ;; returned is a sequence of states and nils
           ;; _ (println "applied-funcs-or-nil-if-failed")

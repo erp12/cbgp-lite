@@ -1605,6 +1605,3 @@
         _ (when verbose (println "FORM: " form))
         func (eval `(fn [] ~form))]
     (is (= [2 3 3] (func)))))
-
-
-(macroexpand '(and true false true))

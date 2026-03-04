@@ -1156,51 +1156,172 @@
           func (eval `(fn [~'input1] ~form))]
       (is (= "hello space there"
              (func ["hello" " space " "there"])))))
-  
+
   (testing "other HOFs on overloaded fns"
-    ;; put test here for mapv-indexed over take once it works
-    ))
+    (testing "- mapv-indexed on take"
+      ;; simpler - only one option to apply (mapv-indexed take ...) to
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+                                                 {:gene :var :name `lib/take'}
+                                                 {:gene :var :name `lib/mapv-indexed}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of lib/STRING)
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= {:type :vector :child {:type 'string?}} type))
+        (is (= '{:op :invoke
+                 :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv-indexed}
+                 :args [{:op :var, :var erp12.cbgp-lite.lang.lib/take'}
+                        {:op :const, :val ["hello" "there" "string"]}]}
+               ast)))
+      ;; next two are the same besides the return type. Both should apply (mapv-indexed take ...) to the vector of vector of ints
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+                                                 {:gene :lit :val [[1 2 3] [4 5] [6 7 8 9] [10]] :type (lib/vector-of (lib/vector-of lib/INT))}
 
-(comment
-  (require '[taoensso.timbre :as log])
-  (log/set-level! :trace) ;; use this if I want to see more details of compilation
-  (log/set-level! :debug) ;; the default
+                                                 {:gene :var :name `lib/take'}
+                                                 {:gene :var :name `lib/mapv-indexed}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of (lib/vector-of lib/INT))
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= (lib/vector-of (lib/vector-of lib/INT)) type))
+        (is (= '{:op :invoke
+                 :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv-indexed}
+                 :args [{:op :var, :var erp12.cbgp-lite.lang.lib/take'}
+                        {:op :const, :val [[1 2 3] [4 5] [6 7 8 9] [10]]}]}
+               ast)))
+      ;; should just return the lit vector of strings
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+                                                 {:gene :lit :val [[1 2 3] [4 5] [6 7 8 9] [10]] :type (lib/vector-of (lib/vector-of lib/INT))}
 
-  ;; type of take'
-  '{:type :overloaded, 
-    :alternatives [{:type :=>, :input {:type :cat, :children [{:type int?} {:type string?}]}, :output {:type string?}}
-                   {:type :=>, :input {:type :cat, :children [{:type int?} {:type :vector, :child {:type :s-var, :sym s-54823}}]}, :output {:type :vector, :child {:type :s-var, :sym s-54823}}}
-                   ]}
+                                                 {:gene :var :name `lib/take'}
+                                                 {:gene :var :name `lib/mapv-indexed}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of lib/STRING)
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= (lib/vector-of lib/STRING) type))
+        (is (= {:op :const, :val ["hello" "there" "string"]}
+               ast)))
+      ;; next two swap the lit order of the first two genes compared to the above two 
+      ;; Both should apply (mapv-indexed take ...) to the vector of strings
+      ;; First one should just return lit vector of vector of ints
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val [[1 2 3] [4 5] [6 7 8 9] [10]] :type (lib/vector-of (lib/vector-of lib/INT))}
+                                                 {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
 
-  ;; this should apply mapv-indexed to take and the vector of vector of ints,
-  ;; but it applies it to take and the vector of strings
-  ;; TMH make this a test after working
-  (:ast (c/push->ast {:push      (list {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
-                                       {:gene :lit :val [[1 2 3] [4 5] [6 7 8 9] [10]] :type (lib/vector-of (lib/vector-of lib/INT))}
+                                                 {:gene :var :name `lib/take'}
+                                                 {:gene :var :name `lib/mapv-indexed}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of (lib/vector-of lib/INT))
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= (lib/vector-of (lib/vector-of lib/INT)) type))
+        (is (= {:op :const, :val [[1 2 3] [4 5] [6 7 8 9] [10]]}
+               ast)))
+      ;; should return (mapv-indexed take) on the lit vector of strings
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val [[1 2 3] [4 5] [6 7 8 9] [10]] :type (lib/vector-of (lib/vector-of lib/INT))}
+                                                 {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
 
-                                       {:gene :var :name `lib/take'}
-                                       {:gene :var :name `lib/mapv-indexed}
-                                       {:gene :apply})
-                      :locals    []
-                      :ret-type  (lib/vector-of lib/STRING)
-                      :type-env  lib/type-env
-                      :dealiases lib/dealiases}))
-  
-  ;; this should apply mapv-indexed to take and the vector of strings, and does, 
-  ;; but not for the right reason
-  ;; TMH make this a test after working
-  (:ast (c/push->ast {:push      (list {:gene :lit :val [[1 2 3] [4 5] [6 7 8 9] [10]] :type (lib/vector-of (lib/vector-of lib/INT))}
-                                       {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+                                                 {:gene :var :name `lib/take'}
+                                                 {:gene :var :name `lib/mapv-indexed}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of lib/STRING)
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= (lib/vector-of lib/STRING) type))
+        (is (= '{:op :invoke
+                 :fn {:op :var, :var erp12.cbgp-lite.lang.lib/mapv-indexed}
+                 :args [{:op :var, :var erp12.cbgp-lite.lang.lib/take'}
+                        {:op :const, :val ["hello" "there" "string"]}]}
+               ast))))
 
-                                       {:gene :var :name `lib/take'}
-                                       {:gene :var :name `lib/mapv-indexed}
-                                       {:gene :apply})
-                      :locals    []
-                      :ret-type  (lib/vector-of lib/STRING)
-                      :type-env  lib/type-env
-                      :dealiases lib/dealiases}))
+    ;; 4 slighty different examples depending on gene order
+    (testing "- this has both overloaded HOF and an overloaded argument"
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val [#{1 2 3} #{4 5} #{6 7 8 9} #{10}] :type (lib/vector-of (lib/set-of lib/INT))}
+                                                 {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+                                                 {:gene :lit :val #{"hi" "someone"} :type (lib/set-of lib/STRING)}
+                                                 {:gene :lit :val #{#{1 2} #{3 4 5 6 7}} :type (lib/set-of (lib/set-of lib/INT))}
 
-  )
+                                                 {:gene :var :name 'vec}
+                                                 {:gene :var :name 'mapv}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of (lib/vector-of lib/INT))
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= (lib/vector-of (lib/vector-of lib/INT)) type))
+        (is (= '{:op :invoke
+                 :fn {:op :var, :var mapv}
+                 :args [{:op :var, :var vec}
+                        {:op :const, :val #{#{1 2} #{3 4 5 6 7}}}]}
+               ast)))
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+                                                 {:gene :lit :val #{"hi" "someone"} :type (lib/set-of lib/STRING)}
+                                                 {:gene :lit :val #{#{1 2} #{3 4 5 6 7}} :type (lib/set-of (lib/set-of lib/INT))}
+                                                 {:gene :lit :val [#{1 2 3} #{4 5} #{6 7 8 9} #{10}] :type (lib/vector-of (lib/set-of lib/INT))}
+
+                                                 {:gene :var :name 'vec}
+                                                 {:gene :var :name 'mapv}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of (lib/vector-of lib/INT))
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= (lib/vector-of (lib/vector-of lib/INT)) type))
+        (is (= '{:op :invoke
+                 :fn {:op :var, :var mapv}
+                 :args [{:op :var, :var vec}
+                        {:op :const, :val [#{1 2 3} #{4 5} #{6 7 8 9} #{10}]}]}
+               ast)))
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val #{#{1 2} #{3 4 5 6 7}} :type (lib/set-of (lib/set-of lib/INT))}
+                                                 {:gene :lit :val [#{1 2 3} #{4 5} #{6 7 8 9} #{10}] :type (lib/vector-of (lib/set-of lib/INT))}
+                                                 {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+                                                 {:gene :lit :val #{"hi" "someone"} :type (lib/set-of lib/STRING)}
+
+                                                 {:gene :var :name 'vec}
+                                                 {:gene :var :name 'mapv}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of (lib/vector-of lib/CHAR))
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= (lib/vector-of (lib/vector-of lib/CHAR)) type))
+        (is (= '{:op :invoke
+                 :fn {:op :var, :var mapv}
+                 :args [{:op :var, :var vec}
+                        {:op :const, :val #{"hi" "someone"}}]}
+               ast)))
+      (let [{::c/keys [ast type]}
+            (:ast (c/push->ast {:push      (list {:gene :lit :val #{"hi" "someone"} :type (lib/set-of lib/STRING)}
+                                                 {:gene :lit :val #{#{1 2} #{3 4 5 6 7}} :type (lib/set-of (lib/set-of lib/INT))}
+                                                 {:gene :lit :val [#{1 2 3} #{4 5} #{6 7 8 9} #{10}] :type (lib/vector-of (lib/set-of lib/INT))}
+                                                 {:gene :lit :val ["hello" "there" "string"] :type (lib/vector-of lib/STRING)}
+
+                                                 {:gene :var :name 'vec}
+                                                 {:gene :var :name 'mapv}
+                                                 {:gene :apply})
+                                :locals    []
+                                :ret-type  (lib/vector-of (lib/vector-of lib/CHAR))
+                                :type-env  lib/type-env
+                                :dealiases lib/dealiases}))]
+        (is (= (lib/vector-of (lib/vector-of lib/CHAR)) type))
+        (is (= '{:op :invoke
+                 :fn {:op :var, :var mapv}
+                 :args [{:op :var, :var vec}
+                        {:op :const, :val ["hello" "there" "string"]}]}
+               ast))))))
 
 (deftest polymorphic-output-test
   (let [{::c/keys [ast type]} (:ast
