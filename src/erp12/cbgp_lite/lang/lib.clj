@@ -761,7 +761,8 @@
    `sort'             {:type :overloaded
                        :alternatives [(unary-transform STRING) ; sort-str
                                       (scheme (fn-of [(vector-of (s-var 'e))] ; sortv
-                                                     (vector-of (s-var 'e))))]}
+                                                     (vector-of (s-var 'e)))
+                                              {'e #{:comparable}})]}
    `safe-sub-coll     {:type :overloaded
                        :alternatives [(fn-of [STRING INT INT] STRING) ; safe-subs
                                       (scheme (fn-of [(vector-of (s-var 'a)) INT INT] ; safe-sub-vec
@@ -789,9 +790,10 @@
                                       (vector-of (s-var 'b))))
    `distinctv          (scheme (fn-of [(vector-of (s-var 'e))]
                                       (vector-of (s-var 'e))))
-   `sortv-by           (scheme (fn-of [(fn-of [(s-var 'e)] {:type :s-var :sym 'k :typeclasses #{:comparable}})
+   `sortv-by           (scheme (fn-of [(fn-of [(s-var 'e)] (s-var 'k))
                                        (vector-of (s-var 'e))]
-                                      (vector-of (s-var 'e))))
+                                      (vector-of (s-var 'e)))
+                               {'k #{:comparable}})
    'group-by           (scheme (fn-of [(fn-of [(s-var 'e)] (s-var 'k))
                                        (vector-of (s-var 'e))]
                                       (map-of (s-var 'k) (vector-of (s-var 'e)))))
