@@ -1,6 +1,6 @@
 {:path     ["src"]
  :deps     {com.taoensso/timbre              {:mvn/version "6.0.4"}
-            io.github.thelmuth/schema-inference {:git/sha "2587e5e05b7e90ab55332b8973a05c22a0d1f1bb"} ;; this is from Owen's most recent changes, which add t-vars
+            io.github.thelmuth/schema-inference {:git/sha "fdaaf08a578a840a175c5879ae3f00ed5bb9de36"} ;; schema inference with t-vars
             clj-fuzzy/clj-fuzzy              {:mvn/version "0.4.1"}
             org.clojure/tools.analyzer.jvm {:mvn/version "1.3.2"}
             com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.0.4"}

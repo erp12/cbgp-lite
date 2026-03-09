@@ -344,10 +344,10 @@
                          "type, T , and two instance of type T representing a lower and "
                          "upper bound, filter the set to the elements that fall "
                          "between two bounds (inclusively).")
-    :input->type    {'input1 {:type :set :child {:type :s-var :sym 'T :typeclasses #{:comparable}}}
-                     'input2 {:type :s-var :sym 'T :typeclasses #{:comparable}}
-                     'input3 {:type :s-var :sym 'T :typeclasses #{:comparable}}}
-    :ret-type       {:type :set :child {:type :s-var :sym 'T :typeclasses #{:comparable}}}
+    :input->type    {'input1 {:type :set :child {:type :t-var :sym 'T :typeclasses #{:comparable}}}
+                     'input2 {:type :t-var :sym 'T :typeclasses #{:comparable}}
+                     'input3 {:type :t-var :sym 'T :typeclasses #{:comparable}}}
+    :ret-type       {:type :set :child {:type :t-var :sym 'T :typeclasses #{:comparable}}}
     :other-type-ctors    #{'boolean?}
     :extra-genes    []
     :case-generator (let [generators [(bu/string-generator 10)
@@ -556,7 +556,7 @@
     :loss-fns       [bu/absolute-distance]}
 
    "count-map-and-string-and-sum"
-   {:description    "Given a vector, count it, and return that plus 10"
+   {:description    "Given a map and a string, count each, and return the sum of their counts plus 10"
     :input->type    {'input1 {:type :map-of, :key {:type 'int?}, :value {:type 'boolean?}}
                      'input2 {:type 'string?}}
     :ret-type       {:type 'int?}
@@ -654,7 +654,7 @@
           (println problem-name "passed in" duration "seconds."))))))
 
 (comment
-  
+
   (validate-solutions {:num-cases 1000})
-  
+
   )
