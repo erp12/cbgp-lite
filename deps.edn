@@ -9,8 +9,8 @@
             com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.4.0"}}
  :aliases  {:test       {:extra-paths ["test"]
                          :jvm-opts    ["-Djdk.attach.allowAttachSelf"]
-                         :extra-deps  {io.github.metabase/hawk   {:sha "9c97bcb6d4de116325e651b40973fd0a75b7ae21"}
-                                       meander/epsilon           {:mvn/version "0.0.650"}}
+                         :extra-deps  {io.github.metabase/hawk {:mvn/version "1.0.13"}
+                                       meander/epsilon         {:mvn/version "0.0.650"}}
                          :exec-fn     mb.hawk.core/find-and-run-tests-cli}
             :benchmarks {:extra-paths ["benchmarks"]
                          :jvm-opts    ["-Xms2G" "-Xmx4G"
