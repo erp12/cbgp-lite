@@ -1,4 +1,5 @@
 (ns erp12.cbgp-lite.lang.ast
+  (:require [erp12.cbgp-lite.lang.lib :refer [guard]])
   (:import (clojure.lang Compiler$CompilerException)))
 
 (defmulti ast->form (fn [{:keys [op]}] op))
@@ -19,10 +20,15 @@
   [{:keys [fn args]}]
   (cons (ast->form fn) (map ast->form args)))
 
+(defmacro guarded-fn
+  "Creates an anonymous function (using fn) that throws if the returned value exceeds the memory guard."
+  [params body]
+  (list 'fn params `(guard ~body)))
+
 (defmethod ast->form :fn
   [{:keys [methods]}]
   (let [{:keys [params body]} (first methods)]
-    (list 'fn
+    (list `guarded-fn
           (mapv ast->form params)
           (ast->form body))))
 

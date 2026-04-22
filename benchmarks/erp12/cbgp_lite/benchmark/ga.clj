@@ -89,6 +89,7 @@
                                                                                                 :num-no-ast            bu/num-no-ast-stat
                                                                                                 :num-penalties         (bu/make-num-penalty-stat (:penalty opts))
                                                                                                 :num-throwing          bu/num-throwing-stat
+                                                                                                :num-exceed-mem-guard  bu/exceed-mem-guard-stat
                                                                                                 :total-error           bu/total-error-stat
                                                                                                 :unique-behaviors      bu/unique-behaviors-stat}
                                                                                                individuals))]

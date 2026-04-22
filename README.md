@@ -2,6 +2,10 @@
 
 A genetic programming system for synthesizing programs that cover a narrow subset of the Clojure language.
 
+## Library
+
+If cbgp-lite is used as a Clojure library the jvm-opt `-Djdk.attach.allowAttachSelf` must be set by the end user.
+
 ## Benchmarking
 
 The `benchmarks` folder contains code to run `cbgp-lite` on a suite of standard benchmark problems. These can be 

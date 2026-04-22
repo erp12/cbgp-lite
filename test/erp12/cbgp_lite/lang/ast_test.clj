@@ -51,6 +51,9 @@
                                                    :fn   {:op :var :var 'inc}
                                                    :args [{:op :local :name 'a}]}}]}
                               {:op :const :val [1 2 3]}]})
-         '(mapv (fn [a] (inc a)) [1 2 3])))
+         '(mapv (erp12.cbgp-lite.lang.ast/guarded-fn [a] (inc a)) [1 2 3]))))
 
-  )
+(deftest guarded-fn-test
+  (let [f (a/guarded-fn [x] (vec (range x)))]
+    (is (= [0 1 2] (f 3)))
+    (is (thrown? clojure.lang.ExceptionInfo (f 1e6)))))

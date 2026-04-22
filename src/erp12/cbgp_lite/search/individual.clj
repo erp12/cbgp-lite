@@ -1,5 +1,6 @@
 (ns erp12.cbgp-lite.search.individual
-  (:require [clj-fuzzy.levenshtein :as lev]
+  (:require [clojure.string :as str]
+          [clj-fuzzy.levenshtein :as lev]
             [erp12.cbgp-lite.lang.ast :as a]
             [erp12.cbgp-lite.lang.compile :as c]
             [erp12.cbgp-lite.search.plushy :as pl]
@@ -22,7 +23,8 @@
   (try
     (with-out-and-stdout (apply func args))
     (catch Exception e
-      {:output e :std-out nil})))
+      ;; Only keep a summary of the error because the stack traces are large and cause OOM.
+      {:exception (str (.getSimpleName (class e)) ": " (.getMessage e))})))
 
 (defn errors-for-case
   "Compute errors on a single case given a program's output.
@@ -67,12 +69,11 @@
                                        :penalty     1
                                        :loss-fns    loss-fns})]
           (if (some pos? errors)
-            (if-let [ex (when (instance? Exception (:output prog-output))
-                          (:output prog-output))]
+            (if (:exception prog-output)
               {:cases-used (inc cases-used)
-               :exception  ex
+               :exception  (:exception prog-output)
                :case       case}
-              {:cases-used (inc cases-used)})
+             {:cases-used (inc cases-used)})
             (recur (rest cases)
                    (inc cases-used))))))))
 
@@ -108,7 +109,12 @@
        :total-error total-error
        :solution?   (zero? total-error)
        :cases-used  (count cases)
-       :exception   (:output (first (filter #(instance? Exception (:output %)) behavior)))})))
+       ;; Save the message of the first exception for logging and debugging.
+       :exception   (some :exception behavior)
+       ;; Record true if any of the exceptions include the error when memory limit is exceeded.
+       :exceeded-mem (boolean (seq (filter #(str/starts-with? (or (:exception %) "")
+                                                              "ExceptionInfo: Value too large")
+                                           behavior)))})))
 
 (defn make-evaluator
   [{:keys [evaluate-fn cases arg-symbols] :as opts}]
