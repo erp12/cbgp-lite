@@ -1,1 +1,0 @@
-docker build --build-arg SEARCH=$1 --build-arg PROBLEM=$2 -t fcbgp-$1-$2 .

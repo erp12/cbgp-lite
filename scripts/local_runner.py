@@ -14,7 +14,7 @@ def active_branch_name(repo_path: str) -> Optional[str]:
         stdout=PIPE, 
         stderr=PIPE,
     ) as p:
-        if p.wait() == 0:
+        if p.wait() == 0 and p.stdout:
             return p.stdout.read().strip().decode()
         return None
 
@@ -26,7 +26,7 @@ def latest_commit(repo_path: str) -> Optional[str]:
         stdout=PIPE, 
         stderr=PIPE,
     ) as p:
-        if p.wait() == 0:
+        if p.wait() == 0 and p.stdout:
             return p.stdout.read().strip().decode()
         return None
 
@@ -39,11 +39,10 @@ def run_cmd(opts: argparse.Namespace, problem: str, run_id: int) -> str:
     if opts.out:
         log_dir = os.path.join(opts.out, f"{branch=}", f"{commit=}", f"started={opts.start_time}", f"{problem=}")
         log_file = os.path.join(log_dir, f"run{run_id}.txt")
-    main_ns = "erp12.cbgp-lite.benchmark." + opts.search
     clj_cmd = " ".join([
-        f"{opts.clj} -X:benchmarks {main_ns}/run",
-        f":suite-ns {opts.suite_ns}",
+        f"{opts.clj} -X:benchmarks erp12.cbgp.benchmark.ga/run",
         f":problem '\"{problem}\"'",
+        f":run-id '\"{run_id}\"'",
     ] + (opts.opts if opts.opts is not None else []))
     return "; ".join(
         [
@@ -51,7 +50,7 @@ def run_cmd(opts: argparse.Namespace, problem: str, run_id: int) -> str:
             "export PATH=$PATH:/usr/java/latest/bin",
             f"cd {opts.cbgp}",
             f"mkdir -p {log_dir}" if log_dir else "echo \"Not creating a log file.\"",
-            f"{clj_cmd} 2>&1" + (" | tee {log_file}" if log_file else ""),
+            f"{clj_cmd} 2>&1" + (f" | tee {log_file}" if log_file else ""),
             f'echo "Finished Run {run_id}"',
         ]
     )
@@ -64,16 +63,6 @@ def start_run(opts: argparse.Namespace, config: Tuple[str, int]):
 
 def cli_opts() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--search",
-        default="ga",
-        help="Options: ga, random-search, simulated-annealing. Default is ga.",
-    )
-    parser.add_argument(
-        "--suite-ns",
-        default="erp12.cbgp-lite.benchmark.suite.psb",
-        help="The namespae of the problem suite file which the problem belongs to."
-    )
     parser.add_argument(
         "--problems", 
         nargs="+",
@@ -135,52 +124,38 @@ if __name__ == "__main__":
         for problem in args.problems:
             for run_id in range(args.num_runs):
                 runs_configs.append((problem, run_id))
-    with Pool(args.parallelism) as p:
-        for r in p.imap_unordered(partial(start_run, args), runs_configs):
-            print(r)
+        with Pool(args.parallelism) as p:
+            for r in p.imap_unordered(partial(start_run, args), runs_configs):
+                print(r)
 
 """
-Example:
+Examples:
 
 # Batch of runs
 python3 scripts/local_runner.py \
-    --search "ga" \
-    --suite-ns "erp12.cbgp-lite.benchmark.suite.psb" \
     --problems "vectors-summed" \
     --num-runs 3 \
     --out "./data/logs/" \
-    --log-types \
     --opts \
-    :data-dir '\"./data/psb\"' \
-    :population-size 10 \
-    :max-generations 10
+    :data-dir '\"./data/psb\"'
     
 # Single run
 python3 scripts/local_runner.py \
-    --search "ga" \
     --problems "vectors-summed" \
     --run-number 1000 \
     --out "./data/logs/" \
-    --log-types \
     --opts \
     :data-dir '\"./data/psb\"' \
     :state-output-fn :biggest \
     :population-size 10 \
     :max-generations 10
 
-python3 scripts/local_runner.py \
-    --problems "vectors-summed"  \
-    --num-runs 1 \
-    --opts \
-    :data-dir "./data/psb"
 
 python3 scripts/local_runner.py \
-    --problems "vectors-summed"  \
+    --problems "compare-string-lengths" \
     --num-runs 1 \
+    --out "./data/logs/" \
     --opts \
-    :data-dir "./data/psb" \
-    :umad-rate 0.9
-
---problems,"vectors-summed",--opts,:data-dir,'"/usr/data/psb"',:umad-rate,0.9
+    :data-dir '\"./data/psb\"'
 
 """

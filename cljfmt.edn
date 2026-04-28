@@ -1,2 +1,2 @@
 {:sort-ns-references? true
- :align-associative?  false}
+ :align-associative? false}

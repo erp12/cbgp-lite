@@ -3,6 +3,11 @@ data/
 results/
 scripts/pull_fly_logs.sh
 
+# TEMPORARY
+src/erp12/cbgp_experimental/
+test/erp12/cbgp_experimental/
+benchmarks/erp12/cbgp_experimental/
+
 # Clojure
 pom.xml
 pom.xml.asc
@@ -16,6 +21,7 @@ pom.xml.asc
 .cpcache/
 .lsp/
 .clj-kondo/
+.rebl/
 
 # Clojurescript
 out/
