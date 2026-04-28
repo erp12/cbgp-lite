@@ -1,4 +1,5 @@
 (ns erp12.cbgp-lite.benchmark.logs
+  "Utilities for reading and analyzing benchmark run log files: metadata parsing, completion status, and solution rates."
   (:require [clojure.instant :as inst]
             [clojure.java.io :as io]
             [clojure.string :as str])
@@ -6,7 +7,6 @@
 
 (defn log-line-ts
   [line]
-  ;(println line)
   (try
     (inst/read-instant-date (first (str/split line #" ")))
     (catch RuntimeException _
@@ -14,18 +14,17 @@
 
 (defn log-meta
   [^File f]
-  (let [parts (-> f .getAbsolutePath (str/replace #"\.txt" "") (str/split #"/") (->> (take-last 6)))]
-    (let [[suite problem search _ _ run-id] parts]
-      {:suite      suite
-       :problem    problem
-       :search     search
-       :id         (-> run-id (str/replace #"run" "") Integer/parseInt)
-       :started    (with-open [rdr (io/reader f)]
-                     (log-line-ts (first (line-seq rdr))))
-       :last-lines (with-open [rdr (io/reader f)]
-                     (vec (take-last 10 (line-seq rdr))))
-       :file       f})
-    ))
+  (let [parts (-> f .getAbsolutePath (str/replace #"\.txt" "") (str/split #"/") (->> (take-last 6)))
+        [suite problem search _ _ run-id] parts]
+    {:suite      suite
+     :problem    problem
+     :search     search
+     :id         (-> run-id (str/replace #"run" "") Integer/parseInt)
+     :started    (with-open [rdr (io/reader f)]
+                   (log-line-ts (first (line-seq rdr))))
+     :last-lines (with-open [rdr (io/reader f)]
+                   (vec (take-last 10 (line-seq rdr))))
+     :file       f}))
 
 (defn all-logs
   [root]
@@ -124,8 +123,8 @@
 
 (defn solution-rates
   [{:keys [root]}]
-  (let [finished (->> root name all-logs (filter finished?))
-        grouper #(select-keys % [:problem :search])
+  (let [finished        (->> root name all-logs (filter finished?))
+        grouper         #(select-keys % [:problem :search])
         solution-counts (->> finished
                              (filter solved?)
                              (group-by grouper)
@@ -147,8 +146,8 @@
 
 (defn generalized-solution-rates
   [{:keys [root]}]
-  (let [finished (->> root name all-logs (filter finished?))
-        grouper #(select-keys % [:problem :search])
+  (let [finished        (->> root name all-logs (filter finished?))
+        grouper         #(select-keys % [:problem :search])
         solution-counts (->> finished
                              (filter generalized?)
                              (group-by grouper)
@@ -166,9 +165,9 @@
           (->> root name all-logs
                (filter generalized?)
                (map #(assoc (select-keys % [:problem :search])
-                       :code (-> % post-simplification-code pr-str
-                                 (str/replace "erp12.cbgp-lite.lang.lib/" "lib/")
-                                 (str/replace "clojure.core/" ""))))
+                            :code (-> % post-simplification-code pr-str
+                                      (str/replace "erp12.cbgp-lite.lang.lib/" "lib/")
+                                      (str/replace "clojure.core/" ""))))
                (group-by #(select-keys % [:problem :search]))
                (map (fn [[k v]]
                       (assoc k :solutions (frequencies (map :code v)))))
@@ -220,6 +219,4 @@
   (->> ROOT all-logs
        (filter (fn [{:keys [last-lines]}] (some #(str/includes? % "NullPointerException") last-lines)))
        (map #(select-keys % [:search :problem :id]))
-       (sort-by #(vector (:search %) (:problem %) (:id %))))
-
-  )
+       (sort-by #(vector (:search %) (:problem %) (:id %)))))

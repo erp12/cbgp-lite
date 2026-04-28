@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(clj -Tcljfmt check benchmarks/erp12/cbgp/benchmark/problems/psb.clj)"
+    ]
+  }
+}

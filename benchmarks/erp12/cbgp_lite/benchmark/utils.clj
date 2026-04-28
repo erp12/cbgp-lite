@@ -1,16 +1,29 @@
 (ns erp12.cbgp-lite.benchmark.utils
+  "Shared benchmark utilities: case downsampling, population statistics aggregation, ERC generators, and loss function helpers."
   (:require [clojure.set :as st]
             [clojure.walk :as w]
+            [clojure.math :as math]
+            [clojure.string :as str]
             [erp12.ga-clj.toolbox :as tb]))
 
-(defn read-problem
-  [{:keys [suite-ns problem] :as config}]
-  (require suite-ns)
-  (let [suite-ns (find-ns suite-ns)
-        suite-problems ((ns-resolve suite-ns 'problems) config)
-        problem-info (get suite-problems (name problem))
-        read-cases (ns-resolve suite-ns 'read-cases)]
-    (merge config (read-cases config) problem-info)))
+(defn sample-n
+  "Uniformly sample n distinct items from vector v without fully shuffling.
+   Returns a vector of length n (or throws if n > (count v))."
+  [n v]
+  (let [cnt (count v)]
+    (when (> n cnt)
+      (throw (ex-info "n must be <= (count v)" {:n     n
+                                                :count cnt})))
+    ;; copy once so we can swap; don't mutate caller's vector
+    (let [a (object-array v)]
+      ;; Fisher–Yates, but only run first n positions
+      (dotimes [i n]
+        (let [j   (+ i (rand-int (- cnt i)))
+              tmp (aget a i)]
+          (aset a i (aget a j))
+          (aset a j tmp)))
+      ;; return first n as a vector
+      (vec (take n a)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Population Statistics
@@ -126,13 +139,11 @@
   ;; Init
   ([] #{})
   ;; Finalize
-  ([exs] exs)
+  ([exs] (str/join "\n. * " exs))
   ;; Reduce
   ([exs {:keys [exception]}]
    (if exception
-     (conj exs (str (.getName (class exception))
-                    ": "
-                    (ex-message exception)))
+     (conj exs exception)
      exs)))
 
 (defn exceed-mem-guard-stat
@@ -191,9 +202,9 @@
   [precision n]
   (cond
     (nil? n) nil
-    (NaN? n) (Math/round ##Inf)
-    :else (let [factor (Math/pow 10 precision)]
-            (/ (Math/round (* n factor)) factor))))
+    (NaN? n) (math/round ##Inf)
+    :else (let [factor (math/pow 10 precision)]
+            (/ (math/round (* n factor)) factor))))
 
 (defn abs'
   "Returns absolute value, coercing to bigint if necessary."
@@ -220,7 +231,7 @@
 
 ;; @todo move to ga-clj.
 (defn jaccard-similarity-loss
-  "this = (1 - Jaccard similarity coefficent), since we want lower to be better
+  "this = (1 - Jaccard similarity coefficient), since we want lower to be better
    https://en.wikipedia.org/wiki/Jaccard_index "
   [actual expected]
   (cond

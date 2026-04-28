@@ -1,18 +1,21 @@
-{:path     ["src"]
- :deps     {com.taoensso/timbre              {:mvn/version "6.0.4"}
-            io.github.erp12/schema-inference {:git/sha "724355178b041a2c83abda6e68a9d4bd83d55a43"}
-            clj-fuzzy/clj-fuzzy              {:mvn/version "0.4.1"}
-            ;; clj-memeory-meter requires -Djdk.attach.allowAttachSelf on alias.
-            com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.4.0"}}
- :aliases  {:test       {:extra-paths ["test"]
-                         :jvm-opts    ["-Djdk.attach.allowAttachSelf"]
-                         :extra-deps  {io.github.metabase/hawk   {:sha "9c97bcb6d4de116325e651b40973fd0a75b7ae21"}
-                                       meander/epsilon           {:mvn/version "0.0.650"}}
-                         :exec-fn     mb.hawk.core/find-and-run-tests-cli}
-            :benchmarks {:extra-paths ["benchmarks"]
-                         :jvm-opts    ["-Xms2G" "-Xmx4G"
-                                       "-XX:CompressedClassSpaceSize=2g"
-                                       "-Djdk.attach.allowAttachSelf"]
-                         :extra-deps  {org.clojure/tools.cli    {:mvn/version "1.0.206"}
-                                       net.clojars.schneau/psb2 {:mvn/version "1.1.1"}
-                                       io.github.erp12/ga-clj   {:git/sha "a6ef20b104875369a4266bd7fd4ff6cc0e7fa786"}}}}}
+{:path    ["src"]
+ :deps    {clj-fuzzy/clj-fuzzy                    {:mvn/version "0.4.1"}
+           net.mikera/core.matrix                 {:mvn/version "0.63.0"}
+           net.mikera/vectorz-clj                 {:mvn/version "0.48.0"}
+           com.clojure-goes-fast/clj-memory-meter {:mvn/version "0.4.0"}
+           org.apache.logging.log4j/log4j-api     {:mvn/version "2.25.2"}
+           org.apache.logging.log4j/log4j-core    {:mvn/version "2.25.2"}}
+ :aliases {:test       {:extra-paths ["test"]
+                        :jvm-opts    ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory" "-Djdk.attach.allowAttachSelf"]
+                        :extra-deps  {io.github.metabase/hawk    {:sha "f3502e0ae7052c4745208cce083118b988de6ac3"}
+                                      nubank/matcher-combinators {:mvn/version "3.9.2"}
+                                      meander/epsilon            {:mvn/version "0.0.650"}}
+                        :exec-fn     mb.hawk.core/find-and-run-tests-cli}
+           :benchmarks {:extra-paths ["benchmarks"]
+                        :jvm-opts    ["-Xms2G" "-Xmx4G" "-XX:CompressedClassSpaceSize=2g"
+                                      "-XX:+HeapDumpOnOutOfMemoryError" "-XX:HeapDumpPath=heapdump.hprof"
+                                      "-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory" "-Djdk.attach.allowAttachSelf"]
+                        :extra-deps  {org.clojure/tools.cli    {:mvn/version "1.0.206"}
+                                      net.clojars.schneau/psb2 {:mvn/version "1.1.1"}
+                                      io.github.erp12/ga-clj   {:git/sha "a6ef20b104875369a4266bd7fd4ff6cc0e7fa786"}
+                                      org.clojure/data.json    {:mvn/version "2.5.2"}}}}}
